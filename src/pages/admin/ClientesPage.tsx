@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -76,6 +77,7 @@ const ClientesPage = () => {
     try {
       setIsLoading(true);
       
+      // Criação do usuário na autenticação
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.senha,
@@ -86,12 +88,19 @@ const ClientesPage = () => {
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error('Erro na autenticação:', authError);
+        if (authError.message.includes('48 seconds')) {
+          throw new Error('Por segurança, tente novamente após 48 segundos.');
+        }
+        throw authError;
+      }
       
       if (!authData.user) {
         throw new Error('Falha ao criar usuário');
       }
       
+      // Criação do perfil do usuário
       const { error: profileError } = await supabase
         .from('perfis')
         .insert({
@@ -102,11 +111,17 @@ const ClientesPage = () => {
         });
 
       if (profileError) {
-        console.error('Erro ao criar perfil, tentando remover usuário:', profileError);
+        console.error('Erro ao criar perfil:', profileError);
+        // Tentar remover usuário se o perfil falhou
         await supabase.auth.admin.deleteUser(authData.user.id);
+        
+        if (profileError.message.includes('row-level security policy')) {
+          throw new Error('Erro de permissão. Verifique as políticas de segurança do banco de dados.');
+        }
         throw profileError;
       }
 
+      // Criação do cliente no sistema
       const { error: clienteError } = await supabase
         .from('clientes_sistema')
         .insert({
@@ -119,7 +134,8 @@ const ClientesPage = () => {
         });
 
       if (clienteError) {
-        console.error('Erro ao criar cliente, tentando limpar dados:', clienteError);
+        console.error('Erro ao criar cliente:', clienteError);
+        // Limpeza de dados se o cliente falhou
         await supabase.from('perfis').delete().eq('id', authData.user.id);
         await supabase.auth.admin.deleteUser(authData.user.id);
         throw clienteError;
