@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -73,6 +72,29 @@ const ClientesPage = () => {
     fetchClientes();
   }, []);
 
+  const handleError = (error: any, defaultMessage: string) => {
+    console.error(`${defaultMessage}:`, error);
+    
+    // Tratamento para erros específicos
+    if (error.message?.includes('48 seconds')) {
+      return 'Por segurança, tente novamente após 48 segundos.';
+    } 
+    if (error.message?.includes('row-level security policy')) {
+      return 'Erro de permissão nas políticas de segurança do banco de dados. Contate o administrador.';
+    }
+    if (error.message?.includes('duplicate key')) {
+      return 'Este registro já existe no sistema.';
+    }
+    
+    // Se for um erro conhecido, exiba a mensagem dele
+    if (error.message) {
+      return error.message;
+    }
+    
+    // Caso contrário, use a mensagem padrão
+    return defaultMessage;
+  };
+
   const handleAddCliente = async (formData: any) => {
     try {
       setIsLoading(true);
@@ -89,11 +111,7 @@ const ClientesPage = () => {
       });
 
       if (authError) {
-        console.error('Erro na autenticação:', authError);
-        if (authError.message.includes('48 seconds')) {
-          throw new Error('Por segurança, tente novamente após 48 segundos.');
-        }
-        throw authError;
+        throw new Error(handleError(authError, 'Erro na autenticação'));
       }
       
       if (!authData.user) {
@@ -111,14 +129,9 @@ const ClientesPage = () => {
         });
 
       if (profileError) {
-        console.error('Erro ao criar perfil:', profileError);
         // Tentar remover usuário se o perfil falhou
         await supabase.auth.admin.deleteUser(authData.user.id);
-        
-        if (profileError.message.includes('row-level security policy')) {
-          throw new Error('Erro de permissão. Verifique as políticas de segurança do banco de dados.');
-        }
-        throw profileError;
+        throw new Error(handleError(profileError, 'Erro ao criar perfil'));
       }
 
       // Criação do cliente no sistema
@@ -134,18 +147,16 @@ const ClientesPage = () => {
         });
 
       if (clienteError) {
-        console.error('Erro ao criar cliente:', clienteError);
         // Limpeza de dados se o cliente falhou
         await supabase.from('perfis').delete().eq('id', authData.user.id);
         await supabase.auth.admin.deleteUser(authData.user.id);
-        throw clienteError;
+        throw new Error(handleError(clienteError, 'Erro ao criar cliente'));
       }
 
       toast.success("Cliente adicionado com sucesso!");
       setOpenNewModal(false);
       fetchClientes();
     } catch (error: any) {
-      console.error('Erro ao adicionar cliente:', error);
       toast.error(error.message || "Erro ao adicionar cliente");
     } finally {
       setIsLoading(false);
@@ -170,13 +181,14 @@ const ClientesPage = () => {
         })
         .eq('id', currentCliente.id);
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(handleError(error, 'Erro ao atualizar cliente'));
+      }
 
       toast.success("Cliente atualizado com sucesso!");
       setOpenEditModal(false);
       fetchClientes();
     } catch (error: any) {
-      console.error('Erro ao atualizar cliente:', error);
       toast.error(error.message || "Erro ao atualizar cliente");
     } finally {
       setIsLoading(false);
@@ -192,14 +204,15 @@ const ClientesPage = () => {
         .delete()
         .eq('id', currentCliente.id);
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(handleError(error, 'Erro ao excluir cliente'));
+      }
 
       toast.success("Cliente excluído com sucesso!");
       setOpenDeleteModal(false);
       fetchClientes();
-    } catch (error) {
-      console.error('Erro ao excluir cliente:', error);
-      toast.error("Erro ao excluir cliente");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao excluir cliente");
     }
   };
 
@@ -212,13 +225,14 @@ const ClientesPage = () => {
         .update({ situacao: newStatus })
         .eq('id', cliente.id);
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(handleError(error, 'Erro ao atualizar status'));
+      }
 
       toast.success(`Cliente ${newStatus === 'liberado' ? 'liberado' : 'bloqueado'} com sucesso!`);
       fetchClientes();
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error);
-      toast.error("Erro ao atualizar status do cliente");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar status do cliente");
     }
   };
 
