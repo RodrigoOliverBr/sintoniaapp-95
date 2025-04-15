@@ -1,7 +1,8 @@
-import { Cliente, Plano, Contrato, Fatura, StatusFatura, CicloFaturamento } from "@/types/admin";
+
+import { ClienteSistema, Plano, Contrato, Fatura, StatusFatura, CicloFaturamento, ClienteStatus } from "@/types/admin";
 
 // Keys de localStorage
-const CLIENTES_KEY = "sintonia:clientes";
+const CLIENTES_SISTEMA_KEY = "sintonia:clientesSistema";
 const PLANOS_KEY = "sintonia:planos";
 const CONTRATOS_KEY = "sintonia:contratos";
 const FATURAS_KEY = "sintonia:faturas";
@@ -14,38 +15,38 @@ const defaultAdminUser = {
 };
 
 // Cliente de exemplo para login por email
-const clientesIniciais: Cliente[] = [
+const clientesIniciais: ClienteSistema[] = [
   {
     id: "1",
-    nome: "eSocial Brasil",
+    razaoSocial: "eSocial Brasil",
     tipo: "juridica",
     numeroEmpregados: 50,
     dataInclusao: Date.now(),
     situacao: "liberado",
-    cpfCnpj: "12.345.678/0001-90",
+    cnpj: "12.345.678/0001-90",
     email: "contato@esocial.com.br",
     telefone: "(11) 99999-9999",
     endereco: "Av. Paulista, 1000",
     cidade: "São Paulo",
     estado: "SP",
     cep: "01310-100",
-    contato: "João Silva"
+    responsavel: "João Silva"
   },
   {
     id: "2",
-    nome: "Tech Solutions Ltda.",
+    razaoSocial: "Tech Solutions Ltda.",
     tipo: "juridica",
     numeroEmpregados: 25,
     dataInclusao: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 dias atrás
     situacao: "liberado",
-    cpfCnpj: "98.765.432/0001-10",
+    cnpj: "98.765.432/0001-10",
     email: "client@empresa.com",
     telefone: "(11) 88888-8888",
     endereco: "Rua Augusta, 500",
     cidade: "São Paulo",
     estado: "SP",
     cep: "01305-000",
-    contato: "Maria Oliveira"
+    responsavel: "Maria Oliveira"
   }
 ];
 
@@ -100,7 +101,7 @@ const contratosIniciais: Contrato[] = [
   {
     id: "1",
     numero: "CONT-2025-001",
-    clienteId: "1",
+    clienteSistemaId: "1",
     planoId: "3",
     dataInicio: Date.now() - 60 * 24 * 60 * 60 * 1000, // 60 dias atrás
     dataFim: Date.now() + 305 * 24 * 60 * 60 * 1000, // em 305 dias
@@ -115,7 +116,7 @@ const contratosIniciais: Contrato[] = [
   {
     id: "2",
     numero: "CONT-2025-002",
-    clienteId: "2",
+    clienteSistemaId: "2",
     planoId: "2",
     dataInicio: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 dias atrás
     dataFim: Date.now() + 335 * 24 * 60 * 60 * 1000, // em 335 dias
@@ -134,7 +135,7 @@ const faturasIniciais: Fatura[] = [
   {
     id: "1",
     numero: "FAT-2025-001",
-    clienteId: "1",
+    clienteSistemaId: "1",
     contratoId: "1",
     dataEmissao: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 dias atrás
     dataVencimento: Date.now() - 15 * 24 * 60 * 60 * 1000, // 15 dias atrás
@@ -145,7 +146,7 @@ const faturasIniciais: Fatura[] = [
   {
     id: "2",
     numero: "FAT-2025-002",
-    clienteId: "1",
+    clienteSistemaId: "1",
     contratoId: "1",
     dataEmissao: Date.now() - 5 * 24 * 60 * 60 * 1000, // 5 dias atrás
     dataVencimento: Date.now() + 10 * 24 * 60 * 60 * 1000, // em 10 dias
@@ -156,7 +157,7 @@ const faturasIniciais: Fatura[] = [
   {
     id: "3",
     numero: "FAT-2025-003",
-    clienteId: "2",
+    clienteSistemaId: "2",
     contratoId: "2",
     dataEmissao: Date.now() - 10 * 24 * 60 * 60 * 1000, // 10 dias atrás
     dataVencimento: Date.now() + 5 * 24 * 60 * 60 * 1000, // em 5 dias
@@ -186,18 +187,25 @@ const inicializarDados = () => {
     }
   }
   
+  // Verificar se clientes_sistema precisa ser inicializado
+  const clientesSistemaAtuais = localStorage.getItem(CLIENTES_SISTEMA_KEY);
+  if (!clientesSistemaAtuais) {
+    console.log("Inicializando clientes do sistema...");
+    localStorage.setItem(CLIENTES_SISTEMA_KEY, JSON.stringify(clientesIniciais));
+  }
+
   if (deveLimpar) {
     // Limpar dados existentes para garantir a consistência
-    localStorage.removeItem(CLIENTES_KEY);
+    localStorage.removeItem(CLIENTES_SISTEMA_KEY);
     localStorage.removeItem(PLANOS_KEY);
     localStorage.removeItem(CONTRATOS_KEY);
     localStorage.removeItem(FATURAS_KEY);
-  }
-  
-  // Inicializar clientes
-  if (!localStorage.getItem(CLIENTES_KEY)) {
-    localStorage.setItem(CLIENTES_KEY, JSON.stringify(clientesIniciais));
-    console.log("Clientes inicializados");
+    
+    // Reinicializar os dados
+    localStorage.setItem(CLIENTES_SISTEMA_KEY, JSON.stringify(clientesIniciais));
+    localStorage.setItem(PLANOS_KEY, JSON.stringify(planosIniciais));
+    localStorage.setItem(CONTRATOS_KEY, JSON.stringify(contratosIniciais));
+    localStorage.setItem(FATURAS_KEY, JSON.stringify(faturasIniciais));
   }
   
   // Inicializar admin
@@ -206,62 +214,88 @@ const inicializarDados = () => {
     console.log("Admin inicializado");
   }
   
+  // Inicializar contratos se necessário
+  if (!localStorage.getItem(CONTRATOS_KEY)) {
+    localStorage.setItem(CONTRATOS_KEY, JSON.stringify(contratosIniciais));
+    console.log("Contratos inicializados");
+  }
+
+  // Inicializar faturas se necessário
+  if (!localStorage.getItem(FATURAS_KEY)) {
+    localStorage.setItem(FATURAS_KEY, JSON.stringify(faturasIniciais));
+    console.log("Faturas inicializadas");
+  }
+
+  // Inicializar planos se necessário
+  if (!localStorage.getItem(PLANOS_KEY)) {
+    localStorage.setItem(PLANOS_KEY, JSON.stringify(planosIniciais));
+    console.log("Planos inicializados");
+  }
+  
   console.log("Verificação de dados concluída");
 };
 
 // Inicializar dados ao carregar o serviço
 inicializarDados();
 
-// Clientes
-export const getClientes = (): Cliente[] => {
-  const clientes = localStorage.getItem(CLIENTES_KEY);
+// Clientes Sistema
+export const getClientesSistema = (): ClienteSistema[] => {
+  const clientes = localStorage.getItem(CLIENTES_SISTEMA_KEY);
   if (!clientes) {
     return [];
   }
   return JSON.parse(clientes);
 };
 
-export const getClienteById = (id: string): Cliente | undefined => {
-  return getClientes().find(c => c.id === id);
+export const getClienteSistemaById = (id: string): ClienteSistema | undefined => {
+  return getClientesSistema().find(c => c.id === id);
 };
 
-export const addCliente = (cliente: Omit<Cliente, "id" | "dataInclusao">): Cliente => {
-  const clientes = getClientes();
-  const newCliente: Cliente = {
+export const addClienteSistema = (cliente: Omit<ClienteSistema, "id" | "dataInclusao">): ClienteSistema => {
+  const clientes = getClientesSistema();
+  const newCliente: ClienteSistema = {
     ...cliente,
     id: Date.now().toString(),
     dataInclusao: Date.now()
   };
-  localStorage.setItem(CLIENTES_KEY, JSON.stringify([...clientes, newCliente]));
+  localStorage.setItem(CLIENTES_SISTEMA_KEY, JSON.stringify([...clientes, newCliente]));
   return newCliente;
 };
 
-export const updateCliente = (cliente: Cliente): void => {
-  const clientes = getClientes();
+export const updateClienteSistema = (cliente: ClienteSistema): void => {
+  const clientes = getClientesSistema();
   const updatedClientes = clientes.map(c => c.id === cliente.id ? cliente : c);
-  localStorage.setItem(CLIENTES_KEY, JSON.stringify(updatedClientes));
+  localStorage.setItem(CLIENTES_SISTEMA_KEY, JSON.stringify(updatedClientes));
 };
 
-export const deleteCliente = (id: string): void => {
-  const clientes = getClientes();
+export const deleteClienteSistema = (id: string): void => {
+  const clientes = getClientesSistema();
   const filteredClientes = clientes.filter(c => c.id !== id);
-  localStorage.setItem(CLIENTES_KEY, JSON.stringify(filteredClientes));
+  localStorage.setItem(CLIENTES_SISTEMA_KEY, JSON.stringify(filteredClientes));
   
   // Excluir contratos e faturas do cliente
   const contratos = getContratos();
-  const filteredContratos = contratos.filter(c => c.clienteId !== id);
+  const filteredContratos = contratos.filter(c => c.clienteSistemaId !== id);
   localStorage.setItem(CONTRATOS_KEY, JSON.stringify(filteredContratos));
   
   const faturas = getFaturas();
-  const filteredFaturas = faturas.filter(f => f.clienteId !== id);
+  const filteredFaturas = faturas.filter(f => f.clienteSistemaId !== id);
   localStorage.setItem(FATURAS_KEY, JSON.stringify(filteredFaturas));
 };
+
+// Função de compatibilidade para apps que ainda usam o nome antigo
+export const getClientes = getClientesSistema;
+export const getClienteById = getClienteSistemaById;
+export const addCliente = addClienteSistema;
+export const updateCliente = updateClienteSistema;
+export const deleteCliente = deleteClienteSistema;
 
 // Planos
 export const getPlanos = (): Plano[] => {
   const planos = localStorage.getItem(PLANOS_KEY);
   if (!planos) {
-    return [];
+    localStorage.setItem(PLANOS_KEY, JSON.stringify(planosIniciais));
+    return planosIniciais;
   }
   return JSON.parse(planos);
 };
@@ -302,13 +336,16 @@ export const getContratos = (): Contrato[] => {
   return JSON.parse(contratos);
 };
 
-export const getContratosByClienteId = (clienteId: string): Contrato[] => {
-  return getContratos().filter(c => c.clienteId === clienteId);
+export const getContratosByClienteSistemaId = (clienteId: string): Contrato[] => {
+  return getContratos().filter(c => c.clienteSistemaId === clienteId);
 };
 
 export const getContratoById = (id: string): Contrato | undefined => {
   return getContratos().find(c => c.id === id);
 };
+
+// Função de compatibilidade
+export const getContratosByClienteId = getContratosByClienteSistemaId;
 
 export const gerarNumeroContrato = (): string => {
   const contratos = getContratos();
@@ -370,13 +407,16 @@ export const getFaturas = (): Fatura[] => {
   return JSON.parse(faturas);
 };
 
-export const getFaturasByClienteId = (clienteId: string): Fatura[] => {
-  return getFaturas().filter(f => f.clienteId === clienteId);
+export const getFaturasByClienteSistemaId = (clienteId: string): Fatura[] => {
+  return getFaturas().filter(f => f.clienteSistemaId === clienteId);
 };
 
 export const getFaturasByContratoId = (contratoId: string): Fatura[] => {
   return getFaturas().filter(f => f.contratoId === contratoId);
 };
+
+// Função de compatibilidade
+export const getFaturasByClienteId = getFaturasByClienteSistemaId;
 
 export const getFaturaById = (id: string): Fatura | undefined => {
   return getFaturas().find(f => f.id === id);
@@ -507,7 +547,7 @@ export const gerarFaturasProgramadas = (contrato: Contrato): Fatura[] => {
     dataEmissaoImplantacao.setDate(dataEmissaoImplantacao.getDate() - 15); // 15 dias antes
     
     const faturaImplantacao: Omit<Fatura, "id" | "numero" | "referencia"> = {
-      clienteId: contrato.clienteId,
+      clienteSistemaId: contrato.clienteSistemaId,
       contratoId: contrato.id,
       dataEmissao: dataEmissaoImplantacao.getTime(),
       dataVencimento: dataPrimeiroVencimento.getTime(),
@@ -560,7 +600,7 @@ export const gerarFaturasProgramadas = (contrato: Contrato): Fatura[] => {
     
     // Criar a fatura
     const novaFatura: Omit<Fatura, "id" | "numero" | "referencia"> = {
-      clienteId: contrato.clienteId,
+      clienteSistemaId: contrato.clienteSistemaId,
       contratoId: contrato.id,
       dataEmissao: dataEmissaoFatura.getTime(),
       dataVencimento: dataVencimento.getTime(),
@@ -634,7 +674,7 @@ export const getContratosParaRenovar = (diasAntecedencia: number = 30): Contrato
 };
 
 export const getDashboardStats = () => {
-  const clientes = getClientes();
+  const clientes = getClientesSistema();
   const contratos = getContratos();
   const faturas = getFaturas();
   
@@ -680,8 +720,8 @@ export const getDashboardStats = () => {
     listaContratosParaRenovar: contratosParaRenovar.map(c => ({
       id: c.id,
       numero: c.numero,
-      clienteId: c.clienteId,
-      clienteNome: getClienteById(c.clienteId)?.nome || 'Cliente não encontrado',
+      clienteId: c.clienteSistemaId,
+      clienteNome: getClienteSistemaById(c.clienteSistemaId)?.razaoSocial || 'Cliente não encontrado',
       dataRenovacao: c.proximaRenovacao || c.dataFim
     }))
   };
@@ -693,9 +733,9 @@ export const checkAdminCredentials = (email: string, password: string): boolean 
          (defaultAdminUser.email === email && defaultAdminUser.password === password);
 };
 
-export const checkClienteCredentials = (email: string, password: string): Cliente | null => {
+export const checkClienteCredentials = (email: string, password: string): ClienteSistema | null => {
   console.log("Tentando autenticar cliente:", email);
-  const clientes = getClientes();
+  const clientes = getClientesSistema();
   console.log("Todos os clientes:", JSON.stringify(clientes));
   
   // Procurar por e-mail
@@ -718,8 +758,8 @@ export const checkClienteCredentials = (email: string, password: string): Client
     }
     
     // Verificação alternativa (mantida para compatibilidade)
-    if (cliente.cpfCnpj) {
-      const reverseCpfCnpj = cliente.cpfCnpj.split('').reverse().join('').replace(/[^0-9]/g, '');
+    if (cliente.cnpj) {
+      const reverseCpfCnpj = cliente.cnpj.split('').reverse().join('').replace(/[^0-9]/g, '');
       if (password === reverseCpfCnpj) {
         console.log("Senha baseada em CPF/CNPJ aceita");
         return cliente;
@@ -727,7 +767,7 @@ export const checkClienteCredentials = (email: string, password: string): Client
     }
   }
   
-  console.log("Autentica��ão de cliente falhou");
+  console.log("Autenticação de cliente falhou");
   return null;
 };
 

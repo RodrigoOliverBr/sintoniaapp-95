@@ -25,7 +25,7 @@ const AdminSidebarLinks: React.FC = () => {
         className={({ isActive }) => isActive ? activeClassName : inactiveClassName}
       >
         <Building2 size={20} />
-        <span>Clientes</span>
+        <span>Clientes Sistema</span>
       </NavLink>
       
       <NavLink 

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -10,91 +11,97 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil, Trash2, Plus, ExternalLink, Lock, Unlock, Check, AlertTriangle } from "lucide-react";
-import { Cliente, TipoPessoa, ClienteStatus } from "@/types/admin";
-import { getClientes, addCliente, updateCliente, deleteCliente, getFaturasByClienteId } from "@/services/adminService";
+import { ClienteSistema, TipoPessoa, ClienteStatus } from "@/types/admin";
+import { 
+  getClientesSistema, 
+  addClienteSistema, 
+  updateClienteSistema, 
+  deleteClienteSistema, 
+  getFaturasByClienteSistemaId 
+} from "@/services/adminService";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const ClientesPage: React.FC = () => {
-  const [clientes, setClientes] = useState<Cliente[]>(getClientes());
+  const [clientesSistema, setClientesSistema] = useState<ClienteSistema[]>(getClientesSistema());
   const [openNewModal, setOpenNewModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [currentCliente, setCurrentCliente] = useState<Cliente | null>(null);
+  const [currentCliente, setCurrentCliente] = useState<ClienteSistema | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
-  const [formNome, setFormNome] = useState("");
+  const [formRazaoSocial, setFormRazaoSocial] = useState("");
   const [formTipo, setFormTipo] = useState<TipoPessoa>("juridica");
   const [formNumeroEmpregados, setFormNumeroEmpregados] = useState(0);
   const [formSituacao, setFormSituacao] = useState<ClienteStatus>("liberado");
-  const [formCpfCnpj, setFormCpfCnpj] = useState("");
+  const [formCnpj, setFormCnpj] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formTelefone, setFormTelefone] = useState("");
   const [formEndereco, setFormEndereco] = useState("");
   const [formCidade, setFormCidade] = useState("");
   const [formEstado, setFormEstado] = useState("");
   const [formCep, setFormCep] = useState("");
-  const [formContato, setFormContato] = useState("");
+  const [formResponsavel, setFormResponsavel] = useState("");
   
   const navigate = useNavigate();
   
   const refreshClientes = () => {
-    setClientes(getClientes());
+    setClientesSistema(getClientesSistema());
   };
   
   const clearForm = () => {
-    setFormNome("");
+    setFormRazaoSocial("");
     setFormTipo("juridica");
     setFormNumeroEmpregados(0);
     setFormSituacao("liberado");
-    setFormCpfCnpj("");
+    setFormCnpj("");
     setFormEmail("");
     setFormTelefone("");
     setFormEndereco("");
     setFormCidade("");
     setFormEstado("");
     setFormCep("");
-    setFormContato("");
+    setFormResponsavel("");
   };
   
-  const handleOpenEditModal = (cliente: Cliente) => {
+  const handleOpenEditModal = (cliente: ClienteSistema) => {
     setCurrentCliente(cliente);
-    setFormNome(cliente.nome);
+    setFormRazaoSocial(cliente.razaoSocial);
     setFormTipo(cliente.tipo);
     setFormNumeroEmpregados(cliente.numeroEmpregados);
     setFormSituacao(cliente.situacao);
-    setFormCpfCnpj(cliente.cpfCnpj);
+    setFormCnpj(cliente.cnpj);
     setFormEmail(cliente.email);
     setFormTelefone(cliente.telefone);
     setFormEndereco(cliente.endereco);
     setFormCidade(cliente.cidade);
     setFormEstado(cliente.estado);
     setFormCep(cliente.cep);
-    setFormContato(cliente.contato);
+    setFormResponsavel(cliente.responsavel);
     setOpenEditModal(true);
   };
   
-  const handleOpenDeleteModal = (cliente: Cliente) => {
+  const handleOpenDeleteModal = (cliente: ClienteSistema) => {
     setCurrentCliente(cliente);
     setOpenDeleteModal(true);
   };
   
   const handleAddCliente = () => {
     try {
-      addCliente({
-        nome: formNome,
+      addClienteSistema({
+        razaoSocial: formRazaoSocial,
         tipo: formTipo,
         numeroEmpregados: formNumeroEmpregados,
         situacao: formSituacao,
-        cpfCnpj: formCpfCnpj,
+        cnpj: formCnpj,
         email: formEmail,
         telefone: formTelefone,
         endereco: formEndereco,
         cidade: formCidade,
         estado: formEstado,
         cep: formCep,
-        contato: formContato
+        responsavel: formResponsavel
       });
       refreshClientes();
       setOpenNewModal(false);
@@ -109,20 +116,20 @@ const ClientesPage: React.FC = () => {
     if (!currentCliente) return;
     
     try {
-      updateCliente({
+      updateClienteSistema({
         ...currentCliente,
-        nome: formNome,
+        razaoSocial: formRazaoSocial,
         tipo: formTipo,
         numeroEmpregados: formNumeroEmpregados,
         situacao: formSituacao,
-        cpfCnpj: formCpfCnpj,
+        cnpj: formCnpj,
         email: formEmail,
         telefone: formTelefone,
         endereco: formEndereco,
         cidade: formCidade,
         estado: formEstado,
         cep: formCep,
-        contato: formContato
+        responsavel: formResponsavel
       });
       refreshClientes();
       setOpenEditModal(false);
@@ -137,7 +144,7 @@ const ClientesPage: React.FC = () => {
     if (!currentCliente) return;
     
     try {
-      deleteCliente(currentCliente.id);
+      deleteClienteSistema(currentCliente.id);
       refreshClientes();
       setOpenDeleteModal(false);
       toast.success("Cliente excluído com sucesso!");
@@ -146,14 +153,14 @@ const ClientesPage: React.FC = () => {
     }
   };
   
-  const handleAccessClienteArea = (cliente: Cliente) => {
+  const handleAccessClienteArea = (cliente: ClienteSistema) => {
     localStorage.setItem("sintonia:userType", "cliente");
     localStorage.setItem("sintonia:currentCliente", JSON.stringify(cliente));
     navigate("/");
   };
   
   const checkClienteStatus = (clienteId: string) => {
-    const faturas = getFaturasByClienteId(clienteId);
+    const faturas = getFaturasByClienteSistemaId(clienteId);
     const hasOverdueFatura = faturas.some(
       f => f.status === 'atrasado' || 
       (f.status === 'pendente' && new Date(f.dataVencimento) < new Date())
@@ -161,31 +168,31 @@ const ClientesPage: React.FC = () => {
     return hasOverdueFatura ? 'atrasado' : 'em_dia';
   };
   
-  const handleToggleStatus = (cliente: Cliente) => {
+  const handleToggleStatus = (cliente: ClienteSistema) => {
     const newStatus: ClienteStatus = cliente.situacao === 'liberado' ? 'bloqueado' : 'liberado';
     const updatedCliente = {
       ...cliente,
       situacao: newStatus
     };
-    updateCliente(updatedCliente);
+    updateClienteSistema(updatedCliente);
     refreshClientes();
     toast.success(`Cliente ${newStatus === 'liberado' ? 'liberado' : 'bloqueado'} com sucesso!`);
   };
   
-  const filteredClientes = clientes.filter(cliente => 
-    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.cpfCnpj.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredClientes = clientesSistema.filter(cliente => 
+    cliente.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.cnpj.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <AdminLayout title="Clientes">
+    <AdminLayout title="Clientes Sistema">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Gerenciamento de Clientes</CardTitle>
+              <CardTitle>Gerenciamento de Clientes Sistema</CardTitle>
               <CardDescription>
-                Cadastre e gerencie os clientes que utilizam o sistema
+                Cadastre e gerencie os clientes que contratam o sistema
               </CardDescription>
             </div>
             <Dialog open={openNewModal} onOpenChange={setOpenNewModal}>
@@ -204,8 +211,8 @@ const ClientesPage: React.FC = () => {
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="nome">Nome</Label>
-                    <Input id="nome" value={formNome} onChange={(e) => setFormNome(e.target.value)} />
+                    <Label htmlFor="razaoSocial">Razão Social</Label>
+                    <Input id="razaoSocial" value={formRazaoSocial} onChange={(e) => setFormRazaoSocial(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="tipo">Tipo</Label>
@@ -223,8 +230,8 @@ const ClientesPage: React.FC = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
-                    <Input id="cpfCnpj" value={formCpfCnpj} onChange={(e) => setFormCpfCnpj(e.target.value)} />
+                    <Label htmlFor="cnpj">CNPJ</Label>
+                    <Input id="cnpj" value={formCnpj} onChange={(e) => setFormCnpj(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="numeroEmpregados">Número de Empregados</Label>
@@ -245,8 +252,8 @@ const ClientesPage: React.FC = () => {
                     <Input id="telefone" value={formTelefone} onChange={(e) => setFormTelefone(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="contato">Nome do Contato</Label>
-                    <Input id="contato" value={formContato} onChange={(e) => setFormContato(e.target.value)} />
+                    <Label htmlFor="responsavel">Nome do Responsável</Label>
+                    <Input id="responsavel" value={formResponsavel} onChange={(e) => setFormResponsavel(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="situacao">Situação</Label>
@@ -289,7 +296,7 @@ const ClientesPage: React.FC = () => {
           </div>
           <div className="pt-4">
             <Input
-              placeholder="Buscar cliente por nome ou CPF/CNPJ..."
+              placeholder="Buscar cliente por razão social ou CNPJ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-xl"
@@ -300,9 +307,9 @@ const ClientesPage: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
+                <TableHead>Razão Social</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>CPF/CNPJ</TableHead>
+                <TableHead>CNPJ</TableHead>
                 <TableHead>Funcionários</TableHead>
                 <TableHead>Data de Inclusão</TableHead>
                 <TableHead>Situação</TableHead>
@@ -320,9 +327,9 @@ const ClientesPage: React.FC = () => {
               ) : (
                 filteredClientes.map((cliente) => (
                   <TableRow key={cliente.id}>
-                    <TableCell className="font-medium">{cliente.nome}</TableCell>
+                    <TableCell className="font-medium">{cliente.razaoSocial}</TableCell>
                     <TableCell>{cliente.tipo === "fisica" ? "Pessoa Física" : "Pessoa Jurídica"}</TableCell>
-                    <TableCell>{cliente.cpfCnpj}</TableCell>
+                    <TableCell>{cliente.cnpj}</TableCell>
                     <TableCell>{cliente.numeroEmpregados}</TableCell>
                     <TableCell>
                       {format(new Date(cliente.dataInclusao), "dd/MM/yyyy", {locale: ptBR})}
@@ -400,8 +407,8 @@ const ClientesPage: React.FC = () => {
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-nome">Nome</Label>
-              <Input id="edit-nome" value={formNome} onChange={(e) => setFormNome(e.target.value)} />
+              <Label htmlFor="edit-razaoSocial">Razão Social</Label>
+              <Input id="edit-razaoSocial" value={formRazaoSocial} onChange={(e) => setFormRazaoSocial(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-tipo">Tipo</Label>
@@ -419,8 +426,8 @@ const ClientesPage: React.FC = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-cpfCnpj">CPF/CNPJ</Label>
-              <Input id="edit-cpfCnpj" value={formCpfCnpj} onChange={(e) => setFormCpfCnpj(e.target.value)} />
+              <Label htmlFor="edit-cnpj">CNPJ</Label>
+              <Input id="edit-cnpj" value={formCnpj} onChange={(e) => setFormCnpj(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-numeroEmpregados">Número de Empregados</Label>
@@ -441,8 +448,8 @@ const ClientesPage: React.FC = () => {
               <Input id="edit-telefone" value={formTelefone} onChange={(e) => setFormTelefone(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-contato">Nome do Contato</Label>
-              <Input id="edit-contato" value={formContato} onChange={(e) => setFormContato(e.target.value)} />
+              <Label htmlFor="edit-responsavel">Nome do Responsável</Label>
+              <Input id="edit-responsavel" value={formResponsavel} onChange={(e) => setFormResponsavel(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-situacao">Situação</Label>
@@ -488,7 +495,7 @@ const ClientesPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Confirmar exclusão</DialogTitle>
             <DialogDescription>
-              Você está prestes a excluir o cliente "{currentCliente?.nome}". Esta ação não pode ser desfeita.
+              Você está prestes a excluir o cliente "{currentCliente?.razaoSocial}". Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

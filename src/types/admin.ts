@@ -5,21 +5,24 @@ export type StatusContrato = 'ativo' | 'em-analise' | 'cancelado';
 export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
 
-export interface Cliente {
+// Renamed from Cliente to ClienteSistema to better reflect its role
+export interface ClienteSistema {
   id: string;
-  nome: string;
+  razaoSocial: string; // Renamed from nome
   tipo: TipoPessoa;
   numeroEmpregados: number;
   dataInclusao: number; // timestamp
   situacao: ClienteStatus;
-  cpfCnpj: string;
+  cnpj: string; // Renamed from cpfCnpj
   email: string;
   telefone: string;
   endereco: string;
   cidade: string;
   estado: string;
   cep: string;
-  contato: string;
+  responsavel: string; // Renamed from contato
+  planoId?: string; // Reference to associated plan
+  contratoId?: string; // Reference to associated contract
 }
 
 export interface Plano {
@@ -40,7 +43,7 @@ export interface Plano {
 export interface Contrato {
   id: string;
   numero: string;
-  clienteId: string;
+  clienteSistemaId: string; // Updated to reference clienteSistema
   planoId: string;
   dataInicio: number; // timestamp
   dataFim: number; // timestamp
@@ -57,7 +60,7 @@ export interface Contrato {
 export interface Fatura {
   id: string;
   numero: string;
-  clienteId: string;
+  clienteSistemaId: string; // Updated to reference clienteSistema
   contratoId: string;
   dataEmissao: number; // timestamp
   dataVencimento: number; // timestamp
