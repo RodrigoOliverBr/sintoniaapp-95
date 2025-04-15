@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -18,6 +17,7 @@ import PlanosPage from "./pages/admin/PlanosPage";
 import ContratosPage from "./pages/admin/ContratosPage";
 import FaturamentoPage from "./pages/admin/FaturamentoPage";
 import { useEffect, useState } from "react";
+import { TestClientInsertion } from './components/admin/TestClientInsertion';
 
 const queryClient = new QueryClient();
 
@@ -35,7 +35,7 @@ const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, use
   return children;
 };
 
-const App = () => {
+function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   useEffect(() => {
@@ -169,6 +169,6 @@ const App = () => {
       </BrowserRouter>
     </QueryClientProvider>
   );
-};
+}
 
 export default App;

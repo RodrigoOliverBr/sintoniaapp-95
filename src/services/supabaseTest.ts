@@ -1,8 +1,10 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { ClienteSistema } from "@/types/admin";
+import { useEffect } from "react";
 
 export const insertTestClient = async () => {
+  console.log("Iniciando teste de inserção...");
   try {
     const { data, error } = await supabase
       .from('clientes_sistema')
@@ -16,8 +18,10 @@ export const insertTestClient = async () => {
       })
       .select();
 
+    console.log("Dados retornados:", data);
+    
     if (error) {
-      console.error('Erro ao inserir cliente:', error);
+      console.error("Erro de inserção:", error);
       return null;
     }
 
@@ -29,11 +33,16 @@ export const insertTestClient = async () => {
   }
 };
 
-// Executar a função imediatamente para testar
-insertTestClient().then(result => {
-  if (result) {
-    console.log('✅ Teste de inserção realizado com sucesso!');
-  } else {
-    console.log('❌ Falha no teste de inserção no banco de dados.');
-  }
-});
+// Função para chamar insertTestClient em um componente
+export const useTestClientInsertion = () => {
+  useEffect(() => {
+    console.log("Chamando insertTestClient no useEffect");
+    insertTestClient().then(result => {
+      if (result) {
+        console.log('✅ Teste de inserção realizado com sucesso!');
+      } else {
+        console.log('❌ Falha no teste de inserção no banco de dados.');
+      }
+    });
+  }, []); // Array vazio garante que só seja chamado uma vez
+};
