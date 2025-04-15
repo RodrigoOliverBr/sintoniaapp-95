@@ -34,7 +34,7 @@ const LoginPage: React.FC = () => {
       // Log para debug
       console.log("Tentando login com:", email);
       
-      // Primeiro tenta autenticar o usuário com Supabase
+      // Tentar autenticar com Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
@@ -49,14 +49,14 @@ const LoginPage: React.FC = () => {
         throw new Error("Não foi possível autenticar o usuário");
       }
       
-      console.log("Usuário autenticado:", authData.user);
+      console.log("Usuário autenticado com sucesso:", authData.user);
       
       // Buscar perfil do usuário para verificar o tipo
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
         .eq('id', authData.user.id)
-        .single();
+        .maybeSingle();
       
       if (perfilError) {
         console.error("Erro ao obter perfil:", perfilError);
@@ -66,31 +66,43 @@ const LoginPage: React.FC = () => {
       
       console.log("Perfil encontrado:", perfilData);
       
+      // Verificar se o perfil existe
       if (!perfilData) {
         await supabase.auth.signOut();
-        throw new Error("Perfil de usuário não encontrado");
+        throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
-      const userType = perfilData.tipo;
-      
-      // Salvar dados de sessão
-      localStorage.setItem("sintonia:userType", userType);
-      
-      // Se for cliente, salvar os dados do cliente
-      if (userType === 'cliente') {
-        // Buscar dados do cliente para salvar no localStorage
+      // Verificar situação do cliente para usuários tipo cliente
+      if (perfilData.tipo === 'cliente') {
         const { data: clienteData, error: clienteError } = await supabase
           .from('clientes_sistema')
           .select('*')
           .eq('email', email)
-          .single();
-          
-        if (!clienteError && clienteData) {
-          localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
-        } else {
-          console.warn("Dados do cliente não encontrados:", clienteError);
+          .maybeSingle();
+        
+        if (clienteError) {
+          console.error("Erro ao buscar dados do cliente:", clienteError);
+          await supabase.auth.signOut();
+          throw new Error("Erro ao verificar status do cliente");
         }
+        
+        if (!clienteData) {
+          await supabase.auth.signOut();
+          throw new Error("Dados do cliente não encontrados");
+        }
+        
+        if (clienteData.situacao === 'bloqueado') {
+          await supabase.auth.signOut();
+          throw new Error("Seu acesso está bloqueado. Entre em contato com o administrador.");
+        }
+        
+        // Salvar dados do cliente no localStorage
+        localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
       }
+      
+      // Salvar dados de sessão
+      const userType = perfilData.tipo;
+      localStorage.setItem("sintonia:userType", userType);
       
       // Redirecionar com base no tipo de usuário
       setTimeout(() => {
