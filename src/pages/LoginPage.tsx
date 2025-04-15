@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { checkCredentials } from "@/services/adminService";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const LoginPage: React.FC = () => {
@@ -26,25 +26,75 @@ const LoginPage: React.FC = () => {
     }
   }, [navigate]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Log para debug
-    console.log("Tentando login com:", email, password);
-    
-    const result = checkCredentials(email, password);
-    console.log("Resultado da autenticação:", result);
-    
-    if (result.isValid) {
-      localStorage.setItem("sintonia:userType", result.userType as string);
+    try {
+      // Log para debug
+      console.log("Tentando login com:", email);
       
-      if (result.userType === 'cliente' && result.userData) {
-        localStorage.setItem("sintonia:currentCliente", JSON.stringify(result.userData));
+      // Primeiro tenta autenticar o usuário com Supabase
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+      
+      if (authError) {
+        console.error("Erro de autenticação Supabase:", authError);
+        throw new Error(authError.message);
       }
       
+      if (!authData.user) {
+        throw new Error("Não foi possível autenticar o usuário");
+      }
+      
+      console.log("Usuário autenticado:", authData.user);
+      
+      // Buscar perfil do usuário para verificar o tipo
+      const { data: perfilData, error: perfilError } = await supabase
+        .from('perfis')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+      
+      if (perfilError) {
+        console.error("Erro ao obter perfil:", perfilError);
+        await supabase.auth.signOut(); // Deslogar em caso de erro
+        throw new Error("Erro ao buscar perfil de usuário");
+      }
+      
+      console.log("Perfil encontrado:", perfilData);
+      
+      if (!perfilData) {
+        await supabase.auth.signOut();
+        throw new Error("Perfil de usuário não encontrado");
+      }
+      
+      const userType = perfilData.tipo;
+      
+      // Salvar dados de sessão
+      localStorage.setItem("sintonia:userType", userType);
+      
+      // Se for cliente, salvar os dados do cliente
+      if (userType === 'cliente') {
+        // Buscar dados do cliente para salvar no localStorage
+        const { data: clienteData, error: clienteError } = await supabase
+          .from('clientes_sistema')
+          .select('*')
+          .eq('email', email)
+          .single();
+          
+        if (!clienteError && clienteData) {
+          localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
+        } else {
+          console.warn("Dados do cliente não encontrados:", clienteError);
+        }
+      }
+      
+      // Redirecionar com base no tipo de usuário
       setTimeout(() => {
-        if (result.userType === 'admin') {
+        if (userType === 'admin') {
           navigate("/admin/dashboard");
         } else {
           navigate("/");
@@ -52,9 +102,10 @@ const LoginPage: React.FC = () => {
         setIsLoading(false);
       }, 1000);
       
-      toast.success(`Login realizado com sucesso como ${result.userType === 'admin' ? 'Administrador' : 'Cliente'}`);
-    } else {
-      toast.error("Credenciais inválidas. Verifique seu e-mail e senha.");
+      toast.success(`Login realizado com sucesso como ${userType === 'admin' ? 'Administrador' : 'Cliente'}`);
+    } catch (error: any) {
+      console.error("Erro no processo de login:", error);
+      toast.error(error.message || "Credenciais inválidas. Verifique seu e-mail e senha.");
       setIsLoading(false);
     }
   };
