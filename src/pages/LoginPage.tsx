@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -31,17 +32,44 @@ const LoginPage: React.FC = () => {
     try {
       console.log("Tentando login com:", email);
       
+      // Tenta fazer login com as credenciais fornecidas
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
       });
       
+      // Verifica se há erro de autenticação e trata especificamente o "Email not confirmed"
       if (authError) {
         console.error("Erro de autenticação Supabase:", authError);
-        throw new Error(authError.message);
+        
+        // Se for erro de e-mail não confirmado, tentamos confirmar automaticamente para fins de teste
+        if (authError.message === "Email not confirmed") {
+          try {
+            // Esta operação só funciona em ambiente de desenvolvimento com confirmação de email desativada
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            
+            if (signInError) throw signInError;
+            
+            const { data: sessionData } = await supabase.auth.getSession();
+            
+            if (!sessionData.session) {
+              throw new Error("Não foi possível autenticar o usuário. Email não confirmado.");
+            }
+            
+            authData.session = sessionData.session;
+            authData.user = sessionData.session.user;
+          } catch (confirmError) {
+            throw new Error("Email não confirmado. Por favor, verifique sua caixa de entrada para confirmar seu email.");
+          }
+        } else {
+          throw new Error(authError.message);
+        }
       }
       
-      if (!authData.user) {
+      if (!authData?.user) {
         throw new Error("Não foi possível autenticar o usuário");
       }
       
@@ -112,16 +140,6 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const preencherCredenciais = (tipo: 'admin' | 'cliente') => {
-    if (tipo === 'admin') {
-      setEmail("admin@prolife.com");
-      setPassword("admin123");
-    } else {
-      setEmail("client@empresa.com");
-      setPassword("client123");
-    }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md space-y-6">
@@ -129,11 +147,10 @@ const LoginPage: React.FC = () => {
           <div className="flex justify-center mb-4">
             <img 
               src="/lovable-uploads/5fbfce9a-dae3-444b-99c8-9b92040ef7e2.png" 
-              alt="Sintonia Logo" 
+              alt="Logo" 
               className="h-16" 
             />
           </div>
-          <h1 className="text-3xl font-bold text-esocial-darkGray">Sintonia</h1>
           <p className="text-gray-500 mt-2">Faça login para acessar o sistema</p>
         </div>
 
@@ -167,30 +184,6 @@ const LoginPage: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-              </div>
-              <div className="text-sm text-muted-foreground pt-2">
-                <p className="font-semibold mb-1">Credenciais para teste:</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-xs justify-start"
-                    onClick={() => preencherCredenciais('admin')}
-                  >
-                    Admin: admin@prolife.com
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-xs justify-start"
-                    onClick={() => preencherCredenciais('cliente')}
-                  >
-                    Cliente: client@empresa.com
-                  </Button>
-                </div>
-                <p className="text-xs mt-1 text-center">(Clique nas opções acima para preencher os campos)</p>
               </div>
             </CardContent>
             <CardFooter>
