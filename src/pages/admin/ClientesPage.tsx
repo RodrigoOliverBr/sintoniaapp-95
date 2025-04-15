@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -105,6 +106,7 @@ const ClientesPage = () => {
 
       if (clienteError) throw clienteError;
 
+      // Adicionar registro na tabela perfis
       const { error: profileError } = await supabase
         .from('perfis')
         .insert({
@@ -127,19 +129,21 @@ const ClientesPage = () => {
     }
   };
 
-  const handleUpdateCliente = async () => {
+  const handleUpdateCliente = async (formData: any) => {
     if (!currentCliente) return;
 
     try {
+      setIsLoading(true);
+      
       const { error } = await supabase
         .from('clientes_sistema')
         .update({
-          razao_social: formRazaoSocial,
-          cnpj: formCnpj,
-          email: formEmail,
-          telefone: formTelefone,
-          responsavel: formResponsavel,
-          situacao: formSituacao
+          razao_social: formData.razao_social,
+          cnpj: formData.cnpj,
+          email: formData.email,
+          telefone: formData.telefone || '',
+          responsavel: formData.responsavel,
+          situacao: formData.situacao
         })
         .eq('id', currentCliente.id);
 
@@ -147,11 +151,12 @@ const ClientesPage = () => {
 
       toast.success("Cliente atualizado com sucesso!");
       setOpenEditModal(false);
-      clearForm();
       fetchClientes();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao atualizar cliente:', error);
-      toast.error("Erro ao atualizar cliente");
+      toast.error(error.message || "Erro ao atualizar cliente");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -367,6 +372,21 @@ const ClientesPage = () => {
               Você está prestes a excluir o cliente "{currentCliente?.razaoSocial}". Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setOpenDeleteModal(false)}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteCliente}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </AdminLayout>
