@@ -29,5 +29,11 @@ export const insertTestClient = async () => {
   }
 };
 
-// Uncomment to test immediately
-// insertTestClient();
+// Executar a função imediatamente para testar
+insertTestClient().then(result => {
+  if (result) {
+    console.log('✅ Teste de inserção realizado com sucesso!');
+  } else {
+    console.log('❌ Falha no teste de inserção no banco de dados.');
+  }
+});
