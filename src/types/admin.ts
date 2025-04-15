@@ -5,24 +5,48 @@ export type StatusContrato = 'ativo' | 'em-analise' | 'cancelado';
 export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
 
-// Renamed from Cliente to ClienteSistema to better reflect its role
-export interface ClienteSistema {
+// Add Cliente interface for backward compatibility
+export interface Cliente {
   id: string;
-  razaoSocial: string; // Renamed from nome
+  nome: string;
   tipo: TipoPessoa;
   numeroEmpregados: number;
   dataInclusao: number; // timestamp
   situacao: ClienteStatus;
-  cnpj: string; // Renamed from cpfCnpj
+  cpfCnpj: string;
   email: string;
   telefone: string;
   endereco: string;
   cidade: string;
   estado: string;
   cep: string;
-  responsavel: string; // Renamed from contato
+  contato: string;
   planoId?: string; // Reference to associated plan
   contratoId?: string; // Reference to associated contract
+}
+
+// ClienteSistema with both new field names and aliases for backward compatibility
+export interface ClienteSistema {
+  id: string;
+  razaoSocial: string;
+  nome?: string; // Alias for backward compatibility
+  tipo: TipoPessoa;
+  numeroEmpregados: number;
+  dataInclusao: number; // timestamp
+  situacao: ClienteStatus;
+  cnpj: string;
+  cpfCnpj?: string; // Alias for backward compatibility
+  email: string;
+  telefone: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+  responsavel: string;
+  contato?: string; // Alias for backward compatibility
+  planoId?: string; // Reference to associated plan
+  contratoId?: string; // Reference to associated contract
+  clienteId?: string; // For backward compatibility
 }
 
 export interface Plano {
@@ -43,7 +67,8 @@ export interface Plano {
 export interface Contrato {
   id: string;
   numero: string;
-  clienteSistemaId: string; // Updated to reference clienteSistema
+  clienteSistemaId: string;
+  clienteId?: string; // For backward compatibility
   planoId: string;
   dataInicio: number; // timestamp
   dataFim: number; // timestamp
@@ -60,7 +85,8 @@ export interface Contrato {
 export interface Fatura {
   id: string;
   numero: string;
-  clienteSistemaId: string; // Updated to reference clienteSistema
+  clienteSistemaId: string;
+  clienteId?: string; // For backward compatibility
   contratoId: string;
   dataEmissao: number; // timestamp
   dataVencimento: number; // timestamp

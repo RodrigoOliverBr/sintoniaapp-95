@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Fatura, Cliente, Contrato } from "@/types/admin";
+import { Fatura, ClienteSistema, Contrato } from "@/types/admin";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Printer } from "lucide-react";
 
 interface InvoicePreviewProps {
   fatura: Fatura;
-  cliente: Cliente;
+  cliente: ClienteSistema;
   contrato: Contrato;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -38,10 +38,10 @@ const InvoicePreview = ({ fatura, cliente, contrato, open, onOpenChange }: Invoi
           <div className="border-t border-b py-4 space-y-4">
             <div>
               <h2 className="font-semibold mb-2">Dados do Cliente</h2>
-              <p>{cliente.nome}</p>
-              <p>{cliente.tipo === 'juridica' ? 'CNPJ' : 'CPF'}: {cliente.cpfCnpj}</p>
-              <p>{cliente.endereco}</p>
-              <p>{cliente.cidade} - {cliente.estado}, CEP: {cliente.cep}</p>
+              <p>{cliente.razaoSocial}</p>
+              <p>CNPJ: {cliente.cnpj}</p>
+              <p>{cliente.endereco || "Endereço não informado"}</p>
+              <p>{cliente.cidade || "Cidade não informada"} - {cliente.estado || "Estado não informado"}, CEP: {cliente.cep || "CEP não informado"}</p>
             </div>
           </div>
 
