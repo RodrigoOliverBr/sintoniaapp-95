@@ -1,7 +1,7 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,174 +12,168 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil, Trash2, Plus, ExternalLink, Lock, Unlock, Check, AlertTriangle } from "lucide-react";
 import { ClienteSistema, TipoPessoa, ClienteStatus } from "@/types/admin";
-import { 
-  getClientesSistema, 
-  addClienteSistema, 
-  updateClienteSistema, 
-  deleteClienteSistema, 
-  getFaturasByClienteSistemaId 
-} from "@/services/adminService";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const ClientesPage: React.FC = () => {
-  const [clientesSistema, setClientesSistema] = useState<ClienteSistema[]>(getClientesSistema());
+const ClientesPage = () => {
+  const [clientes, setClientes] = useState<ClienteSistema[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const [openNewModal, setOpenNewModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [currentCliente, setCurrentCliente] = useState<ClienteSistema | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
   
+  // Form states
   const [formRazaoSocial, setFormRazaoSocial] = useState("");
-  const [formTipo, setFormTipo] = useState<TipoPessoa>("juridica");
-  const [formNumeroEmpregados, setFormNumeroEmpregados] = useState(0);
-  const [formSituacao, setFormSituacao] = useState<ClienteStatus>("liberado");
   const [formCnpj, setFormCnpj] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formTelefone, setFormTelefone] = useState("");
-  const [formEndereco, setFormEndereco] = useState("");
-  const [formCidade, setFormCidade] = useState("");
-  const [formEstado, setFormEstado] = useState("");
-  const [formCep, setFormCep] = useState("");
   const [formResponsavel, setFormResponsavel] = useState("");
+  const [formSituacao, setFormSituacao] = useState<ClienteStatus>("liberado");
   
   const navigate = useNavigate();
-  
-  const refreshClientes = () => {
-    setClientesSistema(getClientesSistema());
+
+  // Fetch clients from Supabase
+  const fetchClientes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clientes_sistema')
+        .select('*')
+        .order('razao_social');
+
+      if (error) throw error;
+      
+      console.log("Clientes carregados:", data);
+      setClientes(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
+      toast.error("Erro ao carregar clientes");
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
+
+  useEffect(() => {
+    fetchClientes();
+  }, []);
+
+  const handleAddCliente = async () => {
+    try {
+      const newClient = {
+        razao_social: formRazaoSocial,
+        cnpj: formCnpj,
+        email: formEmail,
+        telefone: formTelefone,
+        responsavel: formResponsavel,
+        situacao: formSituacao
+      };
+
+      const { error } = await supabase
+        .from('clientes_sistema')
+        .insert([newClient]);
+
+      if (error) throw error;
+
+      toast.success("Cliente adicionado com sucesso!");
+      setOpenNewModal(false);
+      clearForm();
+      fetchClientes();
+    } catch (error) {
+      console.error('Erro ao adicionar cliente:', error);
+      toast.error("Erro ao adicionar cliente");
+    }
+  };
+
+  const handleUpdateCliente = async () => {
+    if (!currentCliente) return;
+
+    try {
+      const { error } = await supabase
+        .from('clientes_sistema')
+        .update({
+          razao_social: formRazaoSocial,
+          cnpj: formCnpj,
+          email: formEmail,
+          telefone: formTelefone,
+          responsavel: formResponsavel,
+          situacao: formSituacao
+        })
+        .eq('id', currentCliente.id);
+
+      if (error) throw error;
+
+      toast.success("Cliente atualizado com sucesso!");
+      setOpenEditModal(false);
+      clearForm();
+      fetchClientes();
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error);
+      toast.error("Erro ao atualizar cliente");
+    }
+  };
+
+  const handleDeleteCliente = async () => {
+    if (!currentCliente) return;
+
+    try {
+      const { error } = await supabase
+        .from('clientes_sistema')
+        .delete()
+        .eq('id', currentCliente.id);
+
+      if (error) throw error;
+
+      toast.success("Cliente excluído com sucesso!");
+      setOpenDeleteModal(false);
+      fetchClientes();
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      toast.error("Erro ao excluir cliente");
+    }
+  };
+
+  const handleToggleStatus = async (cliente: ClienteSistema) => {
+    try {
+      const newStatus: ClienteStatus = cliente.situacao === 'liberado' ? 'bloqueado' : 'liberado';
+      
+      const { error } = await supabase
+        .from('clientes_sistema')
+        .update({ situacao: newStatus })
+        .eq('id', cliente.id);
+
+      if (error) throw error;
+
+      toast.success(`Cliente ${newStatus === 'liberado' ? 'liberado' : 'bloqueado'} com sucesso!`);
+      fetchClientes();
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast.error("Erro ao atualizar status do cliente");
+    }
+  };
+
   const clearForm = () => {
     setFormRazaoSocial("");
-    setFormTipo("juridica");
-    setFormNumeroEmpregados(0);
-    setFormSituacao("liberado");
     setFormCnpj("");
     setFormEmail("");
     setFormTelefone("");
-    setFormEndereco("");
-    setFormCidade("");
-    setFormEstado("");
-    setFormCep("");
     setFormResponsavel("");
+    setFormSituacao("liberado");
   };
-  
+
   const handleOpenEditModal = (cliente: ClienteSistema) => {
     setCurrentCliente(cliente);
     setFormRazaoSocial(cliente.razaoSocial);
-    setFormTipo(cliente.tipo);
-    setFormNumeroEmpregados(cliente.numeroEmpregados);
-    setFormSituacao(cliente.situacao);
     setFormCnpj(cliente.cnpj);
-    setFormEmail(cliente.email);
-    setFormTelefone(cliente.telefone);
-    setFormEndereco(cliente.endereco);
-    setFormCidade(cliente.cidade);
-    setFormEstado(cliente.estado);
-    setFormCep(cliente.cep);
-    setFormResponsavel(cliente.responsavel);
+    setFormEmail(cliente.email || "");
+    setFormTelefone(cliente.telefone || "");
+    setFormResponsavel(cliente.responsavel || "");
+    setFormSituacao(cliente.situacao);
     setOpenEditModal(true);
   };
-  
-  const handleOpenDeleteModal = (cliente: ClienteSistema) => {
-    setCurrentCliente(cliente);
-    setOpenDeleteModal(true);
-  };
-  
-  const handleAddCliente = () => {
-    try {
-      addClienteSistema({
-        razaoSocial: formRazaoSocial,
-        tipo: formTipo,
-        numeroEmpregados: formNumeroEmpregados,
-        situacao: formSituacao,
-        cnpj: formCnpj,
-        email: formEmail,
-        telefone: formTelefone,
-        endereco: formEndereco,
-        cidade: formCidade,
-        estado: formEstado,
-        cep: formCep,
-        responsavel: formResponsavel
-      });
-      refreshClientes();
-      setOpenNewModal(false);
-      clearForm();
-      toast.success("Cliente adicionado com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao adicionar cliente.");
-    }
-  };
-  
-  const handleUpdateCliente = () => {
-    if (!currentCliente) return;
-    
-    try {
-      updateClienteSistema({
-        ...currentCliente,
-        razaoSocial: formRazaoSocial,
-        tipo: formTipo,
-        numeroEmpregados: formNumeroEmpregados,
-        situacao: formSituacao,
-        cnpj: formCnpj,
-        email: formEmail,
-        telefone: formTelefone,
-        endereco: formEndereco,
-        cidade: formCidade,
-        estado: formEstado,
-        cep: formCep,
-        responsavel: formResponsavel
-      });
-      refreshClientes();
-      setOpenEditModal(false);
-      clearForm();
-      toast.success("Cliente atualizado com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao atualizar cliente.");
-    }
-  };
-  
-  const handleDeleteCliente = () => {
-    if (!currentCliente) return;
-    
-    try {
-      deleteClienteSistema(currentCliente.id);
-      refreshClientes();
-      setOpenDeleteModal(false);
-      toast.success("Cliente excluído com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao excluir cliente.");
-    }
-  };
-  
-  const handleAccessClienteArea = (cliente: ClienteSistema) => {
-    localStorage.setItem("sintonia:userType", "cliente");
-    localStorage.setItem("sintonia:currentCliente", JSON.stringify(cliente));
-    navigate("/");
-  };
-  
-  const checkClienteStatus = (clienteId: string) => {
-    const faturas = getFaturasByClienteSistemaId(clienteId);
-    const hasOverdueFatura = faturas.some(
-      f => f.status === 'atrasado' || 
-      (f.status === 'pendente' && new Date(f.dataVencimento) < new Date())
-    );
-    return hasOverdueFatura ? 'atrasado' : 'em_dia';
-  };
-  
-  const handleToggleStatus = (cliente: ClienteSistema) => {
-    const newStatus: ClienteStatus = cliente.situacao === 'liberado' ? 'bloqueado' : 'liberado';
-    const updatedCliente = {
-      ...cliente,
-      situacao: newStatus
-    };
-    updateClienteSistema(updatedCliente);
-    refreshClientes();
-    toast.success(`Cliente ${newStatus === 'liberado' ? 'liberado' : 'bloqueado'} com sucesso!`);
-  };
-  
-  const filteredClientes = clientesSistema.filter(cliente => 
+
+  const filteredClientes = clientes.filter(cliente => 
     cliente.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cliente.cnpj.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -215,33 +209,8 @@ const ClientesPage: React.FC = () => {
                     <Input id="razaoSocial" value={formRazaoSocial} onChange={(e) => setFormRazaoSocial(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="tipo">Tipo</Label>
-                    <Select 
-                      value={formTipo} 
-                      onValueChange={(value: TipoPessoa) => setFormTipo(value)}
-                    >
-                      <SelectTrigger id="tipo">
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fisica">Pessoa Física</SelectItem>
-                        <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="cnpj">CNPJ</Label>
                     <Input id="cnpj" value={formCnpj} onChange={(e) => setFormCnpj(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="numeroEmpregados">Número de Empregados</Label>
-                    <Input 
-                      id="numeroEmpregados" 
-                      type="number" 
-                      min={0}
-                      value={formNumeroEmpregados} 
-                      onChange={(e) => setFormNumeroEmpregados(Number(e.target.value))} 
-                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
@@ -270,22 +239,6 @@ const ClientesPage: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endereco">Endereço</Label>
-                    <Input id="endereco" value={formEndereco} onChange={(e) => setFormEndereco(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cidade">Cidade</Label>
-                    <Input id="cidade" value={formCidade} onChange={(e) => setFormCidade(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="estado">Estado</Label>
-                    <Input id="estado" value={formEstado} onChange={(e) => setFormEstado(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cep">CEP</Label>
-                    <Input id="cep" value={formCep} onChange={(e) => setFormCep(e.target.value)} />
-                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setOpenNewModal(false)}>Cancelar</Button>
@@ -308,19 +261,24 @@ const ClientesPage: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Razão Social</TableHead>
-                <TableHead>Tipo</TableHead>
                 <TableHead>CNPJ</TableHead>
-                <TableHead>Funcionários</TableHead>
-                <TableHead>Data de Inclusão</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead>Responsável</TableHead>
                 <TableHead>Situação</TableHead>
-                <TableHead>Status Pagamento</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredClientes.length === 0 ? (
+              {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                    Carregando clientes...
+                  </TableCell>
+                </TableRow>
+              ) : filteredClientes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
                     Nenhum cliente encontrado.
                   </TableCell>
                 </TableRow>
@@ -328,40 +286,17 @@ const ClientesPage: React.FC = () => {
                 filteredClientes.map((cliente) => (
                   <TableRow key={cliente.id}>
                     <TableCell className="font-medium">{cliente.razaoSocial}</TableCell>
-                    <TableCell>{cliente.tipo === "fisica" ? "Pessoa Física" : "Pessoa Jurídica"}</TableCell>
                     <TableCell>{cliente.cnpj}</TableCell>
-                    <TableCell>{cliente.numeroEmpregados}</TableCell>
-                    <TableCell>
-                      {format(new Date(cliente.dataInclusao), "dd/MM/yyyy", {locale: ptBR})}
-                    </TableCell>
+                    <TableCell>{cliente.email}</TableCell>
+                    <TableCell>{cliente.telefone}</TableCell>
+                    <TableCell>{cliente.responsavel}</TableCell>
                     <TableCell>
                       <Badge variant={cliente.situacao === "liberado" ? "default" : "destructive"}>
                         {cliente.situacao === "liberado" ? "Liberado" : "Bloqueado"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {checkClienteStatus(cliente.id) === 'em_dia' ? (
-                        <Badge variant="success" className="bg-green-500">
-                          <Check className="w-4 h-4 mr-1" />
-                          Em dia
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive">
-                          <AlertTriangle className="w-4 h-4 mr-1" />
-                          Faturas atrasadas
-                        </Badge>
-                      )}
-                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleAccessClienteArea(cliente)}
-                          title="Acessar Área do Cliente"
-                        >
-                          <ExternalLink size={16} />
-                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -383,7 +318,7 @@ const ClientesPage: React.FC = () => {
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => handleOpenDeleteModal(cliente)}
+                          onClick={() => handleDeleteCliente(cliente)}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -411,33 +346,8 @@ const ClientesPage: React.FC = () => {
               <Input id="edit-razaoSocial" value={formRazaoSocial} onChange={(e) => setFormRazaoSocial(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-tipo">Tipo</Label>
-              <Select 
-                value={formTipo} 
-                onValueChange={(value: TipoPessoa) => setFormTipo(value)}
-              >
-                <SelectTrigger id="edit-tipo">
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fisica">Pessoa Física</SelectItem>
-                  <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="edit-cnpj">CNPJ</Label>
               <Input id="edit-cnpj" value={formCnpj} onChange={(e) => setFormCnpj(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-numeroEmpregados">Número de Empregados</Label>
-              <Input 
-                id="edit-numeroEmpregados" 
-                type="number" 
-                min={0}
-                value={formNumeroEmpregados} 
-                onChange={(e) => setFormNumeroEmpregados(Number(e.target.value))} 
-              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-email">Email</Label>
@@ -465,22 +375,6 @@ const ClientesPage: React.FC = () => {
                   <SelectItem value="bloqueado">Bloqueado</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-endereco">Endereço</Label>
-              <Input id="edit-endereco" value={formEndereco} onChange={(e) => setFormEndereco(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-cidade">Cidade</Label>
-              <Input id="edit-cidade" value={formCidade} onChange={(e) => setFormCidade(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-estado">Estado</Label>
-              <Input id="edit-estado" value={formEstado} onChange={(e) => setFormEstado(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-cep">CEP</Label>
-              <Input id="edit-cep" value={formCep} onChange={(e) => setFormCep(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
