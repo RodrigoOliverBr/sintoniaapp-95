@@ -75,7 +75,6 @@ const ClientesPage = () => {
   const handleError = (error: any, defaultMessage: string) => {
     console.error(`${defaultMessage}:`, error);
     
-    // Tratamento para erros específicos
     if (error.message?.includes('48 seconds')) {
       return 'Por segurança, tente novamente após 48 segundos.';
     } 
@@ -86,12 +85,10 @@ const ClientesPage = () => {
       return 'Este registro já existe no sistema.';
     }
     
-    // Se for um erro conhecido, exiba a mensagem dele
     if (error.message) {
       return error.message;
     }
     
-    // Caso contrário, use a mensagem padrão
     return defaultMessage;
   };
 
@@ -99,7 +96,6 @@ const ClientesPage = () => {
     try {
       setIsLoading(true);
       
-      // Criação do usuário na autenticação
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.senha,
@@ -118,23 +114,20 @@ const ClientesPage = () => {
         throw new Error('Falha ao criar usuário');
       }
       
-      // Criação do perfil do usuário
       const { error: profileError } = await supabase
         .from('perfis')
         .insert({
           id: authData.user.id,
           nome: formData.responsavel,
           email: formData.email,
-          tipo: 'cliente'
+          tipo: 'client'
         });
 
       if (profileError) {
-        // Tentar remover usuário se o perfil falhou
         await supabase.auth.admin.deleteUser(authData.user.id);
         throw new Error(handleError(profileError, 'Erro ao criar perfil'));
       }
 
-      // Criação do cliente no sistema
       const { error: clienteError } = await supabase
         .from('clientes_sistema')
         .insert({
@@ -147,7 +140,6 @@ const ClientesPage = () => {
         });
 
       if (clienteError) {
-        // Limpeza de dados se o cliente falhou
         await supabase.from('perfis').delete().eq('id', authData.user.id);
         await supabase.auth.admin.deleteUser(authData.user.id);
         throw new Error(handleError(clienteError, 'Erro ao criar cliente'));

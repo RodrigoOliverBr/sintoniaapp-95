@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,6 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  // Verificar se já está autenticado ao carregar
   useEffect(() => {
     const userType = localStorage.getItem("sintonia:userType");
     if (userType) {
@@ -31,10 +29,8 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Log para debug
       console.log("Tentando login com:", email);
       
-      // Tentar autenticar com Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
@@ -51,7 +47,6 @@ const LoginPage: React.FC = () => {
       
       console.log("Usuário autenticado com sucesso:", authData.user);
       
-      // Buscar perfil do usuário para verificar o tipo
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
@@ -60,20 +55,18 @@ const LoginPage: React.FC = () => {
       
       if (perfilError) {
         console.error("Erro ao obter perfil:", perfilError);
-        await supabase.auth.signOut(); // Deslogar em caso de erro
+        await supabase.auth.signOut();
         throw new Error("Erro ao buscar perfil de usuário");
       }
       
       console.log("Perfil encontrado:", perfilData);
       
-      // Verificar se o perfil existe
       if (!perfilData) {
         await supabase.auth.signOut();
         throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
-      // Verificar situação do cliente para usuários tipo cliente
-      if (perfilData.tipo === 'cliente') {
+      if (perfilData.tipo === 'client') {
         const { data: clienteData, error: clienteError } = await supabase
           .from('clientes_sistema')
           .select('*')
@@ -96,15 +89,12 @@ const LoginPage: React.FC = () => {
           throw new Error("Seu acesso está bloqueado. Entre em contato com o administrador.");
         }
         
-        // Salvar dados do cliente no localStorage
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
       }
       
-      // Salvar dados de sessão
-      const userType = perfilData.tipo;
+      const userType = perfilData.tipo === 'client' ? 'client' : 'admin';
       localStorage.setItem("sintonia:userType", userType);
       
-      // Redirecionar com base no tipo de usuário
       setTimeout(() => {
         if (userType === 'admin') {
           navigate("/admin/dashboard");
@@ -122,7 +112,6 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // Função auxiliar para preencher credenciais de teste
   const preencherCredenciais = (tipo: 'admin' | 'cliente') => {
     if (tipo === 'admin') {
       setEmail("admin@prolife.com");
