@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -92,6 +91,21 @@ const ClientesPage = () => {
       if (!authData.user) {
         throw new Error('Falha ao criar usuário');
       }
+      
+      const { error: profileError } = await supabase
+        .from('perfis')
+        .insert({
+          id: authData.user.id,
+          nome: formData.responsavel,
+          email: formData.email,
+          tipo: 'cliente'
+        });
+
+      if (profileError) {
+        console.error('Erro ao criar perfil, tentando remover usuário:', profileError);
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw profileError;
+      }
 
       const { error: clienteError } = await supabase
         .from('clientes_sistema')
@@ -104,19 +118,12 @@ const ClientesPage = () => {
           situacao: formData.situacao
         });
 
-      if (clienteError) throw clienteError;
-
-      // Adicionar registro na tabela perfis
-      const { error: profileError } = await supabase
-        .from('perfis')
-        .insert({
-          id: authData.user.id,
-          nome: formData.responsavel,
-          email: formData.email,
-          tipo: 'cliente'
-        });
-
-      if (profileError) throw profileError;
+      if (clienteError) {
+        console.error('Erro ao criar cliente, tentando limpar dados:', clienteError);
+        await supabase.from('perfis').delete().eq('id', authData.user.id);
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw clienteError;
+      }
 
       toast.success("Cliente adicionado com sucesso!");
       setOpenNewModal(false);
