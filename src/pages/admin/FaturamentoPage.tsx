@@ -12,8 +12,8 @@ import { Pencil, Trash2, Plus, FileCheck, FileX } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { Fatura, StatusFatura, Contrato } from "@/types/admin";
-import { InvoicePreview } from "@/components/admin/InvoicePreview";
+import { Fatura, StatusFatura, Contrato, StatusContrato, CicloFaturamento } from "@/types/admin";
+import InvoicePreview from "@/components/admin/InvoicePreview";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const FaturamentoPage = () => {
@@ -66,7 +66,25 @@ const FaturamentoPage = () => {
 
       if (error) throw error;
 
-      setContratos(data);
+      const mappedContratos: Contrato[] = data.map(item => ({
+        id: item.id,
+        numero: item.numero,
+        clienteSistemaId: item.cliente_sistema_id,
+        clienteId: item.cliente_id,
+        planoId: item.plano_id,
+        dataInicio: new Date(item.data_inicio).getTime(),
+        dataFim: new Date(item.data_fim).getTime(),
+        dataPrimeiroVencimento: new Date(item.data_primeiro_vencimento).getTime(),
+        valorMensal: Number(item.valor_mensal),
+        status: item.status as StatusContrato,
+        taxaImplantacao: Number(item.taxa_implantacao),
+        observacoes: item.observacoes || '',
+        cicloFaturamento: item.ciclo_faturamento as CicloFaturamento,
+        proximaRenovacao: item.proxima_renovacao ? new Date(item.proxima_renovacao).getTime() : undefined,
+        ciclosGerados: item.ciclos_gerados,
+      }));
+
+      setContratos(mappedContratos);
     } catch (error) {
       console.error('Erro ao carregar contratos:', error);
     }

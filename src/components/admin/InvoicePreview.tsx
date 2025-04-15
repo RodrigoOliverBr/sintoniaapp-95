@@ -1,83 +1,120 @@
 
 import React from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Fatura, ClienteSistema, Contrato } from "@/types/admin";
+import { Fatura, StatusFatura } from "@/types/admin";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
+import { Printer, Check, Clock, AlertTriangle, Ban } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface InvoicePreviewProps {
-  fatura: Fatura;
-  cliente: ClienteSistema;
-  contrato: Contrato;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  invoice: Fatura;
+  onStatusChange?: (fatura: Fatura, newStatus: StatusFatura) => void;
 }
 
-const InvoicePreview = ({ fatura, cliente, contrato, open, onOpenChange }: InvoicePreviewProps) => {
+const InvoicePreview = ({ invoice, onStatusChange }: InvoicePreviewProps) => {
   const handlePrint = () => {
     window.print();
   };
 
+  const getStatusBadgeVariant = (status: StatusFatura) => {
+    switch (status) {
+      case 'pago': return 'default';
+      case 'pendente': return 'warning';
+      case 'atrasado': return 'destructive';
+      case 'programada': return 'outline';
+      default: return 'secondary';
+    }
+  };
+
+  const getStatusName = (status: StatusFatura) => {
+    const statusNames = {
+      pendente: 'Pendente',
+      pago: 'Pago',
+      atrasado: 'Atrasado',
+      programada: 'Programada',
+    };
+    return statusNames[status] || status;
+  };
+
+  const getStatusIcon = (status: StatusFatura) => {
+    switch (status) {
+      case 'pago': return <Check size={14} />;
+      case 'pendente': return <Clock size={14} />;
+      case 'atrasado': return <AlertTriangle size={14} />;
+      case 'programada': return <Ban size={14} />;
+      default: return null;
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl print:shadow-none print:border-none" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <div className="p-8 space-y-6 print:p-0">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-2xl font-bold">FATURA</h1>
-              <p className="text-muted-foreground">Nº {fatura.numero}</p>
-            </div>
-            <div className="text-right">
-              <p>Data de Emissão: {format(new Date(fatura.dataEmissao), "dd/MM/yyyy", { locale: ptBR })}</p>
-              <p>Vencimento: {format(new Date(fatura.dataVencimento), "dd/MM/yyyy", { locale: ptBR })}</p>
-            </div>
-          </div>
+    <div className="p-4 space-y-6 print:p-0">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold">FATURA</h1>
+          <p className="text-muted-foreground">Nº {invoice.numero}</p>
+        </div>
+        <div className="text-right">
+          <p>Data de Emissão: {format(invoice.dataEmissao, "dd/MM/yyyy", { locale: ptBR })}</p>
+          <p>Vencimento: {format(invoice.dataVencimento, "dd/MM/yyyy", { locale: ptBR })}</p>
+        </div>
+      </div>
 
-          <div className="border-t border-b py-4 space-y-4">
-            <div>
-              <h2 className="font-semibold mb-2">Dados do Cliente</h2>
-              <p>{cliente.razaoSocial}</p>
-              <p>CNPJ: {cliente.cnpj}</p>
-              <p>{cliente.endereco || "Endereço não informado"}</p>
-              <p>{cliente.cidade || "Cidade não informada"} - {cliente.estado || "Estado não informado"}, CEP: {cliente.cep || "CEP não informado"}</p>
-            </div>
-          </div>
+      <div className="border-t border-b py-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold">Status</h2>
+          <Badge variant={getStatusBadgeVariant(invoice.status)} className="flex items-center gap-1">
+            {getStatusIcon(invoice.status)}
+            {getStatusName(invoice.status)}
+          </Badge>
+        </div>
 
-          <div className="space-y-4">
-            <h2 className="font-semibold">Detalhes do Serviço</h2>
-            <div className="border rounded-lg p-4">
-              <p>Contrato Nº {contrato.numero}</p>
-              <p className="mt-2">Período de Referência: {fatura.referencia}</p>
-              <p>Plano: {contrato.cicloFaturamento}</p>
-            </div>
-          </div>
-
-          <div className="mt-8">
-            <div className="bg-muted p-4 rounded-lg flex justify-between items-center">
-              <span className="text-lg font-semibold">Valor Total</span>
-              <span className="text-2xl font-bold">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fatura.valor)}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-8 text-sm text-muted-foreground">
-            <p>Para dúvidas ou informações adicionais, entre em contato:</p>
-            <p>Email: financeiro@empresa.com.br</p>
-            <p>Telefone: (11) 1234-5678</p>
-          </div>
-          
-          <div className="print:hidden mt-6 flex justify-end">
-            <Button variant="outline" onClick={handlePrint} className="flex items-center gap-2">
-              <Printer size={16} />
-              Imprimir
+        {onStatusChange && (
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => onStatusChange(invoice, 'pago')}
+              disabled={invoice.status === 'pago'}
+            >
+              Marcar como Pago
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => onStatusChange(invoice, 'pendente')}
+              disabled={invoice.status === 'pendente'}
+            >
+              Marcar como Pendente
             </Button>
           </div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <h2 className="font-semibold">Detalhes do Serviço</h2>
+        <div className="border rounded-lg p-4">
+          <p>Referência: {invoice.referencia}</p>
+          <p className="mt-2">Contrato ID: {invoice.contratoId}</p>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <div className="mt-8">
+        <div className="bg-muted p-4 rounded-lg flex justify-between items-center">
+          <span className="text-lg font-semibold">Valor Total</span>
+          <span className="text-2xl font-bold">
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.valor)}
+          </span>
+        </div>
+      </div>
+      
+      <div className="print:hidden mt-6 flex justify-end">
+        <Button variant="outline" onClick={handlePrint} className="flex items-center gap-2">
+          <Printer size={16} />
+          Imprimir
+        </Button>
+      </div>
+    </div>
   );
 };
 
