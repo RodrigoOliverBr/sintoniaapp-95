@@ -20,9 +20,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const PlanosPage: React.FC = () => {
-  const [planos, setPlanos] = useState<Plano[]>(getPlanos());
+  const [planos, setPlanos] = useState<Plano[]>([]);
   const [openNewModal, setOpenNewModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
@@ -41,70 +42,121 @@ const PlanosPage: React.FC = () => {
   const [formDataValidade, setFormDataValidade] = useState<Date | null>(null);
   const [formSemVencimento, setFormSemVencimento] = useState(false);
   const [formAtivo, setFormAtivo] = useState(true);
-  
+
   useEffect(() => {
-    // Inicializar planos padrão se não existirem
-    const planosExistentes = getPlanos();
-    if (planosExistentes.length === 0) {
-      // Adicionar planos iniciais
-      criarPlanosIniciais();
-    }
-    refreshPlanos();
+    fetchPlanos();
   }, []);
-  
-  const criarPlanosIniciais = () => {
-    // Plano eSocial Brasil (Corporativo)
-    addPlano({
-      nome: "eSocial Brasil (Corporativo)",
-      descricao: "Plano exclusivo para clientes ativos da plataforma eSocial Brasil. Todos os recursos liberados por um valor simbólico.",
-      valorMensal: 99.90,
-      valorImplantacao: 599.00,
-      limiteEmpresas: 1,
-      empresasIlimitadas: true,
-      limiteEmpregados: 1,
-      empregadosIlimitados: true,
-      dataValidade: null,
-      semVencimento: true,
-      ativo: true
-    });
-    
-    // Plano Profissional (Clientes Externos)
-    addPlano({
-      nome: "Profissional (Clientes Externos)",
-      descricao: "Plano completo com diagnóstico psicossocial e relatórios de conformidade para pequenas e médias empresas.",
-      valorMensal: 199.90,
-      valorImplantacao: 1599.00,
-      limiteEmpresas: 1,
-      empresasIlimitadas: false,
-      limiteEmpregados: 100,
-      empregadosIlimitados: false,
-      dataValidade: new Date(new Date().setMonth(new Date().getMonth() + 12)).getTime(),
-      semVencimento: false,
-      ativo: true
-    });
-    
-    // Plano Gratuito
-    addPlano({
-      nome: "Plano Gratuito",
-      descricao: "Versão limitada para testes e experimentações.",
-      valorMensal: 0,
-      valorImplantacao: 0,
-      limiteEmpresas: 1,
-      empresasIlimitadas: false,
-      limiteEmpregados: 10,
-      empregadosIlimitados: false,
-      dataValidade: new Date(new Date().setDate(new Date().getDate() + 30)).getTime(),
-      semVencimento: false,
-      ativo: true
-    });
-    
-    toast.success("Planos iniciais criados com sucesso!");
+
+  const fetchPlanos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('planos')
+        .select('*');
+
+      if (error) {
+        throw error;
+      }
+
+      setPlanos(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar planos:', error);
+      toast.error('Erro ao carregar os planos.');
+    }
   };
-  
-  const refreshPlanos = () => {
-    setPlanos(getPlanos());
+
+  const handleAddPlano = async () => {
+    try {
+      const newPlano = {
+        nome: formNome,
+        descricao: formDescricao,
+        valor_mensal: formValorMensal,
+        valor_implantacao: formValorImplantacao,
+        limite_empresas: formEmpresasIlimitadas ? null : formLimiteEmpresas,
+        empresas_ilimitadas: formEmpresasIlimitadas,
+        limite_empregados: formEmpregadosIlimitados ? null : formLimiteEmpregados,
+        empregados_ilimitados: formEmpregadosIlimitados,
+        data_validade: formSemVencimento ? null : (formDataValidade ? formDataValidade.toISOString() : null),
+        sem_vencimento: formSemVencimento,
+        ativo: formAtivo
+      };
+
+      const { error } = await supabase
+        .from('planos')
+        .insert([newPlano]);
+
+      if (error) {
+        throw error;
+      }
+
+      fetchPlanos();
+      setOpenNewModal(false);
+      clearForm();
+      toast.success('Plano adicionado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao adicionar plano:', error);
+      toast.error('Erro ao adicionar plano.');
+    }
   };
-  
+
+  const handleUpdatePlano = async () => {
+    if (!currentPlano) return;
+
+    try {
+      const updatedPlano = {
+        nome: formNome,
+        descricao: formDescricao,
+        valor_mensal: formValorMensal,
+        valor_implantacao: formValorImplantacao,
+        limite_empresas: formEmpresasIlimitadas ? null : formLimiteEmpresas,
+        empresas_ilimitadas: formEmpresasIlimitadas,
+        limite_empregados: formEmpregadosIlimitados ? null : formLimiteEmpregados,
+        empregados_ilimitados: formEmpregadosIlimitados,
+        data_validade: formSemVencimento ? null : (formDataValidade ? formDataValidade.toISOString() : null),
+        sem_vencimento: formSemVencimento,
+        ativo: formAtivo
+      };
+
+      const { error } = await supabase
+        .from('planos')
+        .update(updatedPlano)
+        .eq('id', currentPlano.id);
+
+      if (error) {
+        throw error;
+      }
+
+      fetchPlanos();
+      setOpenEditModal(false);
+      clearForm();
+      toast.success('Plano atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar plano:', error);
+      toast.error('Erro ao atualizar plano.');
+    }
+  };
+
+  const handleDeletePlano = async () => {
+    if (!currentPlano) return;
+
+    try {
+      const { error } = await supabase
+        .from('planos')
+        .delete()
+        .eq('id', currentPlano.id);
+
+      if (error) {
+        throw error;
+      }
+
+      fetchPlanos();
+      setOpenDeleteModal(false);
+      toast.success('Plano excluído com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir plano:', error);
+      toast.error('Erro ao excluir plano.');
+    }
+  };
+
   const clearForm = () => {
     setFormNome("");
     setFormDescricao("");
@@ -138,70 +190,6 @@ const PlanosPage: React.FC = () => {
   const handleOpenDeleteModal = (plano: Plano) => {
     setCurrentPlano(plano);
     setOpenDeleteModal(true);
-  };
-  
-  const handleAddPlano = () => {
-    try {
-      addPlano({
-        nome: formNome,
-        descricao: formDescricao,
-        valorMensal: formValorMensal,
-        valorImplantacao: formValorImplantacao,
-        limiteEmpresas: formLimiteEmpresas,
-        empresasIlimitadas: formEmpresasIlimitadas,
-        limiteEmpregados: formLimiteEmpregados,
-        empregadosIlimitados: formEmpregadosIlimitados,
-        dataValidade: formSemVencimento ? null : (formDataValidade ? formDataValidade.getTime() : null),
-        semVencimento: formSemVencimento,
-        ativo: formAtivo
-      });
-      refreshPlanos();
-      setOpenNewModal(false);
-      clearForm();
-      toast.success("Plano adicionado com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao adicionar plano.");
-    }
-  };
-  
-  const handleUpdatePlano = () => {
-    if (!currentPlano) return;
-    
-    try {
-      updatePlano({
-        ...currentPlano,
-        nome: formNome,
-        descricao: formDescricao,
-        valorMensal: formValorMensal,
-        valorImplantacao: formValorImplantacao,
-        limiteEmpresas: formLimiteEmpresas,
-        empresasIlimitadas: formEmpresasIlimitadas,
-        limiteEmpregados: formLimiteEmpregados,
-        empregadosIlimitados: formEmpregadosIlimitados,
-        dataValidade: formSemVencimento ? null : (formDataValidade ? formDataValidade.getTime() : null),
-        semVencimento: formSemVencimento,
-        ativo: formAtivo
-      });
-      refreshPlanos();
-      setOpenEditModal(false);
-      clearForm();
-      toast.success("Plano atualizado com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao atualizar plano.");
-    }
-  };
-  
-  const handleDeletePlano = () => {
-    if (!currentPlano) return;
-    
-    try {
-      deletePlano(currentPlano.id);
-      refreshPlanos();
-      setOpenDeleteModal(false);
-      toast.success("Plano excluído com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao excluir plano.");
-    }
   };
   
   const filteredPlanos = planos.filter(plano => 
