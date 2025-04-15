@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -7,15 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Trash2, Plus, ExternalLink, Lock, Unlock, Check, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, Plus, Lock, Unlock } from "lucide-react";
 import { ClienteSistema, TipoPessoa, ClienteStatus } from "@/types/admin";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ClienteForm } from "@/components/admin/ClienteForm";
 
 const ClientesPage = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
@@ -79,30 +75,61 @@ const ClientesPage = () => {
     fetchClientes();
   }, []);
 
-  const handleAddCliente = async () => {
+  const handleAddCliente = async (formData: any) => {
     try {
-      const newClient = {
-        razao_social: formRazaoSocial,
-        cnpj: formCnpj,
-        email: formEmail,
-        telefone: formTelefone,
-        responsavel: formResponsavel,
-        situacao: formSituacao
-      };
+      setIsLoading(true);
+      
+      // 1. Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.senha,
+        options: {
+          data: {
+            name: formData.responsavel,
+          }
+        }
+      });
 
-      const { error } = await supabase
+      if (authError) throw authError;
+      
+      if (!authData.user) {
+        throw new Error('Falha ao criar usuário');
+      }
+
+      // 2. Insert client in clientes_sistema
+      const { error: clienteError } = await supabase
         .from('clientes_sistema')
-        .insert([newClient]);
+        .insert({
+          razao_social: formData.razao_social,
+          cnpj: formData.cnpj,
+          email: formData.email,
+          telefone: formData.telefone,
+          responsavel: formData.responsavel,
+          situacao: formData.situacao
+        });
 
-      if (error) throw error;
+      if (clienteError) throw clienteError;
+
+      // 3. Create profile entry
+      const { error: profileError } = await supabase
+        .from('perfis')
+        .insert({
+          id: authData.user.id,
+          nome: formData.responsavel,
+          email: formData.email,
+          tipo: 'cliente'
+        });
+
+      if (profileError) throw profileError;
 
       toast.success("Cliente adicionado com sucesso!");
       setOpenNewModal(false);
-      clearForm();
       fetchClientes();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao adicionar cliente:', error);
-      toast.error("Erro ao adicionar cliente");
+      toast.error(error.message || "Erro ao adicionar cliente");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -228,47 +255,10 @@ const ClientesPage = () => {
                     Preencha as informações do novo cliente.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="razaoSocial">Razão Social</Label>
-                    <Input id="razaoSocial" value={formRazaoSocial} onChange={(e) => setFormRazaoSocial(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cnpj">CNPJ</Label>
-                    <Input id="cnpj" value={formCnpj} onChange={(e) => setFormCnpj(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="telefone">Telefone</Label>
-                    <Input id="telefone" value={formTelefone} onChange={(e) => setFormTelefone(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="responsavel">Nome do Responsável</Label>
-                    <Input id="responsavel" value={formResponsavel} onChange={(e) => setFormResponsavel(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="situacao">Situação</Label>
-                    <Select 
-                      value={formSituacao} 
-                      onValueChange={(value: ClienteStatus) => setFormSituacao(value)}
-                    >
-                      <SelectTrigger id="situacao">
-                        <SelectValue placeholder="Selecione a situação" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="liberado">Liberado</SelectItem>
-                        <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setOpenNewModal(false)}>Cancelar</Button>
-                  <Button onClick={handleAddCliente}>Salvar</Button>
-                </DialogFooter>
+                <ClienteForm 
+                  onSubmit={handleAddCliente}
+                  isLoading={isLoading}
+                />
               </DialogContent>
             </Dialog>
           </div>
@@ -367,45 +357,31 @@ const ClientesPage = () => {
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-razaoSocial">Razão Social</Label>
               <Input id="edit-razaoSocial" value={formRazaoSocial} onChange={(e) => setFormRazaoSocial(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-cnpj">CNPJ</Label>
               <Input id="edit-cnpj" value={formCnpj} onChange={(e) => setFormCnpj(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
               <Input id="edit-email" type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-telefone">Telefone</Label>
               <Input id="edit-telefone" value={formTelefone} onChange={(e) => setFormTelefone(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-responsavel">Nome do Responsável</Label>
               <Input id="edit-responsavel" value={formResponsavel} onChange={(e) => setFormResponsavel(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-situacao">Situação</Label>
-              <Select 
+              <select 
                 value={formSituacao} 
-                onValueChange={(value: ClienteStatus) => setFormSituacao(value)}
+                onChange={(e) => setFormSituacao(e.target.value as ClienteStatus)}
               >
-                <SelectTrigger id="edit-situacao">
-                  <SelectValue placeholder="Selecione a situação" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="liberado">Liberado</SelectItem>
-                  <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="liberado">Liberado</option>
+                <option value="bloqueado">Bloqueado</option>
+              </select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenEditModal(false)}>Cancelar</Button>
-            <Button onClick={handleUpdateCliente}>Salvar</Button>
-          </DialogFooter>
+          
         </DialogContent>
       </Dialog>
       
@@ -417,10 +393,7 @@ const ClientesPage = () => {
               Você está prestes a excluir o cliente "{currentCliente?.razaoSocial}". Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenDeleteModal(false)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDeleteCliente}>Excluir</Button>
-          </DialogFooter>
+          
         </DialogContent>
       </Dialog>
     </AdminLayout>
