@@ -3,11 +3,13 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ClienteStatus } from "@/types/admin";
+import { Card, CardContent } from "@/components/ui/card";
+import { Lock } from 'lucide-react';
 
 const clienteFormSchema = z.object({
   razao_social: z.string().min(1, 'Razão Social é obrigatória'),
@@ -16,9 +18,15 @@ const clienteFormSchema = z.object({
   telefone: z.string().optional(),
   responsavel: z.string().min(1, 'Nome do responsável é obrigatório'),
   situacao: z.enum(['liberado', 'bloqueado'] as const),
-  senha: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
-  confirmarSenha: z.string()
-}).refine((data) => data.senha === data.confirmarSenha, {
+  senha: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres').optional(),
+  confirmarSenha: z.string().optional()
+}).refine((data) => {
+  // Só valida as senhas se uma delas estiver presente
+  if (data.senha || data.confirmarSenha) {
+    return data.senha === data.confirmarSenha;
+  }
+  return true;
+}, {
   message: "As senhas não conferem",
   path: ["confirmarSenha"],
 });
@@ -29,9 +37,10 @@ interface ClienteFormProps {
   onSubmit: (data: ClienteFormData) => Promise<void>;
   defaultValues?: Partial<ClienteFormData>;
   isLoading?: boolean;
+  isEditing?: boolean;
 }
 
-export const ClienteForm = ({ onSubmit, defaultValues, isLoading }: ClienteFormProps) => {
+export const ClienteForm = ({ onSubmit, defaultValues, isLoading, isEditing }: ClienteFormProps) => {
   const form = useForm<ClienteFormData>({
     resolver: zodResolver(clienteFormSchema),
     defaultValues: {
@@ -78,19 +87,63 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading }: ClienteFormP
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input type="email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <Card className="border-blue-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Lock className="h-4 w-4 text-blue-500" />
+              <span className="text-sm font-medium text-blue-500">Informações de Acesso</span>
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Este email será usado para acessar o sistema
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {!isEditing && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="senha"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Senha</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="confirmarSenha"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirmar Senha</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         <FormField
           control={form.control}
@@ -119,38 +172,6 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading }: ClienteFormP
             </FormItem>
           )}
         />
-
-        {!defaultValues && (
-          <>
-            <FormField
-              control={form.control}
-              name="senha"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Senha</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="confirmarSenha"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmar Senha</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        )}
 
         <FormField
           control={form.control}

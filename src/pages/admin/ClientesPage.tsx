@@ -22,7 +22,6 @@ const ClientesPage = () => {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [currentCliente, setCurrentCliente] = useState<ClienteSistema | null>(null);
   
-  // Form states
   const [formRazaoSocial, setFormRazaoSocial] = useState("");
   const [formCnpj, setFormCnpj] = useState("");
   const [formEmail, setFormEmail] = useState("");
@@ -32,7 +31,6 @@ const ClientesPage = () => {
   
   const navigate = useNavigate();
 
-  // Fetch clients from Supabase
   const fetchClientes = async () => {
     try {
       const { data, error } = await supabase
@@ -42,21 +40,20 @@ const ClientesPage = () => {
 
       if (error) throw error;
       
-      // Map the Supabase data to match our ClienteSistema interface
       const mappedClientes: ClienteSistema[] = data?.map(item => ({
         id: item.id,
         razaoSocial: item.razao_social,
-        nome: item.razao_social, // Alias for backward compatibility
-        tipo: 'juridica' as TipoPessoa, // Default to juridica
-        numeroEmpregados: 0, // Default value
-        dataInclusao: Date.now(), // Default to current timestamp
+        nome: item.razao_social,
+        tipo: 'juridica' as TipoPessoa,
+        numeroEmpregados: 0,
+        dataInclusao: Date.now(),
         situacao: item.situacao as ClienteStatus,
         cnpj: item.cnpj,
-        cpfCnpj: item.cnpj, // Alias for backward compatibility
+        cpfCnpj: item.cnpj,
         email: item.email || '',
         telefone: item.telefone || '',
         responsavel: item.responsavel || '',
-        contato: item.responsavel, // Alias for backward compatibility
+        contato: item.responsavel,
         planoId: item.plano_id || undefined,
         contratoId: item.contrato_id || undefined,
       })) || [];
@@ -79,7 +76,6 @@ const ClientesPage = () => {
     try {
       setIsLoading(true);
       
-      // 1. Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.senha,
@@ -96,7 +92,6 @@ const ClientesPage = () => {
         throw new Error('Falha ao criar usuário');
       }
 
-      // 2. Insert client in clientes_sistema
       const { error: clienteError } = await supabase
         .from('clientes_sistema')
         .insert({
@@ -110,7 +105,6 @@ const ClientesPage = () => {
 
       if (clienteError) throw clienteError;
 
-      // 3. Create profile entry
       const { error: profileError } = await supabase
         .from('perfis')
         .insert({
@@ -211,12 +205,6 @@ const ClientesPage = () => {
 
   const handleOpenEditModal = (cliente: ClienteSistema) => {
     setCurrentCliente(cliente);
-    setFormRazaoSocial(cliente.razaoSocial);
-    setFormCnpj(cliente.cnpj);
-    setFormEmail(cliente.email || "");
-    setFormTelefone(cliente.telefone || "");
-    setFormResponsavel(cliente.responsavel || "");
-    setFormSituacao(cliente.situacao);
     setOpenEditModal(true);
   };
 
@@ -355,33 +343,19 @@ const ClientesPage = () => {
               Atualize as informações do cliente.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-            <div className="space-y-2">
-              <Input id="edit-razaoSocial" value={formRazaoSocial} onChange={(e) => setFormRazaoSocial(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Input id="edit-cnpj" value={formCnpj} onChange={(e) => setFormCnpj(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Input id="edit-email" type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Input id="edit-telefone" value={formTelefone} onChange={(e) => setFormTelefone(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Input id="edit-responsavel" value={formResponsavel} onChange={(e) => setFormResponsavel(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <select 
-                value={formSituacao} 
-                onChange={(e) => setFormSituacao(e.target.value as ClienteStatus)}
-              >
-                <option value="liberado">Liberado</option>
-                <option value="bloqueado">Bloqueado</option>
-              </select>
-            </div>
-          </div>
-          
+          <ClienteForm 
+            onSubmit={handleUpdateCliente}
+            defaultValues={currentCliente ? {
+              razao_social: currentCliente.razaoSocial,
+              cnpj: currentCliente.cnpj,
+              email: currentCliente.email,
+              telefone: currentCliente.telefone || '',
+              responsavel: currentCliente.responsavel,
+              situacao: currentCliente.situacao
+            } : undefined}
+            isLoading={isLoading}
+            isEditing={true}
+          />
         </DialogContent>
       </Dialog>
       
@@ -393,7 +367,6 @@ const ClientesPage = () => {
               Você está prestes a excluir o cliente "{currentCliente?.razaoSocial}". Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          
         </DialogContent>
       </Dialog>
     </AdminLayout>
