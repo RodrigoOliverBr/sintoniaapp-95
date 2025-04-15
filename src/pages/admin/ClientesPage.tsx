@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -45,8 +46,27 @@ const ClientesPage = () => {
 
       if (error) throw error;
       
-      console.log("Clientes carregados:", data);
-      setClientes(data || []);
+      // Map the Supabase data to match our ClienteSistema interface
+      const mappedClientes: ClienteSistema[] = data?.map(item => ({
+        id: item.id,
+        razaoSocial: item.razao_social,
+        nome: item.razao_social, // Alias for backward compatibility
+        tipo: 'juridica' as TipoPessoa, // Default to juridica
+        numeroEmpregados: 0, // Default value
+        dataInclusao: Date.now(), // Default to current timestamp
+        situacao: item.situacao as ClienteStatus,
+        cnpj: item.cnpj,
+        cpfCnpj: item.cnpj, // Alias for backward compatibility
+        email: item.email || '',
+        telefone: item.telefone || '',
+        responsavel: item.responsavel || '',
+        contato: item.responsavel, // Alias for backward compatibility
+        planoId: item.plano_id || undefined,
+        contratoId: item.contrato_id || undefined,
+      })) || [];
+      
+      console.log("Clientes carregados:", mappedClientes);
+      setClientes(mappedClientes);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
       toast.error("Erro ao carregar clientes");
@@ -173,9 +193,14 @@ const ClientesPage = () => {
     setOpenEditModal(true);
   };
 
+  const handleOpenDeleteModal = (cliente: ClienteSistema) => {
+    setCurrentCliente(cliente);
+    setOpenDeleteModal(true);
+  };
+
   const filteredClientes = clientes.filter(cliente => 
-    cliente.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.cnpj.toLowerCase().includes(searchTerm.toLowerCase())
+    cliente.razaoSocial?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.cnpj?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -318,7 +343,7 @@ const ClientesPage = () => {
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => handleDeleteCliente(cliente)}
+                          onClick={() => handleOpenDeleteModal(cliente)}
                         >
                           <Trash2 size={16} />
                         </Button>
