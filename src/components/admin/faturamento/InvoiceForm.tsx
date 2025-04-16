@@ -295,7 +295,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
                   <SelectValue placeholder={!formValues.clienteId ? "Selecione um cliente primeiro" : "Selecione o contrato (opcional)"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem contrato (cobrança avulsa)</SelectItem>
+                  <SelectItem value="sem-contrato">Sem contrato (cobrança avulsa)</SelectItem>
                   {filteredContratos.map((contrato) => (
                     <SelectItem key={contrato.id} value={contrato.id}>
                       {contrato.numero}
