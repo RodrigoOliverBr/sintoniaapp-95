@@ -219,32 +219,43 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
         return;
       }
 
-      const invoiceData = {
-        cliente_id: formValues.clienteId,
-        cliente_sistema_id: formValues.clienteSistemaId,
-        contrato_id: formValues.contratoId === 'sem-contrato' ? null : formValues.contratoId || null,
-        data_emissao: formValues.dataEmissao.toISOString(),
-        data_vencimento: formValues.dataVencimento.toISOString(),
-        valor: formValues.valor,
-        status: formValues.status,
-        numero: formValues.numero,
-      };
-
-      console.log("Dados a serem salvos:", invoiceData);
-
-      let result;
+      // No modo de edição, só atualizamos campos específicos que são permitidos editar
       if (editingInvoice) {
-        result = await supabase
+        const invoiceData = {
+          data_vencimento: formValues.dataVencimento.toISOString(),
+          valor: formValues.valor,
+          status: formValues.status,
+        };
+
+        console.log("Dados a serem atualizados:", invoiceData);
+
+        const result = await supabase
           .from('faturas')
           .update(invoiceData)
           .eq('id', editingInvoice.id);
+
+        if (result.error) throw result.error;
       } else {
-        result = await supabase
+        // Para novas faturas, enviamos todos os campos
+        const invoiceData = {
+          cliente_id: formValues.clienteId,
+          cliente_sistema_id: formValues.clienteSistemaId,
+          contrato_id: formValues.contratoId === 'sem-contrato' ? null : formValues.contratoId || null,
+          data_emissao: formValues.dataEmissao.toISOString(),
+          data_vencimento: formValues.dataVencimento.toISOString(),
+          valor: formValues.valor,
+          status: formValues.status,
+          numero: formValues.numero,
+        };
+
+        console.log("Dados a serem salvos:", invoiceData);
+
+        const result = await supabase
           .from('faturas')
           .insert([invoiceData]);
-      }
 
-      if (result.error) throw result.error;
+        if (result.error) throw result.error;
+      }
 
       toast.success(editingInvoice ? "Fatura atualizada com sucesso!" : "Fatura criada com sucesso!");
       onSuccess();
@@ -263,18 +274,18 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
         <DialogHeader>
           <DialogTitle>{editingInvoice ? "Editar Fatura" : "Adicionar Nova Fatura"}</DialogTitle>
           <DialogDescription>
-            {editingInvoice ? "Altere as informações da fatura." : "Preencha as informações da nova fatura."}
+            {editingInvoice ? "Altere as informações permitidas da fatura." : "Preencha as informações da nova fatura."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-4">
-            {/* Cliente Select */}
+            {/* Cliente Select - desabilitado na edição */}
             <div className="space-y-2">
               <Label htmlFor="cliente">Cliente</Label>
               <Select
                 value={formValues.clienteId}
                 onValueChange={handleClienteChange}
-                disabled={isLoading}
+                disabled={isLoading || !!editingInvoice}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o cliente" />
@@ -287,15 +298,18 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
                   ))}
                 </SelectContent>
               </Select>
+              {editingInvoice && (
+                <p className="text-sm text-muted-foreground">O cliente não pode ser alterado após a criação da fatura.</p>
+              )}
             </div>
 
-            {/* Contrato Select - Agora opcional */}
+            {/* Contrato Select - desabilitado na edição */}
             <div className="space-y-2">
               <Label htmlFor="contrato">Contrato (opcional)</Label>
               <Select
                 value={formValues.contratoId}
                 onValueChange={handleContratoChange}
-                disabled={isLoading || !formValues.clienteId}
+                disabled={isLoading || !formValues.clienteId || !!editingInvoice}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={!formValues.clienteId ? "Selecione um cliente primeiro" : "Selecione o contrato (opcional)"} />
@@ -309,10 +323,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
                   ))}
                 </SelectContent>
               </Select>
+              {editingInvoice && (
+                <p className="text-sm text-muted-foreground">O contrato não pode ser alterado após a criação da fatura.</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Data de Emissão */}
+              {/* Data de Emissão - desabilitado na edição */}
               <div className="space-y-2">
                 <Label htmlFor="dataEmissao">Data de Emissão</Label>
                 <Popover>
@@ -323,6 +340,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
                         "w-full justify-start text-left font-normal",
                         !formValues.dataEmissao && "text-muted-foreground"
                       )}
+                      disabled={!!editingInvoice}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formValues.dataEmissao ? (
@@ -336,16 +354,20 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
                     <Calendar
                       mode="single"
                       selected={formValues.dataEmissao}
-                      onSelect={(date) => date && setFormValues({ ...formValues, dataEmissao: date })}
+                      onSelect={(date) => date && !editingInvoice && setFormValues({ ...formValues, dataEmissao: date })}
                       initialFocus
                       locale={ptBR}
                       className={cn("p-3 pointer-events-auto")}
+                      disabled={!!editingInvoice}
                     />
                   </PopoverContent>
                 </Popover>
+                {editingInvoice && (
+                  <p className="text-sm text-muted-foreground">A data de emissão não pode ser alterada.</p>
+                )}
               </div>
 
-              {/* Data de Vencimento */}
+              {/* Data de Vencimento - sempre editável */}
               <div className="space-y-2">
                 <Label htmlFor="dataVencimento">Data de Vencimento</Label>
                 <Popover>
@@ -356,6 +378,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
                         "w-full justify-start text-left font-normal",
                         !formValues.dataVencimento && "text-muted-foreground"
                       )}
+                      disabled={isLoading}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formValues.dataVencimento ? (
@@ -373,6 +396,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
                       initialFocus
                       locale={ptBR}
                       className={cn("p-3 pointer-events-auto")}
+                      disabled={isLoading}
                     />
                   </PopoverContent>
                 </Popover>
@@ -380,7 +404,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Valor com formato brasileiro */}
+              {/* Valor com formato brasileiro - sempre editável */}
               <div className="space-y-2">
                 <Label htmlFor="valor">Valor (R$)</Label>
                 <Input
@@ -394,7 +418,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
                 />
               </div>
 
-              {/* Status */}
+              {/* Status - sempre editável */}
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select
@@ -416,15 +440,18 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
               </div>
             </div>
 
-            {/* Número da Fatura (editável) */}
+            {/* Número da Fatura - desabilitado na edição */}
             <div className="space-y-2">
               <Label htmlFor="numero">Número da Fatura</Label>
               <Input
                 id="numero"
                 value={formValues.numero}
-                onChange={(e) => setFormValues({ ...formValues, numero: e.target.value })}
-                disabled={isLoading}
+                onChange={(e) => !editingInvoice && setFormValues({ ...formValues, numero: e.target.value })}
+                disabled={isLoading || !!editingInvoice}
               />
+              {editingInvoice && (
+                <p className="text-sm text-muted-foreground">O número da fatura não pode ser alterado.</p>
+              )}
             </div>
           </div>
 
