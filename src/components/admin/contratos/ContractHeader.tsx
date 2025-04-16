@@ -1,16 +1,20 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CardTitle, CardDescription } from "@/components/ui/card";
-import { DialogTrigger } from "@/components/ui/dialog";
 
 interface ContractHeaderProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
+  onNewContract?: () => void;
 }
 
-const ContractHeader: React.FC<ContractHeaderProps> = ({ searchTerm, onSearchChange }) => {
+const ContractHeader: React.FC<ContractHeaderProps> = ({ 
+  searchTerm, 
+  onSearchChange,
+  onNewContract 
+}) => {
   return (
     <div className="flex items-center justify-between">
       <div>
@@ -19,9 +23,7 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ searchTerm, onSearchCha
           Cadastre e gerencie os contratos dos clientes
         </CardDescription>
       </div>
-      <DialogTrigger asChild>
-        <Button>Novo Contrato</Button>
-      </DialogTrigger>
+      <Button onClick={onNewContract}>Novo Contrato</Button>
     </div>
   );
 };

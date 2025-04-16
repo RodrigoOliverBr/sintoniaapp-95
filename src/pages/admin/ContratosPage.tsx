@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -32,7 +31,6 @@ const ContratosPage: React.FC = () => {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // Form states
   const [formClienteId, setFormClienteId] = useState("");
   const [formPlanoId, setFormPlanoId] = useState("");
   const [formDataInicio, setFormDataInicio] = useState<Date>(new Date());
@@ -44,13 +42,10 @@ const ContratosPage: React.FC = () => {
   const [formObservacoes, setFormObservacoes] = useState("");
   const [formNumeroContrato, setFormNumeroContrato] = useState("");
   
-  // Efeito para atualizar a data de fim quando a data de início mudar
   useEffect(() => {
-    // Calcula a data de fim como 12 meses após a data de início
     setFormDataFim(addMonths(formDataInicio, 12));
   }, [formDataInicio]);
 
-  // Efeito para gerar automaticamente o número do contrato ao abrir o modal
   useEffect(() => {
     if (openNewModal) {
       const ano = new Date().getFullYear();
@@ -59,7 +54,6 @@ const ContratosPage: React.FC = () => {
     }
   }, [openNewModal]);
   
-  // Efeito para atualizar o valor mensal quando o plano é selecionado
   useEffect(() => {
     if (formPlanoId) {
       const planoSelecionado = planos.find(p => p.id === formPlanoId);
@@ -70,7 +64,6 @@ const ContratosPage: React.FC = () => {
     }
   }, [formPlanoId, planos]);
   
-  // Filtragem de contratos
   const filteredContratos = contratos.filter(contrato => {
     const clienteNome = clientes.find(c => c.id === contrato.clienteSistemaId)?.razaoSocial || "";
     return clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -90,6 +83,10 @@ const ContratosPage: React.FC = () => {
     const ano = new Date().getFullYear();
     const numeroAleatorio = Math.floor(1000 + Math.random() * 9000);
     setFormNumeroContrato(`CONT-${ano}-${numeroAleatorio}`);
+  };
+  
+  const handleOpenNewModal = () => {
+    setOpenNewModal(true);
   };
   
   const handleOpenEditModal = (contrato: typeof currentContrato) => {
@@ -178,7 +175,8 @@ const ContratosPage: React.FC = () => {
         <CardHeader>
           <ContractHeader 
             searchTerm={searchTerm} 
-            onSearchChange={setSearchTerm} 
+            onSearchChange={setSearchTerm}
+            onNewContract={handleOpenNewModal}
           />
           <ContractSearch 
             searchTerm={searchTerm} 
@@ -197,7 +195,6 @@ const ContratosPage: React.FC = () => {
         </CardContent>
       </Card>
       
-      {/* Modais */}
       <Dialog open={openNewModal} onOpenChange={(open) => {
         setOpenNewModal(open);
         if (!open) clearForm();
