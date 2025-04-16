@@ -6,6 +6,8 @@ import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus } from "lucide-react";
 import { Plano } from "@/types/admin";
 import PlanosTable from "./components/PlanosTable";
 import PlanoPersistenceModal from "./components/PlanoPersistenceModal";
