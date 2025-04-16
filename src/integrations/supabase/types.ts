@@ -299,7 +299,7 @@ export type Database = {
         Row: {
           cliente_id: string
           cliente_sistema_id: string | null
-          contrato_id: string
+          contrato_id: string | null
           created_at: string
           data_emissao: string
           data_vencimento: string
@@ -313,7 +313,7 @@ export type Database = {
         Insert: {
           cliente_id: string
           cliente_sistema_id?: string | null
-          contrato_id: string
+          contrato_id?: string | null
           created_at?: string
           data_emissao?: string
           data_vencimento: string
@@ -327,7 +327,7 @@ export type Database = {
         Update: {
           cliente_id?: string
           cliente_sistema_id?: string | null
-          contrato_id?: string
+          contrato_id?: string | null
           created_at?: string
           data_emissao?: string
           data_vencimento?: string

@@ -216,7 +216,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
       const invoiceData = {
         cliente_id: formValues.clienteId,
         cliente_sistema_id: formValues.clienteSistemaId,
-        contrato_id: formValues.contratoId || null, // Agora permite null
+        contrato_id: formValues.contratoId === 'sem-contrato' ? null : formValues.contratoId, 
         data_emissao: formValues.dataEmissao.toISOString(),
         data_vencimento: formValues.dataVencimento.toISOString(),
         valor: formValues.valor,
