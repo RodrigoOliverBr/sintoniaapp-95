@@ -28,6 +28,7 @@ import {
   deleteContrato 
 } from "@/services/adminService";
 import { toast } from "sonner";
+import AdminLayout from "@/components/AdminLayout";
 
 const ContratosPage: React.FC = () => {
   const [contratos, setContratos] = useState<Contrato[]>(getContratos());
@@ -112,7 +113,7 @@ const ContratosPage: React.FC = () => {
   const handleAddContrato = () => {
     try {
       addContrato({
-        clienteSistemaId: formClienteId, // Usar clienteSistemaId em vez de clienteId
+        clienteSistemaId: formClienteId,
         planoId: formPlanoId,
         dataInicio: formDataInicio.getTime(),
         dataFim: formDataFim.getTime(),
@@ -138,7 +139,7 @@ const ContratosPage: React.FC = () => {
     try {
       updateContrato({
         ...currentContrato,
-        clienteSistemaId: formClienteId, // Usar clienteSistemaId em vez de clienteId
+        clienteSistemaId: formClienteId,
         planoId: formPlanoId,
         dataInicio: formDataInicio.getTime(),
         dataFim: formDataFim.getTime(),
@@ -171,292 +172,296 @@ const ContratosPage: React.FC = () => {
     }
   };
 
-  return (
-    <div>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Gerenciamento de Contratos</CardTitle>
-              <CardDescription>
-                Cadastre e gerencie os contratos dos clientes
-              </CardDescription>
-            </div>
-            <Dialog open={openNewModal} onOpenChange={setOpenNewModal}>
-              <DialogTrigger asChild>
-                <Button>Novo Contrato</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Adicionar Novo Contrato</DialogTitle>
-                  <DialogDescription>
-                    Preencha as informações do novo contrato.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cliente">Cliente</Label>
-                    <Select 
-                      value={formClienteId} 
-                      onValueChange={(value) => setFormClienteId(value)}
-                    >
-                      <SelectTrigger id="cliente">
-                        <SelectValue placeholder="Selecione o cliente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clientes.map(cliente => (
-                          <SelectItem key={cliente.id} value={cliente.id}>{cliente.razaoSocial}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="plano">Plano</Label>
-                    <Select 
-                      value={formPlanoId} 
-                      onValueChange={(value) => setFormPlanoId(value)}
-                    >
-                      <SelectTrigger id="plano">
-                        <SelectValue placeholder="Selecione o plano" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {planos.map(plano => (
-                          <SelectItem key={plano.id} value={plano.id}>{plano.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dataInicio">Data de Início</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-[240px] justify-start text-left font-normal",
-                            !formDataInicio && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formDataInicio ? (
-                            format(formDataInicio, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formDataInicio}
-                          onSelect={setFormDataInicio}
-                          disabled={(date) =>
-                            date > new Date()
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dataFim">Data de Fim</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-[240px] justify-start text-left font-normal",
-                            !formDataFim && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formDataFim ? (
-                            format(formDataFim, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formDataFim}
-                          onSelect={setFormDataFim}
-                          disabled={(date) =>
-                            date < formDataInicio
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dataPrimeiroVencimento">Data do Primeiro Vencimento</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-[240px] justify-start text-left font-normal",
-                            !formDataPrimeiroVencimento && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formDataPrimeiroVencimento ? (
-                            format(formDataPrimeiroVencimento, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formDataPrimeiroVencimento}
-                          onSelect={setFormDataPrimeiroVencimento}
-                          disabled={(date) =>
-                            date < new Date()
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="valorMensal">Valor Mensal</Label>
-                    <Input 
-                      id="valorMensal" 
-                      type="number" 
-                      value={formValorMensal} 
-                      onChange={(e) => setFormValorMensal(Number(e.target.value))} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select 
-                      value={formStatus} 
-                      onValueChange={(value: StatusContrato) => setFormStatus(value)}
-                    >
-                      <SelectTrigger id="status">
-                        <SelectValue placeholder="Selecione o status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ativo">Ativo</SelectItem>
-                        <SelectItem value="em-analise">Em Análise</SelectItem>
-                        <SelectItem value="cancelado">Cancelado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="taxaImplantacao">Taxa de Implantação</Label>
-                    <Input 
-                      id="taxaImplantacao" 
-                      type="number" 
-                      value={formTaxaImplantacao} 
-                      onChange={(e) => setFormTaxaImplantacao(Number(e.target.value))} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cicloFaturamento">Ciclo de Faturamento</Label>
-                    <Select 
-                      value={formCicloFaturamento} 
-                      onValueChange={(value: CicloFaturamento) => setFormCicloFaturamento(value)}
-                    >
-                      <SelectTrigger id="cicloFaturamento">
-                        <SelectValue placeholder="Selecione o ciclo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mensal">Mensal</SelectItem>
-                        <SelectItem value="trimestral">Trimestral</SelectItem>
-                        <SelectItem value="anual">Anual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="observacoes">Observações</Label>
-                    <Input id="observacoes" value={formObservacoes} onChange={(e) => setFormObservacoes(e.target.value)} />
-                  </div>
+  const ContratosContent = () => (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Gerenciamento de Contratos</CardTitle>
+            <CardDescription>
+              Cadastre e gerencie os contratos dos clientes
+            </CardDescription>
+          </div>
+          <Dialog open={openNewModal} onOpenChange={setOpenNewModal}>
+            <DialogTrigger asChild>
+              <Button>Novo Contrato</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Adicionar Novo Contrato</DialogTitle>
+                <DialogDescription>
+                  Preencha as informações do novo contrato.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cliente">Cliente</Label>
+                  <Select 
+                    value={formClienteId} 
+                    onValueChange={(value) => setFormClienteId(value)}
+                  >
+                    <SelectTrigger id="cliente">
+                      <SelectValue placeholder="Selecione o cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clientes.map(cliente => (
+                        <SelectItem key={cliente.id} value={cliente.id}>{cliente.razaoSocial}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setOpenNewModal(false)}>Cancelar</Button>
-                  <Button onClick={handleAddContrato}>Salvar</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-          <div className="pt-4">
-            <Input
-              placeholder="Buscar contrato por cliente ou número..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-xl"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
+                <div className="space-y-2">
+                  <Label htmlFor="plano">Plano</Label>
+                  <Select 
+                    value={formPlanoId} 
+                    onValueChange={(value) => setFormPlanoId(value)}
+                  >
+                    <SelectTrigger id="plano">
+                      <SelectValue placeholder="Selecione o plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {planos.map(plano => (
+                        <SelectItem key={plano.id} value={plano.id}>{plano.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dataInicio">Data de Início</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[240px] justify-start text-left font-normal",
+                          !formDataInicio && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formDataInicio ? (
+                          format(formDataInicio, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formDataInicio}
+                        onSelect={setFormDataInicio}
+                        disabled={(date) =>
+                          date > new Date()
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dataFim">Data de Fim</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[240px] justify-start text-left font-normal",
+                          !formDataFim && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formDataFim ? (
+                          format(formDataFim, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formDataFim}
+                        onSelect={setFormDataFim}
+                        disabled={(date) =>
+                          date < formDataInicio
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dataPrimeiroVencimento">Data do Primeiro Vencimento</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[240px] justify-start text-left font-normal",
+                          !formDataPrimeiroVencimento && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formDataPrimeiroVencimento ? (
+                          format(formDataPrimeiroVencimento, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formDataPrimeiroVencimento}
+                        onSelect={setFormDataPrimeiroVencimento}
+                        disabled={(date) =>
+                          date < new Date()
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="valorMensal">Valor Mensal</Label>
+                  <Input 
+                    id="valorMensal" 
+                    type="number" 
+                    value={formValorMensal} 
+                    onChange={(e) => setFormValorMensal(Number(e.target.value))} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select 
+                    value={formStatus} 
+                    onValueChange={(value: StatusContrato) => setFormStatus(value)}
+                  >
+                    <SelectTrigger id="status">
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ativo">Ativo</SelectItem>
+                      <SelectItem value="em-analise">Em Análise</SelectItem>
+                      <SelectItem value="cancelado">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="taxaImplantacao">Taxa de Implantação</Label>
+                  <Input 
+                    id="taxaImplantacao" 
+                    type="number" 
+                    value={formTaxaImplantacao} 
+                    onChange={(e) => setFormTaxaImplantacao(Number(e.target.value))} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cicloFaturamento">Ciclo de Faturamento</Label>
+                  <Select 
+                    value={formCicloFaturamento} 
+                    onValueChange={(value: CicloFaturamento) => setFormCicloFaturamento(value)}
+                  >
+                    <SelectTrigger id="cicloFaturamento">
+                      <SelectValue placeholder="Selecione o ciclo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mensal">Mensal</SelectItem>
+                      <SelectItem value="trimestral">Trimestral</SelectItem>
+                      <SelectItem value="anual">Anual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="observacoes">Observações</Label>
+                  <Input id="observacoes" value={formObservacoes} onChange={(e) => setFormObservacoes(e.target.value)} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpenNewModal(false)}>Cancelar</Button>
+                <Button onClick={handleAddContrato}>Salvar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+        <div className="pt-4">
+          <Input
+            placeholder="Buscar contrato por cliente ou número..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-xl"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Plano</TableHead>
+              <TableHead>Data de Início</TableHead>
+              <TableHead>Data de Fim</TableHead>
+              <TableHead>Valor Mensal</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredContratos.length === 0 ? (
               <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Plano</TableHead>
-                <TableHead>Data de Início</TableHead>
-                <TableHead>Data de Fim</TableHead>
-                <TableHead>Valor Mensal</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                  Nenhum contrato encontrado.
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredContratos.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                    Nenhum contrato encontrado.
+            ) : (
+              filteredContratos.map((contrato) => (
+                <TableRow key={contrato.id}>
+                  <TableCell className="font-medium">{getClienteNome(contrato.clienteSistemaId)}</TableCell>
+                  <TableCell>{getPlanoNome(contrato.planoId)}</TableCell>
+                  <TableCell>{format(new Date(contrato.dataInicio), "dd/MM/yyyy")}</TableCell>
+                  <TableCell>{format(new Date(contrato.dataFim), "dd/MM/yyyy")}</TableCell>
+                  <TableCell>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contrato.valorMensal)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={
+                        contrato.status === "ativo" ? "default" : 
+                        contrato.status === "em-analise" ? "secondary" : 
+                        "destructive"
+                      }>
+                      {contrato.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleOpenEditModal(contrato)}
+                      >
+                        <Pencil size={16} />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleOpenDeleteModal(contrato)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ) : (
-                filteredContratos.map((contrato) => (
-                  <TableRow key={contrato.id}>
-                    <TableCell className="font-medium">{getClienteNome(contrato.clienteSistemaId)}</TableCell>
-                    <TableCell>{getPlanoNome(contrato.planoId)}</TableCell>
-                    <TableCell>{format(new Date(contrato.dataInicio), "dd/MM/yyyy")}</TableCell>
-                    <TableCell>{format(new Date(contrato.dataFim), "dd/MM/yyyy")}</TableCell>
-                    <TableCell>
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contrato.valorMensal)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={
-                          contrato.status === "ativo" ? "default" : 
-                          contrato.status === "em-analise" ? "secondary" : 
-                          "destructive"
-                        }>
-                        {contrato.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleOpenEditModal(contrato)}
-                        >
-                          <Pencil size={16} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleOpenDeleteModal(contrato)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <AdminLayout title="Contratos">
+      <ContratosContent />
       
       <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
         <DialogContent className="sm:max-w-[600px]">
@@ -671,7 +676,7 @@ const ContratosPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminLayout>
   );
 };
 
