@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -8,26 +9,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2, Plus, Lock, Unlock } from "lucide-react";
-import { ClienteSistema, TipoPessoa, ClienteStatus } from "@/types/admin";
+import { Pencil, Trash2, Plus } from "lucide-react";
+import { ClienteSistema, TipoPessoa, ClienteStatus, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
 import { ClienteForm } from "@/components/admin/ClienteForm";
+import { getContratosByClienteSistemaId } from "@/services/adminService";
+
+// Interface para representar o cliente com informações do contrato
+interface ClienteComContrato extends ClienteSistema {
+  statusContrato?: StatusContrato | 'vencimento-proximo' | 'sem-contrato';
+  diasParaVencimento?: number;
+}
 
 const ClientesPage = () => {
-  const [clientes, setClientes] = useState<ClienteSistema[]>([]);
+  const [clientes, setClientes] = useState<ClienteComContrato[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [openNewModal, setOpenNewModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [currentCliente, setCurrentCliente] = useState<ClienteSistema | null>(null);
-  
-  const [formRazaoSocial, setFormRazaoSocial] = useState("");
-  const [formCnpj, setFormCnpj] = useState("");
-  const [formEmail, setFormEmail] = useState("");
-  const [formTelefone, setFormTelefone] = useState("");
-  const [formResponsavel, setFormResponsavel] = useState("");
-  const [formSituacao, setFormSituacao] = useState<ClienteStatus>("liberado");
   
   const navigate = useNavigate();
 
@@ -58,8 +59,56 @@ const ClientesPage = () => {
         contratoId: item.contrato_id || undefined,
       })) || [];
       
-      console.log("Clientes carregados:", mappedClientes);
-      setClientes(mappedClientes);
+      // Obter status do contrato para cada cliente
+      const clientesComContrato: ClienteComContrato[] = await Promise.all(
+        mappedClientes.map(async (cliente) => {
+          const contratos = getContratosByClienteSistemaId(cliente.id);
+          
+          // Se não tem contratos, define como 'sem-contrato'
+          if (!contratos || contratos.length === 0) {
+            return {
+              ...cliente,
+              statusContrato: 'sem-contrato'
+            };
+          }
+          
+          // Pega o contrato mais recente (assumindo que é o ativo)
+          const contratoAtivo = contratos.find(c => c.status === 'ativo');
+          
+          if (contratoAtivo) {
+            // Verificar se está próximo ao vencimento (45 dias)
+            const hoje = new Date();
+            const dataVencimento = new Date(contratoAtivo.dataFim);
+            const diasParaVencimento = Math.ceil((dataVencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+            
+            if (diasParaVencimento <= 45 && diasParaVencimento > 0) {
+              return {
+                ...cliente,
+                statusContrato: 'vencimento-proximo',
+                diasParaVencimento
+              };
+            }
+            
+            return {
+              ...cliente,
+              statusContrato: contratoAtivo.status as StatusContrato
+            };
+          }
+          
+          // Se tem contrato mas nenhum ativo, pega o status do mais recente
+          const contratoMaisRecente = contratos.sort((a, b) => 
+            new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime()
+          )[0];
+          
+          return {
+            ...cliente,
+            statusContrato: contratoMaisRecente.status as StatusContrato
+          };
+        })
+      );
+      
+      console.log("Clientes carregados com informações de contrato:", clientesComContrato);
+      setClientes(clientesComContrato);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
       toast.error("Erro ao carregar clientes");
@@ -208,35 +257,6 @@ const ClientesPage = () => {
     }
   };
 
-  const handleToggleStatus = async (cliente: ClienteSistema) => {
-    try {
-      const newStatus: ClienteStatus = cliente.situacao === 'liberado' ? 'bloqueado' : 'liberado';
-      
-      const { error } = await supabase
-        .from('clientes_sistema')
-        .update({ situacao: newStatus })
-        .eq('id', cliente.id);
-
-      if (error) {
-        throw new Error(handleError(error, 'Erro ao atualizar status'));
-      }
-
-      toast.success(`Cliente ${newStatus === 'liberado' ? 'liberado' : 'bloqueado'} com sucesso!`);
-      fetchClientes();
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao atualizar status do cliente");
-    }
-  };
-
-  const clearForm = () => {
-    setFormRazaoSocial("");
-    setFormCnpj("");
-    setFormEmail("");
-    setFormTelefone("");
-    setFormResponsavel("");
-    setFormSituacao("liberado");
-  };
-
   const handleOpenEditModal = (cliente: ClienteSistema) => {
     setCurrentCliente(cliente);
     setOpenEditModal(true);
@@ -245,6 +265,28 @@ const ClientesPage = () => {
   const handleOpenDeleteModal = (cliente: ClienteSistema) => {
     setCurrentCliente(cliente);
     setOpenDeleteModal(true);
+  };
+
+  // Helper para renderizar o badge de status baseado no contrato
+  const renderStatusBadge = (cliente: ClienteComContrato) => {
+    switch (cliente.statusContrato) {
+      case 'ativo':
+        return <Badge variant="default">Ativo</Badge>;
+      case 'em-analise':
+        return <Badge variant="secondary">Em análise</Badge>;
+      case 'cancelado':
+        return <Badge variant="destructive">Cancelado</Badge>;
+      case 'vencimento-proximo':
+        return <Badge variant="warning" className="bg-yellow-500 hover:bg-yellow-600">
+          Vencimento em {cliente.diasParaVencimento} dias
+        </Badge>;
+      case 'sem-contrato':
+        return <Badge variant="outline">Sem contrato</Badge>;
+      default:
+        return <Badge variant={cliente.situacao === "liberado" ? "default" : "destructive"}>
+          {cliente.situacao === "liberado" ? "Liberado" : "Bloqueado"}
+        </Badge>;
+    }
   };
 
   const filteredClientes = clientes.filter(cliente => 
@@ -328,23 +370,10 @@ const ClientesPage = () => {
                     <TableCell>{cliente.telefone}</TableCell>
                     <TableCell>{cliente.responsavel}</TableCell>
                     <TableCell>
-                      <Badge variant={cliente.situacao === "liberado" ? "default" : "destructive"}>
-                        {cliente.situacao === "liberado" ? "Liberado" : "Bloqueado"}
-                      </Badge>
+                      {renderStatusBadge(cliente)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleToggleStatus(cliente)}
-                          title={cliente.situacao === 'liberado' ? 'Bloquear Acesso' : 'Liberar Acesso'}
-                        >
-                          {cliente.situacao === 'liberado' ? 
-                            <Lock size={16} /> : 
-                            <Unlock size={16} />
-                          }
-                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon"
