@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { format } from "date-fns";
+import { format, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Check, Pencil, Trash2 } from "lucide-react";
 import { 
@@ -55,11 +55,12 @@ const ContratosPage: React.FC = () => {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [currentContrato, setCurrentContrato] = useState<Contrato | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   
   const [formClienteId, setFormClienteId] = useState("");
   const [formPlanoId, setFormPlanoId] = useState("");
   const [formDataInicio, setFormDataInicio] = useState<Date>(new Date());
-  const [formDataFim, setFormDataFim] = useState<Date>(new Date());
+  const [formDataFim, setFormDataFim] = useState<Date>(addMonths(new Date(), 12));
   const [formDataPrimeiroVencimento, setFormDataPrimeiroVencimento] = useState<Date>(new Date());
   const [formValorMensal, setFormValorMensal] = useState(0);
   const [formStatus, setFormStatus] = useState<StatusContrato>("ativo");
@@ -69,6 +70,12 @@ const ContratosPage: React.FC = () => {
   
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
+  
+  // Efeito para atualizar a data de fim quando a data de início mudar
+  useEffect(() => {
+    // Calcula a data de fim como 12 meses após a data de início
+    setFormDataFim(addMonths(formDataInicio, 12));
+  }, [formDataInicio]);
   
   // Carregando dados do Supabase
   useEffect(() => {
@@ -132,35 +139,7 @@ const ContratosPage: React.FC = () => {
         
         setPlanos(planosFormatados);
         
-        // Carregar contratos
-        const { data: contratosData, error: contratosError } = await supabase
-          .from('contratos')
-          .select('*');
-        
-        if (contratosError) {
-          console.error('Erro ao carregar contratos:', contratosError);
-          return;
-        }
-        
-        const contratosFormatados = contratosData.map(contrato => ({
-          id: contrato.id,
-          numero: contrato.numero,
-          clienteSistemaId: contrato.cliente_sistema_id || contrato.cliente_id,
-          clienteId: contrato.cliente_id,
-          planoId: contrato.plano_id,
-          dataInicio: new Date(contrato.data_inicio).getTime(),
-          dataFim: new Date(contrato.data_fim).getTime(),
-          dataPrimeiroVencimento: new Date(contrato.data_primeiro_vencimento).getTime(),
-          valorMensal: Number(contrato.valor_mensal),
-          status: contrato.status as StatusContrato,
-          taxaImplantacao: Number(contrato.taxa_implantacao),
-          observacoes: contrato.observacoes || '',
-          cicloFaturamento: contrato.ciclo_faturamento as CicloFaturamento,
-          proximaRenovacao: contrato.proxima_renovacao ? new Date(contrato.proxima_renovacao).getTime() : undefined,
-          ciclosGerados: contrato.ciclos_gerados || 0
-        }));
-        
-        setContratos(contratosFormatados);
+        await refreshContratos();
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
         toast.error('Erro ao carregar dados');
@@ -215,7 +194,7 @@ const ContratosPage: React.FC = () => {
     setFormClienteId("");
     setFormPlanoId("");
     setFormDataInicio(new Date());
-    setFormDataFim(new Date());
+    setFormDataFim(addMonths(new Date(), 12));
     setFormDataPrimeiroVencimento(new Date());
     setFormValorMensal(0);
     setFormStatus("ativo");
@@ -262,6 +241,7 @@ const ContratosPage: React.FC = () => {
     }
 
     try {
+      setIsLoading(true);
       // Gera um número de contrato baseado na data atual
       const numeroContrato = `CONT-${Date.now().toString().slice(-6)}`;
       
@@ -303,6 +283,8 @@ const ContratosPage: React.FC = () => {
     } catch (error: any) {
       console.error("Erro ao adicionar contrato:", error);
       toast.error("Erro ao adicionar contrato: " + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -310,6 +292,7 @@ const ContratosPage: React.FC = () => {
     if (!currentContrato) return;
     
     try {
+      setIsLoading(true);
       const { error } = await supabase
         .from('contratos')
         .update({
@@ -340,6 +323,8 @@ const ContratosPage: React.FC = () => {
     } catch (error: any) {
       console.error("Erro ao atualizar contrato:", error);
       toast.error("Erro ao atualizar contrato: " + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -347,6 +332,7 @@ const ContratosPage: React.FC = () => {
     if (!currentContrato) return;
     
     try {
+      setIsLoading(true);
       // Primeiro, atualiza o cliente para remover a referência ao contrato
       await supabase
         .from('clientes_sistema')
@@ -371,6 +357,8 @@ const ContratosPage: React.FC = () => {
     } catch (error: any) {
       console.error("Erro ao excluir contrato:", error);
       toast.error("Erro ao excluir contrato: " + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -384,7 +372,10 @@ const ContratosPage: React.FC = () => {
               Cadastre e gerencie os contratos dos clientes
             </CardDescription>
           </div>
-          <Dialog open={openNewModal} onOpenChange={setOpenNewModal}>
+          <Dialog open={openNewModal} onOpenChange={(open) => {
+            setOpenNewModal(open);
+            if (!open) clearForm();
+          }}>
             <DialogTrigger asChild>
               <Button>Novo Contrato</Button>
             </DialogTrigger>
@@ -401,6 +392,7 @@ const ContratosPage: React.FC = () => {
                   <Select 
                     value={formClienteId} 
                     onValueChange={(value) => setFormClienteId(value)}
+                    disabled={isLoading}
                   >
                     <SelectTrigger id="cliente">
                       <SelectValue placeholder="Selecione o cliente" />
@@ -417,6 +409,7 @@ const ContratosPage: React.FC = () => {
                   <Select 
                     value={formPlanoId} 
                     onValueChange={(value) => setFormPlanoId(value)}
+                    disabled={isLoading}
                   >
                     <SelectTrigger id="plano">
                       <SelectValue placeholder="Selecione o plano" />
@@ -433,6 +426,7 @@ const ContratosPage: React.FC = () => {
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
+                        disabled={isLoading}
                         variant={"outline"}
                         className={cn(
                           "w-full justify-start text-left font-normal",
@@ -463,6 +457,7 @@ const ContratosPage: React.FC = () => {
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
+                        disabled={isLoading}
                         variant={"outline"}
                         className={cn(
                           "w-full justify-start text-left font-normal",
@@ -496,6 +491,7 @@ const ContratosPage: React.FC = () => {
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
+                        disabled={isLoading}
                         variant={"outline"}
                         className={cn(
                           "w-full justify-start text-left font-normal",
@@ -528,6 +524,7 @@ const ContratosPage: React.FC = () => {
                     type="number" 
                     value={formValorMensal} 
                     onChange={(e) => setFormValorMensal(Number(e.target.value))} 
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -535,6 +532,7 @@ const ContratosPage: React.FC = () => {
                   <Select 
                     value={formStatus} 
                     onValueChange={(value: StatusContrato) => setFormStatus(value)}
+                    disabled={isLoading}
                   >
                     <SelectTrigger id="status">
                       <SelectValue placeholder="Selecione o status" />
@@ -553,6 +551,7 @@ const ContratosPage: React.FC = () => {
                     type="number" 
                     value={formTaxaImplantacao} 
                     onChange={(e) => setFormTaxaImplantacao(Number(e.target.value))} 
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -560,6 +559,7 @@ const ContratosPage: React.FC = () => {
                   <Select 
                     value={formCicloFaturamento} 
                     onValueChange={(value: CicloFaturamento) => setFormCicloFaturamento(value)}
+                    disabled={isLoading}
                   >
                     <SelectTrigger id="cicloFaturamento">
                       <SelectValue placeholder="Selecione o ciclo" />
@@ -573,12 +573,19 @@ const ContratosPage: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="observacoes">Observações</Label>
-                  <Input id="observacoes" value={formObservacoes} onChange={(e) => setFormObservacoes(e.target.value)} />
+                  <Input 
+                    id="observacoes" 
+                    value={formObservacoes} 
+                    onChange={(e) => setFormObservacoes(e.target.value)} 
+                    disabled={isLoading}
+                  />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setOpenNewModal(false)}>Cancelar</Button>
-                <Button onClick={handleAddContrato}>Salvar</Button>
+                <Button variant="outline" onClick={() => setOpenNewModal(false)} disabled={isLoading}>Cancelar</Button>
+                <Button onClick={handleAddContrato} disabled={isLoading}>
+                  {isLoading ? "Salvando..." : "Salvar"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -637,6 +644,7 @@ const ContratosPage: React.FC = () => {
                         variant="ghost" 
                         size="icon"
                         onClick={() => handleOpenEditModal(contrato)}
+                        disabled={isLoading}
                       >
                         <Pencil size={16} />
                       </Button>
@@ -644,6 +652,7 @@ const ContratosPage: React.FC = () => {
                         variant="ghost" 
                         size="icon"
                         onClick={() => handleOpenDeleteModal(contrato)}
+                        disabled={isLoading}
                       >
                         <Trash2 size={16} />
                       </Button>
@@ -662,7 +671,10 @@ const ContratosPage: React.FC = () => {
     <AdminLayout title="Contratos">
       <ContratosContent />
       
-      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
+      <Dialog open={openEditModal} onOpenChange={(open) => {
+        setOpenEditModal(open);
+        if (!open) clearForm();
+      }}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Editar Contrato</DialogTitle>
@@ -676,6 +688,7 @@ const ContratosPage: React.FC = () => {
               <Select 
                 value={formClienteId} 
                 onValueChange={(value) => setFormClienteId(value)}
+                disabled={isLoading}
               >
                 <SelectTrigger id="edit-cliente">
                   <SelectValue placeholder="Selecione o cliente" />
@@ -692,6 +705,7 @@ const ContratosPage: React.FC = () => {
               <Select 
                 value={formPlanoId} 
                 onValueChange={(value) => setFormPlanoId(value)}
+                disabled={isLoading}
               >
                 <SelectTrigger id="edit-plano">
                   <SelectValue placeholder="Selecione o plano" />
@@ -708,6 +722,7 @@ const ContratosPage: React.FC = () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
+                    disabled={isLoading}
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
@@ -738,6 +753,7 @@ const ContratosPage: React.FC = () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
+                    disabled={isLoading}
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
@@ -771,6 +787,7 @@ const ContratosPage: React.FC = () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
+                    disabled={isLoading}
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
@@ -803,6 +820,7 @@ const ContratosPage: React.FC = () => {
                 type="number" 
                 value={formValorMensal} 
                 onChange={(e) => setFormValorMensal(Number(e.target.value))} 
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -810,6 +828,7 @@ const ContratosPage: React.FC = () => {
               <Select 
                 value={formStatus} 
                 onValueChange={(value: StatusContrato) => setFormStatus(value)}
+                disabled={isLoading}
               >
                 <SelectTrigger id="edit-status">
                   <SelectValue placeholder="Selecione o status" />
@@ -828,6 +847,7 @@ const ContratosPage: React.FC = () => {
                 type="number" 
                 value={formTaxaImplantacao} 
                 onChange={(e) => setFormTaxaImplantacao(Number(e.target.value))} 
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -835,6 +855,7 @@ const ContratosPage: React.FC = () => {
               <Select 
                 value={formCicloFaturamento} 
                 onValueChange={(value: CicloFaturamento) => setFormCicloFaturamento(value)}
+                disabled={isLoading}
               >
                 <SelectTrigger id="edit-cicloFaturamento">
                   <SelectValue placeholder="Selecione o ciclo" />
@@ -848,12 +869,19 @@ const ContratosPage: React.FC = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-observacoes">Observações</Label>
-              <Input id="edit-observacoes" value={formObservacoes} onChange={(e) => setFormObservacoes(e.target.value)} />
+              <Input 
+                id="edit-observacoes" 
+                value={formObservacoes} 
+                onChange={(e) => setFormObservacoes(e.target.value)} 
+                disabled={isLoading}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenEditModal(false)}>Cancelar</Button>
-            <Button onClick={handleUpdateContrato}>Salvar</Button>
+            <Button variant="outline" onClick={() => setOpenEditModal(false)} disabled={isLoading}>Cancelar</Button>
+            <Button onClick={handleUpdateContrato} disabled={isLoading}>
+              {isLoading ? "Salvando..." : "Salvar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -867,8 +895,10 @@ const ContratosPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenDeleteModal(false)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDeleteContrato}>Excluir</Button>
+            <Button variant="outline" onClick={() => setOpenDeleteModal(false)} disabled={isLoading}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDeleteContrato} disabled={isLoading}>
+              {isLoading ? "Excluindo..." : "Excluir"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
