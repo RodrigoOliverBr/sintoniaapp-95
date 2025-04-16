@@ -3,7 +3,8 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, FileCheck, FileX, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Pencil, Trash2, FileCheck, FileX } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Fatura, StatusFatura, BatchSelection } from "@/types/admin";
@@ -79,11 +80,10 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
       <TableHeader>
         <TableRow>
           <TableHead className="w-12">
-            <input 
-              type="checkbox" 
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            <Checkbox 
               checked={allSelected}
-              onChange={(e) => onSelectAll(e.target.checked)}
+              onCheckedChange={(checked) => onSelectAll(checked === true)}
+              aria-label="Selecionar todas"
             />
           </TableHead>
           <TableHead>Número</TableHead>
@@ -100,11 +100,10 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
         {invoices.map((invoice) => (
           <TableRow key={invoice.id}>
             <TableCell>
-              <input 
-                type="checkbox" 
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              <Checkbox 
                 checked={!!selectedInvoices[invoice.id]}
-                onChange={(e) => onSelectInvoice(invoice.id, e.target.checked)}
+                onCheckedChange={(checked) => onSelectInvoice(invoice.id, checked === true)}
+                aria-label={`Selecionar fatura ${invoice.numero}`}
               />
             </TableCell>
             <TableCell className="font-medium">{invoice.numero}</TableCell>

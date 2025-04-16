@@ -63,6 +63,13 @@ const InvoiceFilters: React.FC<FilterProps> = ({ onFilterChange }) => {
     onFilterChange(filters);
   };
 
+  const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onFilterChange(filters);
+    }
+  };
+
   return (
     <div className="flex flex-col space-y-4">
       <div className="flex items-end space-x-2">
@@ -75,6 +82,7 @@ const InvoiceFilters: React.FC<FilterProps> = ({ onFilterChange }) => {
                 placeholder="Buscar por cliente, número da fatura ou número do contrato..." 
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
+                onKeyDown={handleSearchInputKeyDown}
                 className="pl-8 w-full"
               />
             </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -69,7 +68,6 @@ const InvoiceDashboard: React.FC = () => {
 
       if (error) throw error;
 
-      // Map the data to match our Fatura type
       const mappedFaturas: Fatura[] = faturasData.map(item => ({
         id: item.id,
         numero: item.numero,
@@ -99,23 +97,20 @@ const InvoiceDashboard: React.FC = () => {
   const applyFilters = () => {
     let result = [...faturas];
 
-    // Apply search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       result = result.filter(
         (fatura) =>
-          fatura.clienteName?.toLowerCase().includes(searchLower) ||
+          (fatura.clienteName?.toLowerCase().includes(searchLower)) ||
           fatura.numero.toLowerCase().includes(searchLower) ||
           (fatura.contratoNumero && fatura.contratoNumero.toLowerCase().includes(searchLower))
       );
     }
 
-    // Apply status filter
     if (filters.status !== "all") {
       result = result.filter((fatura) => fatura.status === filters.status);
     }
 
-    // Apply year filter
     if (filters.year) {
       result = result.filter((fatura) => {
         const year = new Date(fatura.dataVencimento).getFullYear().toString();
@@ -123,7 +118,6 @@ const InvoiceDashboard: React.FC = () => {
       });
     }
 
-    // Apply month filter
     if (filters.month !== "all") {
       result = result.filter((fatura) => {
         const month = new Date(fatura.dataVencimento).getMonth() + 1;
