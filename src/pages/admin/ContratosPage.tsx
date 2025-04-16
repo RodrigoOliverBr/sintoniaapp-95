@@ -265,23 +265,23 @@ const ContratosPage: React.FC = () => {
       // Gera um número de contrato baseado na data atual
       const numeroContrato = `CONT-${Date.now().toString().slice(-6)}`;
       
+      // Corrigido: Adicionando o campo cliente_id e cliente_sistema_id
       const { data, error } = await supabase
         .from('contratos')
-        .insert([
-          {
-            numero: numeroContrato,
-            cliente_sistema_id: formClienteId,
-            plano_id: formPlanoId,
-            data_inicio: formDataInicio.toISOString(),
-            data_fim: formDataFim.toISOString(),
-            data_primeiro_vencimento: formDataPrimeiroVencimento.toISOString(),
-            valor_mensal: formValorMensal,
-            status: formStatus,
-            taxa_implantacao: formTaxaImplantacao,
-            observacoes: formObservacoes,
-            ciclo_faturamento: formCicloFaturamento
-          }
-        ])
+        .insert({
+          numero: numeroContrato,
+          cliente_sistema_id: formClienteId,
+          cliente_id: formClienteId, // Usando o mesmo ID do clienteSistema para o cliente_id
+          plano_id: formPlanoId,
+          data_inicio: formDataInicio.toISOString(),
+          data_fim: formDataFim.toISOString(),
+          data_primeiro_vencimento: formDataPrimeiroVencimento.toISOString(),
+          valor_mensal: formValorMensal,
+          status: formStatus,
+          taxa_implantacao: formTaxaImplantacao,
+          observacoes: formObservacoes,
+          ciclo_faturamento: formCicloFaturamento
+        })
         .select();
 
       if (error) {
@@ -314,6 +314,7 @@ const ContratosPage: React.FC = () => {
         .from('contratos')
         .update({
           cliente_sistema_id: formClienteId,
+          cliente_id: formClienteId, // Corrigido: Garantindo que cliente_id seja preenchido
           plano_id: formPlanoId,
           data_inicio: formDataInicio.toISOString(),
           data_fim: formDataFim.toISOString(),
