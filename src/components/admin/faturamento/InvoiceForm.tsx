@@ -57,6 +57,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
   const [filteredContratos, setFilteredContratos] = useState<Contrato[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [valorFormatado, setValorFormatado] = useState("");
+  const [selectedClienteName, setSelectedClienteName] = useState<string>("");
 
   const [formValues, setFormValues] = useState<FormValues>({
     clienteId: "",
@@ -88,6 +89,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
         
         // Formatar o valor da fatura para exibição
         setValorFormatado(formatarValorParaExibicao(editingInvoice.valor || 0));
+        
+        // Set the client name if editing
+        setSelectedClienteName(editingInvoice.clienteName || "");
       } else {
         // Reset form for new invoice
         setFormValues({
@@ -102,6 +106,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
         });
         
         setValorFormatado("");
+        setSelectedClienteName("");
       }
     }
   }, [open, editingInvoice]);
@@ -110,10 +115,16 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
     if (formValues.clienteId) {
       const clienteContratos = contratos.filter(contrato => contrato.cliente_id === formValues.clienteId);
       setFilteredContratos(clienteContratos);
+      
+      // Update selected client name when clienteId changes
+      const selectedCliente = clientes.find(cliente => cliente.id === formValues.clienteId);
+      if (selectedCliente) {
+        setSelectedClienteName(selectedCliente.razao_social);
+      }
     } else {
       setFilteredContratos([]);
     }
-  }, [formValues.clienteId, contratos]);
+  }, [formValues.clienteId, contratos, clientes]);
 
   const fetchClientes = async () => {
     try {
@@ -268,6 +279,16 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
     }
   };
 
+  // Function to get contract number display for read-only view
+  const getContratoDisplay = () => {
+    if (editingInvoice?.contratoNumero) {
+      return editingInvoice.contratoNumero;
+    } else if (formValues.contratoId === 'sem-contrato') {
+      return "Sem contrato (cobrança avulsa)";
+    }
+    return "Não especificado";
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -282,49 +303,71 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
             {/* Cliente Select - desabilitado na edição */}
             <div className="space-y-2">
               <Label htmlFor="cliente">Cliente</Label>
-              <Select
-                value={formValues.clienteId}
-                onValueChange={handleClienteChange}
-                disabled={isLoading || !!editingInvoice}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clientes.map((cliente) => (
-                    <SelectItem key={cliente.id} value={cliente.id}>
-                      {cliente.razao_social}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {editingInvoice && (
-                <p className="text-sm text-muted-foreground">O cliente não pode ser alterado após a criação da fatura.</p>
+              {editingInvoice ? (
+                <div>
+                  <Input 
+                    value={selectedClienteName}
+                    readOnly
+                    disabled
+                    className="bg-gray-100"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    O cliente não pode ser alterado após a criação da fatura.
+                  </p>
+                </div>
+              ) : (
+                <Select
+                  value={formValues.clienteId}
+                  onValueChange={handleClienteChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientes.map((cliente) => (
+                      <SelectItem key={cliente.id} value={cliente.id}>
+                        {cliente.razao_social}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
 
             {/* Contrato Select - desabilitado na edição */}
             <div className="space-y-2">
               <Label htmlFor="contrato">Contrato (opcional)</Label>
-              <Select
-                value={formValues.contratoId}
-                onValueChange={handleContratoChange}
-                disabled={isLoading || !formValues.clienteId || !!editingInvoice}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={!formValues.clienteId ? "Selecione um cliente primeiro" : "Selecione o contrato (opcional)"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sem-contrato">Sem contrato (cobrança avulsa)</SelectItem>
-                  {filteredContratos.map((contrato) => (
-                    <SelectItem key={contrato.id} value={contrato.id}>
-                      {contrato.numero}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {editingInvoice && (
-                <p className="text-sm text-muted-foreground">O contrato não pode ser alterado após a criação da fatura.</p>
+              {editingInvoice ? (
+                <div>
+                  <Input 
+                    value={getContratoDisplay()}
+                    readOnly
+                    disabled
+                    className="bg-gray-100"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    O contrato não pode ser alterado após a criação da fatura.
+                  </p>
+                </div>
+              ) : (
+                <Select
+                  value={formValues.contratoId}
+                  onValueChange={handleContratoChange}
+                  disabled={isLoading || !formValues.clienteId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={!formValues.clienteId ? "Selecione um cliente primeiro" : "Selecione o contrato (opcional)"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sem-contrato">Sem contrato (cobrança avulsa)</SelectItem>
+                    {filteredContratos.map((contrato) => (
+                      <SelectItem key={contrato.id} value={contrato.id}>
+                        {contrato.numero}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
 
@@ -332,38 +375,49 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
               {/* Data de Emissão - desabilitado na edição */}
               <div className="space-y-2">
                 <Label htmlFor="dataEmissao">Data de Emissão</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formValues.dataEmissao && "text-muted-foreground"
-                      )}
-                      disabled={!!editingInvoice}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formValues.dataEmissao ? (
-                        format(formValues.dataEmissao, "dd/MM/yyyy", { locale: ptBR })
-                      ) : (
-                        <span>Selecione uma data</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formValues.dataEmissao}
-                      onSelect={(date) => date && !editingInvoice && setFormValues({ ...formValues, dataEmissao: date })}
-                      initialFocus
-                      locale={ptBR}
-                      className={cn("p-3 pointer-events-auto")}
-                      disabled={!!editingInvoice}
+                {editingInvoice ? (
+                  <div>
+                    <Input 
+                      value={format(formValues.dataEmissao, "dd/MM/yyyy", { locale: ptBR })}
+                      readOnly
+                      disabled
+                      className="bg-gray-100"
                     />
-                  </PopoverContent>
-                </Popover>
-                {editingInvoice && (
-                  <p className="text-sm text-muted-foreground">A data de emissão não pode ser alterada.</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      A data de emissão não pode ser alterada.
+                    </p>
+                  </div>
+                ) : (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !formValues.dataEmissao && "text-muted-foreground"
+                        )}
+                        disabled={isLoading}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formValues.dataEmissao ? (
+                          format(formValues.dataEmissao, "dd/MM/yyyy", { locale: ptBR })
+                        ) : (
+                          <span>Selecione uma data</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formValues.dataEmissao}
+                        onSelect={(date) => date && setFormValues({ ...formValues, dataEmissao: date })}
+                        initialFocus
+                        locale={ptBR}
+                        className={cn("p-3 pointer-events-auto")}
+                        disabled={isLoading}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 )}
               </div>
 
@@ -443,14 +497,25 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
             {/* Número da Fatura - desabilitado na edição */}
             <div className="space-y-2">
               <Label htmlFor="numero">Número da Fatura</Label>
-              <Input
-                id="numero"
-                value={formValues.numero}
-                onChange={(e) => !editingInvoice && setFormValues({ ...formValues, numero: e.target.value })}
-                disabled={isLoading || !!editingInvoice}
-              />
-              {editingInvoice && (
-                <p className="text-sm text-muted-foreground">O número da fatura não pode ser alterado.</p>
+              {editingInvoice ? (
+                <div>
+                  <Input 
+                    value={formValues.numero}
+                    readOnly
+                    disabled
+                    className="bg-gray-100"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    O número da fatura não pode ser alterado.
+                  </p>
+                </div>
+              ) : (
+                <Input
+                  id="numero"
+                  value={formValues.numero}
+                  onChange={(e) => setFormValues({ ...formValues, numero: e.target.value })}
+                  disabled={isLoading}
+                />
               )}
             </div>
           </div>
