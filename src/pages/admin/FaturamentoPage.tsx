@@ -6,7 +6,9 @@ import InvoiceDashboard from "@/components/admin/faturamento/InvoiceDashboard";
 const FaturamentoPage = () => {
   return (
     <AdminLayout title="Faturamento">
-      <InvoiceDashboard />
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <InvoiceDashboard />
+      </div>
     </AdminLayout>
   );
 };
