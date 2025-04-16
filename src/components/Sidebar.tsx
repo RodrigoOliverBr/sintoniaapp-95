@@ -15,6 +15,9 @@ const Sidebar = () => {
     window.location.href = "/login";
   };
 
+  // Verificação se está em uma rota de admin ou cliente
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   return (
     <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r bg-white md:flex">
       <div className="flex h-16 items-center justify-center border-b px-6">
