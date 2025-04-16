@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Fatura, StatusFatura } from "@/types/admin";
+import { Fatura, StatusFatura, BatchSelection } from "@/types/admin";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 import InvoiceForm from "./InvoiceForm";
 import InvoiceTable from "./InvoiceTable";
@@ -18,6 +19,9 @@ const InvoiceDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Fatura | null>(null);
+  const [selectedInvoices, setSelectedInvoices] = useState<BatchSelection>({});
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [batchDeleteMode, setBatchDeleteMode] = useState(false);
   const [summaryData, setSummaryData] = useState({
     totalValue: 0,
     totalCount: 0,
@@ -77,11 +81,13 @@ const InvoiceDashboard: React.FC = () => {
         valor: Number(item.valor),
         status: item.status as StatusFatura,
         clienteName: item.clientes_sistema?.razao_social,
-        contratoNumero: item.contratos?.numero
+        contratoNumero: item.contratos?.numero,
+        referencia: item.referencia || ""
       }));
 
       setFaturas(mappedFaturas);
       setFilteredFaturas(mappedFaturas);
+      setSelectedInvoices({});
       setIsLoading(false);
     } catch (error) {
       console.error('Erro ao carregar faturas:', error);
@@ -100,7 +106,7 @@ const InvoiceDashboard: React.FC = () => {
         (fatura) =>
           fatura.clienteName?.toLowerCase().includes(searchLower) ||
           fatura.numero.toLowerCase().includes(searchLower) ||
-          fatura.contratoNumero?.toLowerCase().includes(searchLower)
+          (fatura.contratoNumero && fatura.contratoNumero.toLowerCase().includes(searchLower))
       );
     }
 
@@ -173,20 +179,9 @@ const InvoiceDashboard: React.FC = () => {
   };
 
   const handleDelete = async (invoice: Fatura) => {
-    try {
-      const { error } = await supabase
-        .from('faturas')
-        .delete()
-        .eq('id', invoice.id);
-
-      if (error) throw error;
-      
-      toast.success("Fatura excluída com sucesso");
-      fetchFaturas();
-    } catch (error) {
-      console.error('Erro ao excluir fatura:', error);
-      toast.error("Erro ao excluir fatura");
-    }
+    setBatchDeleteMode(false);
+    setSelectedInvoices({ [invoice.id]: true });
+    setConfirmDeleteOpen(true);
   };
 
   const handleStatusChange = async (invoice: Fatura, newStatus: StatusFatura) => {
@@ -206,10 +201,62 @@ const InvoiceDashboard: React.FC = () => {
     }
   };
 
+  const handleBatchDelete = async () => {
+    setIsLoading(true);
+    try {
+      const idsToDelete = Object.keys(selectedInvoices).filter(id => selectedInvoices[id]);
+      
+      if (idsToDelete.length === 0) {
+        toast.error("Nenhuma fatura selecionada");
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('faturas')
+        .delete()
+        .in('id', idsToDelete);
+
+      if (error) throw error;
+      
+      toast.success(`${idsToDelete.length} faturas excluídas com sucesso`);
+      fetchFaturas();
+      setConfirmDeleteOpen(false);
+    } catch (error) {
+      console.error('Erro ao excluir faturas:', error);
+      toast.error("Erro ao excluir faturas");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectInvoice = (id: string, selected: boolean) => {
+    setSelectedInvoices(prev => ({
+      ...prev,
+      [id]: selected
+    }));
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    const newSelection: BatchSelection = {};
+    
+    filteredFaturas.forEach(fatura => {
+      newSelection[fatura.id] = selected;
+    });
+    
+    setSelectedInvoices(newSelection);
+  };
+
   const addNewInvoice = () => {
     setEditingInvoice(null);
     setFormOpen(true);
   };
+
+  const getSelectedCount = () => {
+    return Object.values(selectedInvoices).filter(Boolean).length;
+  };
+
+  const allSelected = filteredFaturas.length > 0 && 
+    filteredFaturas.every(fatura => selectedInvoices[fatura.id]);
 
   return (
     <div>
@@ -218,10 +265,25 @@ const InvoiceDashboard: React.FC = () => {
           <h1 className="text-2xl font-bold">Gerenciamento de Faturas</h1>
           <p className="text-gray-600">Cadastre e gerencie as faturas dos clientes</p>
         </div>
-        <Button className="flex items-center gap-1" onClick={addNewInvoice}>
-          <Plus size={16} />
-          Nova Fatura
-        </Button>
+        <div className="flex items-center gap-2">
+          {getSelectedCount() > 0 && (
+            <Button 
+              variant="destructive" 
+              className="flex items-center gap-1" 
+              onClick={() => {
+                setBatchDeleteMode(true);
+                setConfirmDeleteOpen(true);
+              }}
+            >
+              <Trash2 size={16} />
+              Excluir {getSelectedCount()} selecionadas
+            </Button>
+          )}
+          <Button className="flex items-center gap-1" onClick={addNewInvoice}>
+            <Plus size={16} />
+            Nova Fatura
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="faturas" className="space-y-4">
@@ -250,6 +312,10 @@ const InvoiceDashboard: React.FC = () => {
             onDelete={handleDelete}
             onStatusChange={handleStatusChange}
             isLoading={isLoading}
+            selectedInvoices={selectedInvoices}
+            onSelectInvoice={handleSelectInvoice}
+            onSelectAll={handleSelectAll}
+            allSelected={allSelected}
           />
         </TabsContent>
 
@@ -266,6 +332,38 @@ const InvoiceDashboard: React.FC = () => {
         onSuccess={fetchFaturas}
         editingInvoice={editingInvoice}
       />
+
+      <AlertDialog 
+        open={confirmDeleteOpen} 
+        onOpenChange={setConfirmDeleteOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {batchDeleteMode 
+                ? `Excluir ${getSelectedCount()} faturas selecionadas?`
+                : "Excluir fatura?"
+              }
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {batchDeleteMode 
+                ? "Esta ação não pode ser desfeita. As faturas selecionadas serão excluídas permanentemente."
+                : "Esta ação não pode ser desfeita. A fatura será excluída permanentemente."
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBatchDelete}
+              disabled={isLoading} 
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isLoading ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

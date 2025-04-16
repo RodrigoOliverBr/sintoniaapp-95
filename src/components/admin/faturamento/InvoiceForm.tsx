@@ -151,7 +151,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
       currency: 'BRL',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    });
+    }).replace('R$', '').trim();
   };
 
   const parseValorParaNumero = (valorFormatado: string): number => {
@@ -192,7 +192,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
   };
 
   const handleClienteChange = (value: string) => {
-    const cliente = clientes.find(c => c.id === value);
     setFormValues({
       ...formValues,
       clienteId: value,
@@ -213,6 +212,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
     setIsLoading(true);
 
     try {
+      // Validação básica
+      if (!formValues.clienteId) {
+        toast.error("Cliente é obrigatório");
+        setIsLoading(false);
+        return;
+      }
+
       const invoiceData = {
         cliente_id: formValues.clienteId,
         cliente_sistema_id: formValues.clienteSistemaId,
@@ -380,7 +386,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
                 <Input
                   type="text"
                   id="valor"
-                  value={valorFormatado}
+                  value={`R$ ${valorFormatado}`}
                   onChange={handleValorChange}
                   placeholder="R$ 0,00"
                   disabled={isLoading}

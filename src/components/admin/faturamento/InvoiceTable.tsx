@@ -3,10 +3,10 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, FileCheck, FileX } from "lucide-react";
+import { Pencil, Trash2, FileCheck, FileX, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Fatura, StatusFatura } from "@/types/admin";
+import { Fatura, StatusFatura, BatchSelection } from "@/types/admin";
 
 interface InvoiceTableProps {
   invoices: Fatura[];
@@ -14,6 +14,10 @@ interface InvoiceTableProps {
   onDelete: (invoice: Fatura) => void;
   onStatusChange: (invoice: Fatura, newStatus: StatusFatura) => void;
   isLoading: boolean;
+  selectedInvoices: BatchSelection;
+  onSelectInvoice: (id: string, selected: boolean) => void;
+  onSelectAll: (selected: boolean) => void;
+  allSelected: boolean;
 }
 
 const InvoiceTable: React.FC<InvoiceTableProps> = ({ 
@@ -21,7 +25,11 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
   onEdit, 
   onDelete, 
   onStatusChange,
-  isLoading
+  isLoading,
+  selectedInvoices,
+  onSelectInvoice,
+  onSelectAll,
+  allSelected
 }) => {
   const getStatusBadgeVariant = (status: StatusFatura) => {
     switch (status) {
@@ -74,6 +82,8 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
             <input 
               type="checkbox" 
               className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              checked={allSelected}
+              onChange={(e) => onSelectAll(e.target.checked)}
             />
           </TableHead>
           <TableHead>Número</TableHead>
@@ -93,6 +103,8 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
               <input 
                 type="checkbox" 
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                checked={!!selectedInvoices[invoice.id]}
+                onChange={(e) => onSelectInvoice(invoice.id, e.target.checked)}
               />
             </TableCell>
             <TableCell className="font-medium">{invoice.numero}</TableCell>

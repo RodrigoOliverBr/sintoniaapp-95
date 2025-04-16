@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 
 interface FilterProps {
   onFilterChange: (filters: Filters) => void;
@@ -68,13 +68,16 @@ const InvoiceFilters: React.FC<FilterProps> = ({ onFilterChange }) => {
       <div className="flex items-end space-x-2">
         <div className="flex-1">
           <form onSubmit={handleSearch}>
-            <Input 
-              type="text" 
-              placeholder="Buscar fatura por cliente ou número..." 
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full"
-            />
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+              <Input 
+                type="text" 
+                placeholder="Buscar por cliente, número da fatura ou número do contrato..." 
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                className="pl-8 w-full"
+              />
+            </div>
           </form>
         </div>
         
@@ -132,7 +135,8 @@ const InvoiceFilters: React.FC<FilterProps> = ({ onFilterChange }) => {
           </Select>
         </div>
         
-        <Button onClick={handleSearch} type="submit">
+        <Button type="submit" onClick={handleSearch}>
+          <Filter className="mr-2 h-4 w-4" />
           Filtrar
         </Button>
       </div>
