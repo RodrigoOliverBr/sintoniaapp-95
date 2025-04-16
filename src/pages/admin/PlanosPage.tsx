@@ -1,47 +1,22 @@
 
 import React, { useState, useEffect } from "react";
-import AdminLayout from "@/components/AdminLayout";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Pencil, Trash2, Plus, X, Check, CalendarIcon } from "lucide-react";
-import { Plano } from "@/types/admin";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import AdminLayout from "@/components/AdminLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Plano } from "@/types/admin";
+import PlanosTable from "./components/PlanosTable";
+import PlanoPersistenceModal from "./components/PlanoPersistenceModal";
 
 const PlanosPage: React.FC = () => {
   const [planos, setPlanos] = useState<Plano[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [openNewModal, setOpenNewModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [currentPlano, setCurrentPlano] = useState<Plano | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  
-  // Form fields
-  const [formNome, setFormNome] = useState("");
-  const [formDescricao, setFormDescricao] = useState("");
-  const [formValorMensal, setFormValorMensal] = useState(0);
-  const [formValorImplantacao, setFormValorImplantacao] = useState(0);
-  const [formLimiteEmpresas, setFormLimiteEmpresas] = useState(1);
-  const [formEmpresasIlimitadas, setFormEmpresasIlimitadas] = useState(false);
-  const [formLimiteEmpregados, setFormLimiteEmpregados] = useState(10);
-  const [formEmpregadosIlimitados, setFormEmpregadosIlimitados] = useState(false);
-  const [formDataValidade, setFormDataValidade] = useState<Date | null>(null);
-  const [formSemVencimento, setFormSemVencimento] = useState(false);
-  const [formAtivo, setFormAtivo] = useState(true);
 
   useEffect(() => {
     fetchPlanos();
@@ -49,15 +24,9 @@ const PlanosPage: React.FC = () => {
 
   const fetchPlanos = async () => {
     try {
-      const { data, error } = await supabase
-        .from('planos')
-        .select('*');
+      const { data, error } = await supabase.from('planos').select('*');
+      if (error) throw error;
 
-      if (error) {
-        throw error;
-      }
-
-      // Transform the data to match our Plano interface
       const transformedPlanos: Plano[] = data.map(item => ({
         id: item.id,
         nome: item.nome,
@@ -80,34 +49,26 @@ const PlanosPage: React.FC = () => {
     }
   };
 
-  const handleAddPlano = async () => {
+  const handleAddPlano = async (novoPlanoDados: Omit<Plano, 'id'>) => {
     try {
-      // Transform data to match Supabase table structure
       const newPlano = {
-        nome: formNome,
-        descricao: formDescricao,
-        valor_mensal: formValorMensal,
-        valor_implantacao: formValorImplantacao,
-        limite_empresas: formEmpresasIlimitadas ? null : formLimiteEmpresas,
-        empresas_ilimitadas: formEmpresasIlimitadas,
-        limite_empregados: formEmpregadosIlimitados ? null : formLimiteEmpregados,
-        empregados_ilimitados: formEmpregadosIlimitados,
-        data_validade: formSemVencimento ? null : (formDataValidade ? formDataValidade.toISOString() : null),
-        sem_vencimento: formSemVencimento,
-        ativo: formAtivo
+        nome: novoPlanoDados.nome,
+        descricao: novoPlanoDados.descricao,
+        valor_mensal: novoPlanoDados.valorMensal,
+        valor_implantacao: novoPlanoDados.valorImplantacao,
+        limite_empresas: novoPlanoDados.empresasIlimitadas ? null : novoPlanoDados.limiteEmpresas,
+        empresas_ilimitadas: novoPlanoDados.empresasIlimitadas,
+        limite_empregados: novoPlanoDados.empregadosIlimitados ? null : novoPlanoDados.limiteEmpregados,
+        empregados_ilimitados: novoPlanoDados.empregadosIlimitados,
+        data_validade: novoPlanoDados.semVencimento ? null : (novoPlanoDados.dataValidade ? new Date(novoPlanoDados.dataValidade).toISOString() : null),
+        sem_vencimento: novoPlanoDados.semVencimento,
+        ativo: novoPlanoDados.ativo
       };
 
-      const { data, error } = await supabase
-        .from('planos')
-        .insert([newPlano])
-        .select();
+      const { data, error } = await supabase.from('planos').insert([newPlano]).select();
 
-      if (error) {
-        console.error('Erro detalhado:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      // Add the new plano to state after successful insertion
       if (data && data.length > 0) {
         const addedPlano: Plano = {
           id: data[0].id,
@@ -125,36 +86,30 @@ const PlanosPage: React.FC = () => {
         };
         
         setPlanos(prevPlanos => [...prevPlanos, addedPlano]);
-        setOpenNewModal(false);
-        clearForm();
         toast.success('Plano adicionado com sucesso!');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao adicionar plano:', error);
-      if (error.code === '42501') {
-        toast.error('Erro de permissão: você não tem autorização para adicionar planos.');
-      } else {
-        toast.error('Erro ao adicionar plano.');
-      }
+      toast.error('Erro ao adicionar plano.');
     }
   };
 
-  const handleUpdatePlano = async () => {
+  const handleUpdatePlano = async (planoDados: Omit<Plano, 'id'>) => {
     if (!currentPlano) return;
 
     try {
       const updatedPlano = {
-        nome: formNome,
-        descricao: formDescricao,
-        valor_mensal: formValorMensal,
-        valor_implantacao: formValorImplantacao,
-        limite_empresas: formEmpresasIlimitadas ? null : formLimiteEmpresas,
-        empresas_ilimitadas: formEmpresasIlimitadas,
-        limite_empregados: formEmpregadosIlimitados ? null : formLimiteEmpregados,
-        empregados_ilimitados: formEmpregadosIlimitados,
-        data_validade: formSemVencimento ? null : (formDataValidade ? formDataValidade.toISOString() : null),
-        sem_vencimento: formSemVencimento,
-        ativo: formAtivo
+        nome: planoDados.nome,
+        descricao: planoDados.descricao,
+        valor_mensal: planoDados.valorMensal,
+        valor_implantacao: planoDados.valorImplantacao,
+        limite_empresas: planoDados.empresasIlimitadas ? null : planoDados.limiteEmpresas,
+        empresas_ilimitadas: planoDados.empresasIlimitadas,
+        limite_empregados: planoDados.empregadosIlimitados ? null : planoDados.limiteEmpregados,
+        empregados_ilimitados: planoDados.empregadosIlimitados,
+        data_validade: planoDados.semVencimento ? null : (planoDados.dataValidade ? new Date(planoDados.dataValidade).toISOString() : null),
+        sem_vencimento: planoDados.semVencimento,
+        ativo: planoDados.ativo
       };
 
       const { error } = await supabase
@@ -162,40 +117,21 @@ const PlanosPage: React.FC = () => {
         .update(updatedPlano)
         .eq('id', currentPlano.id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      // Update the plano in state
       const updatedPlanoObj: Plano = {
         ...currentPlano,
-        nome: formNome,
-        descricao: formDescricao,
-        valorMensal: formValorMensal,
-        valorImplantacao: formValorImplantacao,
-        limiteEmpresas: formEmpresasIlimitadas ? 0 : formLimiteEmpresas,
-        empresasIlimitadas: formEmpresasIlimitadas,
-        limiteEmpregados: formEmpregadosIlimitados ? 0 : formLimiteEmpregados,
-        empregadosIlimitados: formEmpregadosIlimitados,
-        dataValidade: formSemVencimento ? null : (formDataValidade ? formDataValidade.getTime() : null),
-        semVencimento: formSemVencimento,
-        ativo: formAtivo
+        ...planoDados
       };
       
       setPlanos(prevPlanos => 
         prevPlanos.map(plano => plano.id === currentPlano.id ? updatedPlanoObj : plano)
       );
       
-      setOpenEditModal(false);
-      clearForm();
       toast.success('Plano atualizado com sucesso!');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao atualizar plano:', error);
-      if (error.code === '42501') {
-        toast.error('Erro de permissão: você não tem autorização para atualizar planos.');
-      } else {
-        toast.error('Erro ao atualizar plano.');
-      }
+      toast.error('Erro ao atualizar plano.');
     }
   };
 
@@ -208,78 +144,20 @@ const PlanosPage: React.FC = () => {
         .delete()
         .eq('id', currentPlano.id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setPlanos(prevPlanos => prevPlanos.filter(plano => plano.id !== currentPlano.id));
-      setOpenDeleteModal(false);
       toast.success('Plano excluído com sucesso!');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao excluir plano:', error);
-      if (error.code === '42501') {
-        toast.error('Erro de permissão: você não tem autorização para excluir planos.');
-      } else {
-        toast.error('Erro ao excluir plano.');
-      }
+      toast.error('Erro ao excluir plano.');
     }
   };
 
-  const clearForm = () => {
-    setFormNome("");
-    setFormDescricao("");
-    setFormValorMensal(0);
-    setFormValorImplantacao(0);
-    setFormLimiteEmpresas(1);
-    setFormEmpresasIlimitadas(false);
-    setFormLimiteEmpregados(10);
-    setFormEmpregadosIlimitados(false);
-    setFormDataValidade(null);
-    setFormSemVencimento(false);
-    setFormAtivo(true);
-  };
-  
-  const handleOpenEditModal = (plano: Plano) => {
-    setCurrentPlano(plano);
-    setFormNome(plano.nome);
-    setFormDescricao(plano.descricao || "");
-    setFormValorMensal(plano.valorMensal);
-    setFormValorImplantacao(plano.valorImplantacao);
-    setFormLimiteEmpresas(plano.limiteEmpresas || 1);
-    setFormEmpresasIlimitadas(plano.empresasIlimitadas);
-    setFormLimiteEmpregados(plano.limiteEmpregados || 10);
-    setFormEmpregadosIlimitados(plano.empregadosIlimitados);
-    setFormDataValidade(plano.dataValidade ? new Date(plano.dataValidade) : null);
-    setFormSemVencimento(plano.semVencimento);
-    setFormAtivo(plano.ativo);
-    setOpenEditModal(true);
-  };
-  
-  const handleOpenDeleteModal = (plano: Plano) => {
-    setCurrentPlano(plano);
-    setOpenDeleteModal(true);
-  };
-  
   const filteredPlanos = planos.filter(plano => 
     plano.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (plano.descricao && plano.descricao.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
-  const formatarLimiteEmpresas = (plano: Plano) => {
-    if (plano.empresasIlimitadas) return "Ilimitadas";
-    return plano.limiteEmpresas === 1 ? "1 empresa" : `${plano.limiteEmpresas} empresas`;
-  };
-
-  const formatarLimiteEmpregados = (plano: Plano) => {
-    if (plano.empregadosIlimitados) return "Ilimitados";
-    return `Até ${plano.limiteEmpregados}`;
-  };
-
-  const formatarDataValidade = (plano: Plano) => {
-    if (plano.semVencimento) return "Sem vencimento";
-    if (!plano.dataValidade) return "Não definida";
-    return format(new Date(plano.dataValidade), "dd/MM/yyyy", { locale: ptBR });
-  };
 
   return (
     <AdminLayout title="Planos">
@@ -292,162 +170,13 @@ const PlanosPage: React.FC = () => {
                 Crie e gerencie os planos oferecidos aos clientes
               </CardDescription>
             </div>
-            <Dialog open={openNewModal} onOpenChange={setOpenNewModal}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Plus size={16} />
-                  Novo Plano
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Adicionar Novo Plano</DialogTitle>
-                  <DialogDescription>
-                    Preencha as informações do novo plano comercial.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nome">Nome do Plano</Label>
-                    <Input id="nome" value={formNome} onChange={(e) => setFormNome(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="descricao">Descrição</Label>
-                    <Textarea 
-                      id="descricao" 
-                      value={formDescricao} 
-                      onChange={(e) => setFormDescricao(e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="valorMensal">Valor Mensal (R$)</Label>
-                      <Input 
-                        id="valorMensal" 
-                        type="number" 
-                        min={0}
-                        step={0.01}
-                        value={formValorMensal} 
-                        onChange={(e) => setFormValorMensal(Number(e.target.value))} 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="valorImplantacao">Valor de Implantação (R$)</Label>
-                      <Input 
-                        id="valorImplantacao" 
-                        type="number" 
-                        min={0}
-                        step={0.01}
-                        value={formValorImplantacao} 
-                        onChange={(e) => setFormValorImplantacao(Number(e.target.value))} 
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="limiteEmpresas">Limite de Empresas</Label>
-                      <div className="flex flex-col space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Switch 
-                            id="empresasIlimitadas"
-                            checked={formEmpresasIlimitadas} 
-                            onCheckedChange={setFormEmpresasIlimitadas}
-                          />
-                          <Label htmlFor="empresasIlimitadas" className="font-normal">Ilimitadas</Label>
-                        </div>
-                        {!formEmpresasIlimitadas && (
-                          <Input 
-                            id="limiteEmpresas" 
-                            type="number" 
-                            min={1}
-                            value={formLimiteEmpresas} 
-                            onChange={(e) => setFormLimiteEmpresas(Number(e.target.value))} 
-                          />
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="limiteEmpregados">Limite de Empregados</Label>
-                      <div className="flex flex-col space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Switch 
-                            id="empregadosIlimitados"
-                            checked={formEmpregadosIlimitados} 
-                            onCheckedChange={setFormEmpregadosIlimitados}
-                          />
-                          <Label htmlFor="empregadosIlimitados" className="font-normal">Ilimitados</Label>
-                        </div>
-                        {!formEmpregadosIlimitados && (
-                          <Input 
-                            id="limiteEmpregados" 
-                            type="number" 
-                            min={1}
-                            value={formLimiteEmpregados} 
-                            onChange={(e) => setFormLimiteEmpregados(Number(e.target.value))} 
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Data de Validade</Label>
-                    <div className="flex flex-col space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          id="semVencimento"
-                          checked={formSemVencimento} 
-                          onCheckedChange={setFormSemVencimento}
-                        />
-                        <Label htmlFor="semVencimento" className="font-normal">Sem vencimento</Label>
-                      </div>
-                      {!formSemVencimento && (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !formDataValidade && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {formDataValidade ? format(formDataValidade, "dd/MM/yyyy", { locale: ptBR }) : "Selecione uma data"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={formDataValidade || undefined}
-                              onSelect={date => setFormDataValidade(date)}
-                              initialFocus
-                              locale={ptBR}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Status do Plano</Label>
-                    <div className="flex items-center space-x-2">
-                      <Switch 
-                        id="ativo"
-                        checked={formAtivo} 
-                        onCheckedChange={setFormAtivo}
-                      />
-                      <Label htmlFor="ativo" className="font-normal">
-                        {formAtivo ? "Ativo" : "Inativo"}
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setOpenNewModal(false)}>Cancelar</Button>
-                  <Button onClick={handleAddPlano}>Salvar</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button 
+              className="flex items-center gap-2"
+              onClick={() => setOpenNewModal(true)}
+            >
+              <Plus size={16} />
+              Novo Plano
+            </Button>
           </div>
           <div className="pt-4">
             <Input
@@ -459,232 +188,31 @@ const PlanosPage: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Valores</TableHead>
-                <TableHead>Limites</TableHead>
-                <TableHead>Validade</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPlanos.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                    Nenhum plano encontrado.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredPlanos.map((plano) => (
-                  <TableRow key={plano.id}>
-                    <TableCell className="font-medium">{plano.nome}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{plano.descricao}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span>Mensal: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plano.valorMensal)}</span>
-                        <span className="text-xs text-muted-foreground">
-                          Impl: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plano.valorImplantacao)}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span>{formatarLimiteEmpresas(plano)}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatarLimiteEmpregados(plano)} empregados
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {formatarDataValidade(plano)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={plano.ativo ? "default" : "secondary"}>
-                        {plano.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleOpenEditModal(plano)}
-                        >
-                          <Pencil size={16} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleOpenDeleteModal(plano)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <PlanosTable 
+            planos={filteredPlanos} 
+            onEdit={(plano) => {
+              setCurrentPlano(plano);
+              setOpenEditModal(true);
+            }}
+            onDelete={(plano) => {
+              setCurrentPlano(plano);
+              setOpenDeleteModal(true);
+            }}
+          />
         </CardContent>
       </Card>
-      
-      {/* Modal de Edição - Mesmo conteúdo do modal de Adição */}
-      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Plano</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do plano comercial.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-nome">Nome do Plano</Label>
-              <Input id="edit-nome" value={formNome} onChange={(e) => setFormNome(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-descricao">Descrição</Label>
-              <Textarea 
-                id="edit-descricao" 
-                value={formDescricao} 
-                onChange={(e) => setFormDescricao(e.target.value)}
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-valorMensal">Valor Mensal (R$)</Label>
-                <Input 
-                  id="edit-valorMensal" 
-                  type="number" 
-                  min={0}
-                  step={0.01}
-                  value={formValorMensal} 
-                  onChange={(e) => setFormValorMensal(Number(e.target.value))} 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-valorImplantacao">Valor de Implantação (R$)</Label>
-                <Input 
-                  id="edit-valorImplantacao" 
-                  type="number" 
-                  min={0}
-                  step={0.01}
-                  value={formValorImplantacao} 
-                  onChange={(e) => setFormValorImplantacao(Number(e.target.value))} 
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-limiteEmpresas">Limite de Empresas</Label>
-                <div className="flex flex-col space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Switch 
-                      id="edit-empresasIlimitadas"
-                      checked={formEmpresasIlimitadas} 
-                      onCheckedChange={setFormEmpresasIlimitadas}
-                    />
-                    <Label htmlFor="edit-empresasIlimitadas" className="font-normal">Ilimitadas</Label>
-                  </div>
-                  {!formEmpresasIlimitadas && (
-                    <Input 
-                      id="edit-limiteEmpresas" 
-                      type="number" 
-                      min={1}
-                      value={formLimiteEmpresas} 
-                      onChange={(e) => setFormLimiteEmpresas(Number(e.target.value))} 
-                    />
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-limiteEmpregados">Limite de Empregados</Label>
-                <div className="flex flex-col space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Switch 
-                      id="edit-empregadosIlimitados"
-                      checked={formEmpregadosIlimitados} 
-                      onCheckedChange={setFormEmpregadosIlimitados}
-                    />
-                    <Label htmlFor="edit-empregadosIlimitados" className="font-normal">Ilimitados</Label>
-                  </div>
-                  {!formEmpregadosIlimitados && (
-                    <Input 
-                      id="edit-limiteEmpregados" 
-                      type="number" 
-                      min={1}
-                      value={formLimiteEmpregados} 
-                      onChange={(e) => setFormLimiteEmpregados(Number(e.target.value))} 
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Data de Validade</Label>
-              <div className="flex flex-col space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="edit-semVencimento"
-                    checked={formSemVencimento} 
-                    onCheckedChange={setFormSemVencimento}
-                  />
-                  <Label htmlFor="edit-semVencimento" className="font-normal">Sem vencimento</Label>
-                </div>
-                {!formSemVencimento && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !formDataValidade && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formDataValidade ? format(formDataValidade, "dd/MM/yyyy", { locale: ptBR }) : "Selecione uma data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={formDataValidade || undefined}
-                        onSelect={date => setFormDataValidade(date)}
-                        initialFocus
-                        locale={ptBR}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Status do Plano</Label>
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="edit-ativo"
-                  checked={formAtivo} 
-                  onCheckedChange={setFormAtivo}
-                />
-                <Label htmlFor="edit-ativo" className="font-normal">
-                  {formAtivo ? "Ativo" : "Inativo"}
-                </Label>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenEditModal(false)}>Cancelar</Button>
-            <Button onClick={handleUpdatePlano}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
+
+      <PlanoPersistenceModal
+        plano={currentPlano}
+        isOpen={openNewModal || openEditModal}
+        onOpenChange={(open) => {
+          setOpenNewModal(open);
+          setOpenEditModal(open);
+          if (!open) setCurrentPlano(null);
+        }}
+        onSubmit={currentPlano ? handleUpdatePlano : handleAddPlano}
+      />
+
       {/* Modal de Exclusão */}
       <Dialog open={openDeleteModal} onOpenChange={setOpenDeleteModal}>
         <DialogContent className="sm:max-w-[425px]">
