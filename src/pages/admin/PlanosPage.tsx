@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Pencil, Trash2, Plus, X, Check, CalendarIcon } from "lucide-react";
 import { Plano } from "@/types/admin";
-import { getPlanos, addPlano, updatePlano, deletePlano } from "@/services/adminService";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -57,7 +57,23 @@ const PlanosPage: React.FC = () => {
         throw error;
       }
 
-      setPlanos(data || []);
+      // Transform the data to match our Plano interface
+      const transformedPlanos: Plano[] = data.map(item => ({
+        id: item.id,
+        nome: item.nome,
+        descricao: item.descricao || "",
+        valorMensal: Number(item.valor_mensal),
+        valorImplantacao: Number(item.valor_implantacao),
+        limiteEmpresas: item.limite_empresas || 0,
+        empresasIlimitadas: item.empresas_ilimitadas || false,
+        limiteEmpregados: item.limite_empregados || 0,
+        empregadosIlimitados: item.empregados_ilimitados || false,
+        dataValidade: item.data_validade ? new Date(item.data_validade).getTime() : null,
+        semVencimento: item.sem_vencimento || false,
+        ativo: item.ativo || true
+      }));
+
+      setPlanos(transformedPlanos);
     } catch (error) {
       console.error('Erro ao buscar planos:', error);
       toast.error('Erro ao carregar os planos.');
@@ -66,6 +82,7 @@ const PlanosPage: React.FC = () => {
 
   const handleAddPlano = async () => {
     try {
+      // Transform data to match Supabase table structure
       const newPlano = {
         nome: formNome,
         descricao: formDescricao,
@@ -80,21 +97,45 @@ const PlanosPage: React.FC = () => {
         ativo: formAtivo
       };
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('planos')
-        .insert([newPlano]);
+        .insert([newPlano])
+        .select();
 
       if (error) {
+        console.error('Erro detalhado:', error);
         throw error;
       }
 
-      fetchPlanos();
-      setOpenNewModal(false);
-      clearForm();
-      toast.success('Plano adicionado com sucesso!');
-    } catch (error) {
+      // Add the new plano to state after successful insertion
+      if (data && data.length > 0) {
+        const addedPlano: Plano = {
+          id: data[0].id,
+          nome: data[0].nome,
+          descricao: data[0].descricao || "",
+          valorMensal: Number(data[0].valor_mensal),
+          valorImplantacao: Number(data[0].valor_implantacao),
+          limiteEmpresas: data[0].limite_empresas || 0,
+          empresasIlimitadas: data[0].empresas_ilimitadas || false,
+          limiteEmpregados: data[0].limite_empregados || 0,
+          empregadosIlimitados: data[0].empregados_ilimitados || false,
+          dataValidade: data[0].data_validade ? new Date(data[0].data_validade).getTime() : null,
+          semVencimento: data[0].sem_vencimento || false,
+          ativo: data[0].ativo || true
+        };
+        
+        setPlanos(prevPlanos => [...prevPlanos, addedPlano]);
+        setOpenNewModal(false);
+        clearForm();
+        toast.success('Plano adicionado com sucesso!');
+      }
+    } catch (error: any) {
       console.error('Erro ao adicionar plano:', error);
-      toast.error('Erro ao adicionar plano.');
+      if (error.code === '42501') {
+        toast.error('Erro de permissão: você não tem autorização para adicionar planos.');
+      } else {
+        toast.error('Erro ao adicionar plano.');
+      }
     }
   };
 
@@ -125,13 +166,36 @@ const PlanosPage: React.FC = () => {
         throw error;
       }
 
-      fetchPlanos();
+      // Update the plano in state
+      const updatedPlanoObj: Plano = {
+        ...currentPlano,
+        nome: formNome,
+        descricao: formDescricao,
+        valorMensal: formValorMensal,
+        valorImplantacao: formValorImplantacao,
+        limiteEmpresas: formEmpresasIlimitadas ? 0 : formLimiteEmpresas,
+        empresasIlimitadas: formEmpresasIlimitadas,
+        limiteEmpregados: formEmpregadosIlimitados ? 0 : formLimiteEmpregados,
+        empregadosIlimitados: formEmpregadosIlimitados,
+        dataValidade: formSemVencimento ? null : (formDataValidade ? formDataValidade.getTime() : null),
+        semVencimento: formSemVencimento,
+        ativo: formAtivo
+      };
+      
+      setPlanos(prevPlanos => 
+        prevPlanos.map(plano => plano.id === currentPlano.id ? updatedPlanoObj : plano)
+      );
+      
       setOpenEditModal(false);
       clearForm();
       toast.success('Plano atualizado com sucesso!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao atualizar plano:', error);
-      toast.error('Erro ao atualizar plano.');
+      if (error.code === '42501') {
+        toast.error('Erro de permissão: você não tem autorização para atualizar planos.');
+      } else {
+        toast.error('Erro ao atualizar plano.');
+      }
     }
   };
 
@@ -148,12 +212,16 @@ const PlanosPage: React.FC = () => {
         throw error;
       }
 
-      fetchPlanos();
+      setPlanos(prevPlanos => prevPlanos.filter(plano => plano.id !== currentPlano.id));
       setOpenDeleteModal(false);
       toast.success('Plano excluído com sucesso!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao excluir plano:', error);
-      toast.error('Erro ao excluir plano.');
+      if (error.code === '42501') {
+        toast.error('Erro de permissão: você não tem autorização para excluir planos.');
+      } else {
+        toast.error('Erro ao excluir plano.');
+      }
     }
   };
 
@@ -174,12 +242,12 @@ const PlanosPage: React.FC = () => {
   const handleOpenEditModal = (plano: Plano) => {
     setCurrentPlano(plano);
     setFormNome(plano.nome);
-    setFormDescricao(plano.descricao);
+    setFormDescricao(plano.descricao || "");
     setFormValorMensal(plano.valorMensal);
     setFormValorImplantacao(plano.valorImplantacao);
-    setFormLimiteEmpresas(plano.limiteEmpresas);
+    setFormLimiteEmpresas(plano.limiteEmpresas || 1);
     setFormEmpresasIlimitadas(plano.empresasIlimitadas);
-    setFormLimiteEmpregados(plano.limiteEmpregados);
+    setFormLimiteEmpregados(plano.limiteEmpregados || 10);
     setFormEmpregadosIlimitados(plano.empregadosIlimitados);
     setFormDataValidade(plano.dataValidade ? new Date(plano.dataValidade) : null);
     setFormSemVencimento(plano.semVencimento);
@@ -194,7 +262,7 @@ const PlanosPage: React.FC = () => {
   
   const filteredPlanos = planos.filter(plano => 
     plano.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    plano.descricao.toLowerCase().includes(searchTerm.toLowerCase())
+    (plano.descricao && plano.descricao.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const formatarLimiteEmpresas = (plano: Plano) => {
