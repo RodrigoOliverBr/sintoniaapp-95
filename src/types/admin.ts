@@ -92,7 +92,7 @@ export interface Fatura {
   dataVencimento: number; // timestamp
   valor: number;
   status: StatusFatura;
-  referencia?: string; // Agora é opcional
+  referencia?: string; // Campo para armazenar o número do contrato e número da parcela
   // Adicionando propriedades para evitar erros de TypeScript
   clienteName?: string;
   contratoNumero?: string;

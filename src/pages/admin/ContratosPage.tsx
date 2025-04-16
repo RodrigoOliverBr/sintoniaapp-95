@@ -11,24 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { format, addMonths, parseISO } from "date-fns";
+import { format, addMonths, addDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Check, Pencil, Trash2 } from "lucide-react";
 import { 
   ClienteSistema, 
   Plano, 
   Contrato, 
-  StatusContrato, 
-  CicloFaturamento 
+  StatusContrato,
+  CicloFaturamento
 } from "@/types/admin";
-import { 
-  getClientesSistema, 
-  getPlanos, 
-  getContratos, 
-  addContrato, 
-  updateContrato, 
-  deleteContrato 
-} from "@/services/adminService";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,7 +58,7 @@ const ContratosPage: React.FC = () => {
   const [formStatus, setFormStatus] = useState<StatusContrato>("ativo");
   const [formTaxaImplantacao, setFormTaxaImplantacao] = useState(0);
   const [formObservacoes, setFormObservacoes] = useState("");
-  const [formCicloFaturamento, setFormCicloFaturamento] = useState<CicloFaturamento>("mensal");
+  const [formNumeroContrato, setFormNumeroContrato] = useState("");
   
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -76,6 +68,15 @@ const ContratosPage: React.FC = () => {
     // Calcula a data de fim como 12 meses após a data de início
     setFormDataFim(addMonths(formDataInicio, 12));
   }, [formDataInicio]);
+
+  // Efeito para gerar automaticamente o número do contrato ao abrir o modal
+  useEffect(() => {
+    if (openNewModal) {
+      const ano = new Date().getFullYear();
+      const numeroAleatorio = Math.floor(1000 + Math.random() * 9000);
+      setFormNumeroContrato(`CONT-${ano}-${numeroAleatorio}`);
+    }
+  }, [openNewModal]);
   
   // Carregando dados do Supabase
   useEffect(() => {
@@ -200,7 +201,9 @@ const ContratosPage: React.FC = () => {
     setFormStatus("ativo");
     setFormTaxaImplantacao(0);
     setFormObservacoes("");
-    setFormCicloFaturamento("mensal");
+    const ano = new Date().getFullYear();
+    const numeroAleatorio = Math.floor(1000 + Math.random() * 9000);
+    setFormNumeroContrato(`CONT-${ano}-${numeroAleatorio}`);
   };
   
   const handleOpenEditModal = (contrato: Contrato) => {
@@ -214,7 +217,7 @@ const ContratosPage: React.FC = () => {
     setFormStatus(contrato.status);
     setFormTaxaImplantacao(contrato.taxaImplantacao);
     setFormObservacoes(contrato.observacoes);
-    setFormCicloFaturamento(contrato.cicloFaturamento);
+    setFormNumeroContrato(contrato.numero);
     setOpenEditModal(true);
   };
   
@@ -234,22 +237,77 @@ const ContratosPage: React.FC = () => {
     }
   }, [formPlanoId, planos]);
   
+  // Função para gerar as faturas automáticas
+  const gerarFaturasAutomaticas = async (contratoId: string, clienteId: string, valorMensal: number, taxaImplantacao: number, dataInicio: Date, dataPrimeiroVencimento: Date, numeroContrato: string) => {
+    try {
+      const faturas = [];
+      
+      // Fatura de implantação (parcela 0)
+      if (taxaImplantacao > 0) {
+        faturas.push({
+          numero: `FAT-${Date.now().toString().slice(-8)}`,
+          cliente_id: clienteId,
+          cliente_sistema_id: clienteId,
+          contrato_id: contratoId,
+          data_emissao: dataInicio.toISOString(),
+          data_vencimento: dataPrimeiroVencimento.toISOString(),
+          valor: taxaImplantacao,
+          status: 'pendente',
+          referencia: `${numeroContrato}-0-12`
+        });
+      }
+      
+      // 12 faturas mensais (parcelas 1 a 12)
+      for (let i = 0; i < 12; i++) {
+        const dataEmissao = addMonths(dataInicio, i);
+        const dataVencimento = addDays(dataEmissao, 7); // Vencimento 7 dias após emissão
+        
+        faturas.push({
+          numero: `FAT-${Date.now().toString().slice(-8)}-${i+1}`,
+          cliente_id: clienteId,
+          cliente_sistema_id: clienteId,
+          contrato_id: contratoId,
+          data_emissao: dataEmissao.toISOString(),
+          data_vencimento: dataVencimento.toISOString(),
+          valor: valorMensal,
+          status: 'pendente',
+          referencia: `${numeroContrato}-${i+1}-12`
+        });
+      }
+      
+      // Inserir faturas no Supabase
+      const { error } = await supabase
+        .from('faturas')
+        .insert(faturas);
+      
+      if (error) {
+        console.error('Erro ao gerar faturas:', error);
+        toast.error('Erro ao gerar faturas automáticas');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Erro ao gerar faturas automáticas:', error);
+      toast.error('Erro ao gerar faturas automáticas');
+      return false;
+    }
+  };
+  
   const handleAddContrato = async () => {
-    if (!formClienteId || !formPlanoId) {
-      toast.error("Cliente e Plano são obrigatórios");
+    if (!formClienteId || !formPlanoId || !formNumeroContrato) {
+      toast.error("Cliente, Plano e Número do Contrato são obrigatórios");
       return;
     }
 
     try {
       setIsLoading(true);
-      // Gera um número de contrato baseado na data atual
-      const numeroContrato = `CONT-${Date.now().toString().slice(-6)}`;
       
-      // Corrigido: Adicionando o campo cliente_id e cliente_sistema_id
+      // Inserir o contrato
       const { data, error } = await supabase
         .from('contratos')
         .insert({
-          numero: numeroContrato,
+          numero: formNumeroContrato,
           cliente_sistema_id: formClienteId,
           cliente_id: formClienteId, // Usando o mesmo ID do clienteSistema para o cliente_id
           plano_id: formPlanoId,
@@ -260,7 +318,7 @@ const ContratosPage: React.FC = () => {
           status: formStatus,
           taxa_implantacao: formTaxaImplantacao,
           observacoes: formObservacoes,
-          ciclo_faturamento: formCicloFaturamento
+          ciclo_faturamento: 'mensal' // Sempre mensal agora
         })
         .select();
 
@@ -273,13 +331,33 @@ const ContratosPage: React.FC = () => {
       // Atualiza o cliente com a referência ao contrato
       await supabase
         .from('clientes_sistema')
-        .update({ contrato_id: data![0].id })
+        .update({ contrato_id: data[0].id })
         .eq('id', formClienteId);
+
+      // Se o contrato for ativo, gerar faturas automáticas
+      if (formStatus === 'ativo') {
+        const faturasGeradas = await gerarFaturasAutomaticas(
+          data[0].id,
+          formClienteId,
+          formValorMensal,
+          formTaxaImplantacao,
+          formDataInicio,
+          formDataPrimeiroVencimento,
+          formNumeroContrato
+        );
+        
+        if (faturasGeradas) {
+          toast.success("Contrato e faturas geradas com sucesso!");
+        } else {
+          toast.warning("Contrato salvo, mas houve um problema ao gerar as faturas");
+        }
+      } else {
+        toast.success("Contrato adicionado com sucesso!");
+      }
 
       await refreshContratos();
       setOpenNewModal(false);
       clearForm();
-      toast.success("Contrato adicionado com sucesso!");
     } catch (error: any) {
       console.error("Erro ao adicionar contrato:", error);
       toast.error("Erro ao adicionar contrato: " + error.message);
@@ -296,6 +374,7 @@ const ContratosPage: React.FC = () => {
       const { error } = await supabase
         .from('contratos')
         .update({
+          numero: formNumeroContrato,
           cliente_sistema_id: formClienteId,
           cliente_id: formClienteId, // Corrigido: Garantindo que cliente_id seja preenchido
           plano_id: formPlanoId,
@@ -306,7 +385,7 @@ const ContratosPage: React.FC = () => {
           status: formStatus,
           taxa_implantacao: formTaxaImplantacao,
           observacoes: formObservacoes,
-          ciclo_faturamento: formCicloFaturamento
+          ciclo_faturamento: 'mensal' // Sempre mensal agora
         })
         .eq('id', currentContrato.id);
 
@@ -420,6 +499,15 @@ const ContratosPage: React.FC = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="numeroContrato">Número do Contrato</Label>
+                  <Input
+                    id="numeroContrato"
+                    value={formNumeroContrato}
+                    onChange={(e) => setFormNumeroContrato(e.target.value)}
+                    disabled={isLoading}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dataInicio">Data de Início</Label>
@@ -554,24 +642,7 @@ const ContratosPage: React.FC = () => {
                     disabled={isLoading}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cicloFaturamento">Ciclo de Faturamento</Label>
-                  <Select 
-                    value={formCicloFaturamento} 
-                    onValueChange={(value: CicloFaturamento) => setFormCicloFaturamento(value)}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger id="cicloFaturamento">
-                      <SelectValue placeholder="Selecione o ciclo" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="mensal">Mensal</SelectItem>
-                      <SelectItem value="trimestral">Trimestral</SelectItem>
-                      <SelectItem value="anual">Anual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="observacoes">Observações</Label>
                   <Input 
                     id="observacoes" 
@@ -718,6 +789,15 @@ const ContratosPage: React.FC = () => {
               </Select>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="edit-numeroContrato">Número do Contrato</Label>
+              <Input
+                id="edit-numeroContrato"
+                value={formNumeroContrato}
+                onChange={(e) => setFormNumeroContrato(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="edit-dataInicio">Data de Início</Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -850,24 +930,7 @@ const ContratosPage: React.FC = () => {
                 disabled={isLoading}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-cicloFaturamento">Ciclo de Faturamento</Label>
-              <Select 
-                value={formCicloFaturamento} 
-                onValueChange={(value: CicloFaturamento) => setFormCicloFaturamento(value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger id="edit-cicloFaturamento">
-                  <SelectValue placeholder="Selecione o ciclo" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="mensal">Mensal</SelectItem>
-                  <SelectItem value="trimestral">Trimestral</SelectItem>
-                  <SelectItem value="anual">Anual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="edit-observacoes">Observações</Label>
               <Input 
                 id="edit-observacoes" 
