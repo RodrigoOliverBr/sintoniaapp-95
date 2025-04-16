@@ -57,7 +57,7 @@ const InvoiceDashboard: React.FC = () => {
           clientes_sistema!inner (
             razao_social
           ),
-          contratos!inner (
+          contratos (
             numero
           )
         `)
@@ -71,14 +71,13 @@ const InvoiceDashboard: React.FC = () => {
         numero: item.numero,
         clienteId: item.cliente_id,
         clienteSistemaId: item.cliente_sistema_id,
-        contratoId: item.contrato_id,
+        contratoId: item.contrato_id || undefined,
         dataEmissao: new Date(item.data_emissao).getTime(),
         dataVencimento: new Date(item.data_vencimento).getTime(),
         valor: Number(item.valor),
         status: item.status as StatusFatura,
-        referencia: item.referencia || '',
-        clienteName: item.clientes_sistema.razao_social,
-        contratoNumero: item.contratos.numero
+        clienteName: item.clientes_sistema?.razao_social,
+        contratoNumero: item.contratos?.numero
       }));
 
       setFaturas(mappedFaturas);

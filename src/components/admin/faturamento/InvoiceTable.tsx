@@ -3,7 +3,7 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, FileCheck, FileX, Copy } from "lucide-react";
+import { Pencil, Trash2, FileCheck, FileX } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Fatura, StatusFatura } from "@/types/admin";
@@ -79,7 +79,6 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
           <TableHead>Número</TableHead>
           <TableHead>Cliente</TableHead>
           <TableHead>Contrato</TableHead>
-          <TableHead>Referência</TableHead>
           <TableHead>Emissão</TableHead>
           <TableHead>Vencimento</TableHead>
           <TableHead>Valor</TableHead>
@@ -101,9 +100,8 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
               {invoice.clienteName || 'Cliente não informado'}
             </TableCell>
             <TableCell>
-              {invoice.contratoNumero || 'Contrato não informado'}
+              {invoice.contratoNumero || 'Sem contrato'}
             </TableCell>
-            <TableCell>{invoice.referencia}</TableCell>
             <TableCell>
               {format(invoice.dataEmissao, 'dd/MM/yyyy', { locale: ptBR })}
             </TableCell>

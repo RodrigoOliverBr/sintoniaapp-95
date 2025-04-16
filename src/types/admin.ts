@@ -87,12 +87,15 @@ export interface Fatura {
   numero: string;
   clienteSistemaId: string;
   clienteId?: string; // For backward compatibility
-  contratoId: string;
+  contratoId?: string; // Agora é opcional
   dataEmissao: number; // timestamp
   dataVencimento: number; // timestamp
   valor: number;
   status: StatusFatura;
-  referencia: string; // ex: "05/2025"
+  referencia?: string; // Agora é opcional
+  // Adicionando propriedades para evitar erros de TypeScript
+  clienteName?: string;
+  contratoNumero?: string;
 }
 
 // Interface para estado de seleção em lote

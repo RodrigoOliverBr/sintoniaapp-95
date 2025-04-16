@@ -23,7 +23,6 @@ interface FormValues {
   dataVencimento: Date;
   valor: number;
   status: StatusFatura;
-  referencia: string;
   numero: string;
 }
 
@@ -57,6 +56,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [filteredContratos, setFilteredContratos] = useState<Contrato[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [valorFormatado, setValorFormatado] = useState("");
 
   const [formValues, setFormValues] = useState<FormValues>({
     clienteId: "",
@@ -66,7 +66,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
     dataVencimento: new Date(),
     valor: 0,
     status: "pendente",
-    referencia: format(new Date(), "MM/yyyy"),
     numero: `FAT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999)).padStart(3, '0')}`,
   });
 
@@ -84,9 +83,11 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
           dataVencimento: new Date(editingInvoice.dataVencimento),
           valor: editingInvoice.valor || 0,
           status: editingInvoice.status || "pendente",
-          referencia: editingInvoice.referencia || "",
           numero: editingInvoice.numero || "",
         });
+        
+        // Formatar o valor da fatura para exibição
+        setValorFormatado(formatarValorParaExibicao(editingInvoice.valor || 0));
       } else {
         // Reset form for new invoice
         setFormValues({
@@ -97,9 +98,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
           dataVencimento: new Date(),
           valor: 0,
           status: "pendente",
-          referencia: format(new Date(), "MM/yyyy"),
           numero: `FAT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999)).padStart(3, '0')}`,
         });
+        
+        setValorFormatado("");
       }
     }
   }, [open, editingInvoice]);
@@ -143,6 +145,52 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
     }
   };
 
+  const formatarValorParaExibicao = (valor: number): string => {
+    return valor.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const parseValorParaNumero = (valorFormatado: string): number => {
+    // Remove todos os caracteres não-numéricos, exceto o ponto decimal
+    const valorLimpo = valorFormatado.replace(/[^0-9,]/g, '').replace(',', '.');
+    return parseFloat(valorLimpo) || 0;
+  };
+
+  const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValor = e.target.value;
+    
+    // Remove formatação existente
+    let valorNumerico = inputValor.replace(/[^\d,]/g, '');
+    
+    // Trata a entrada do usuário
+    if (valorNumerico) {
+      // Converte para o formato de número
+      valorNumerico = valorNumerico.replace(',', '.');
+      const numero = parseFloat(valorNumerico);
+      
+      if (!isNaN(numero)) {
+        // Atualiza o estado com o valor numérico
+        setFormValues({
+          ...formValues,
+          valor: numero
+        });
+        
+        // Atualiza o campo formatado
+        setValorFormatado(formatarValorParaExibicao(numero));
+      }
+    } else {
+      setFormValues({
+        ...formValues,
+        valor: 0
+      });
+      setValorFormatado('');
+    }
+  };
+
   const handleClienteChange = (value: string) => {
     const cliente = clientes.find(c => c.id === value);
     setFormValues({
@@ -168,14 +216,15 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
       const invoiceData = {
         cliente_id: formValues.clienteId,
         cliente_sistema_id: formValues.clienteSistemaId,
-        contrato_id: formValues.contratoId,
+        contrato_id: formValues.contratoId || null, // Agora permite null
         data_emissao: formValues.dataEmissao.toISOString(),
         data_vencimento: formValues.dataVencimento.toISOString(),
         valor: formValues.valor,
         status: formValues.status,
-        referencia: formValues.referencia,
         numero: formValues.numero,
       };
+
+      console.log("Dados a serem salvos:", invoiceData);
 
       let result;
       if (editingInvoice) {
@@ -234,18 +283,19 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
               </Select>
             </div>
 
-            {/* Contrato Select */}
+            {/* Contrato Select - Agora opcional */}
             <div className="space-y-2">
-              <Label htmlFor="contrato">Contrato</Label>
+              <Label htmlFor="contrato">Contrato (opcional)</Label>
               <Select
                 value={formValues.contratoId}
                 onValueChange={handleContratoChange}
                 disabled={isLoading || !formValues.clienteId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={!formValues.clienteId ? "Selecione um cliente primeiro" : "Selecione o contrato"} />
+                  <SelectValue placeholder={!formValues.clienteId ? "Selecione um cliente primeiro" : "Selecione o contrato (opcional)"} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">Sem contrato (cobrança avulsa)</SelectItem>
                   {filteredContratos.map((contrato) => (
                     <SelectItem key={contrato.id} value={contrato.id}>
                       {contrato.numero}
@@ -324,17 +374,17 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Valor */}
+              {/* Valor com formato brasileiro */}
               <div className="space-y-2">
                 <Label htmlFor="valor">Valor (R$)</Label>
                 <Input
-                  type="number"
+                  type="text"
                   id="valor"
-                  step="0.01"
-                  min="0"
-                  value={formValues.valor}
-                  onChange={(e) => setFormValues({ ...formValues, valor: parseFloat(e.target.value) || 0 })}
+                  value={valorFormatado}
+                  onChange={handleValorChange}
+                  placeholder="R$ 0,00"
                   disabled={isLoading}
+                  className="text-right"
                 />
               </div>
 
@@ -358,18 +408,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Referência */}
-            <div className="space-y-2">
-              <Label htmlFor="referencia">Referência (MM/AAAA)</Label>
-              <Input
-                id="referencia"
-                placeholder="Ex: 05/2025"
-                value={formValues.referencia}
-                onChange={(e) => setFormValues({ ...formValues, referencia: e.target.value })}
-                disabled={isLoading}
-              />
             </div>
 
             {/* Número da Fatura (auto-gerado, mas editável) */}
