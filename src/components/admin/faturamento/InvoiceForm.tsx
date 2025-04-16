@@ -416,7 +416,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ open, onOpenChange, onSuccess
               </div>
             </div>
 
-            {/* Número da Fatura (auto-gerado, mas editável) */}
+            {/* Número da Fatura (editável) */}
             <div className="space-y-2">
               <Label htmlFor="numero">Número da Fatura</Label>
               <Input
