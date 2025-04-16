@@ -6,21 +6,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Fatura, StatusFatura, BatchSelection } from "@/types/admin";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
 import InvoiceForm from "./InvoiceForm";
 import InvoiceTable from "./InvoiceTable";
 import InvoiceSummary from "./InvoiceSummary";
 import InvoiceFilters, { Filters } from "./InvoiceFilters";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+
+const ITEMS_PER_PAGE = 10;
 
 const InvoiceDashboard: React.FC = () => {
   const [faturas, setFaturas] = useState<Fatura[]>([]);
   const [filteredFaturas, setFilteredFaturas] = useState<Fatura[]>([]);
+  const [paginatedFaturas, setPaginatedFaturas] = useState<Fatura[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Fatura | null>(null);
   const [selectedInvoices, setSelectedInvoices] = useState<BatchSelection>({});
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [batchDeleteMode, setBatchDeleteMode] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [summaryData, setSummaryData] = useState({
     totalValue: 0,
     totalCount: 0,
@@ -47,8 +52,31 @@ const InvoiceDashboard: React.FC = () => {
   }, [faturas, filters]);
 
   useEffect(() => {
+    updatePagination();
+  }, [filteredFaturas, currentPage]);
+
+  useEffect(() => {
     calculateSummary(filteredFaturas);
   }, [filteredFaturas]);
+
+  const updatePagination = () => {
+    const totalItems = filteredFaturas.length;
+    const calculatedTotalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+    
+    setTotalPages(calculatedTotalPages);
+    
+    if (currentPage > calculatedTotalPages) {
+      setCurrentPage(1);
+    }
+    
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
+    
+    const currentPageFaturas = filteredFaturas.slice(startIndex, endIndex);
+    setPaginatedFaturas(currentPageFaturas);
+    
+    setSelectedInvoices({});
+  };
 
   const fetchFaturas = async () => {
     setIsLoading(true);
@@ -165,6 +193,7 @@ const InvoiceDashboard: React.FC = () => {
 
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
+    setCurrentPage(1);
   };
 
   const handleEdit = (invoice: Fatura) => {
@@ -233,11 +262,106 @@ const InvoiceDashboard: React.FC = () => {
   const handleSelectAll = (selected: boolean) => {
     const newSelection: BatchSelection = {};
     
-    filteredFaturas.forEach(fatura => {
+    paginatedFaturas.forEach(fatura => {
       newSelection[fatura.id] = selected;
     });
     
     setSelectedInvoices(newSelection);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page > 0 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const maxDisplayedPages = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxDisplayedPages / 2));
+    let endPage = Math.min(totalPages, startPage + maxDisplayedPages - 1);
+    
+    if (endPage === totalPages) {
+      startPage = Math.max(1, endPage - maxDisplayedPages + 1);
+    }
+    
+    pages.push(
+      <PaginationItem key="prev">
+        <PaginationPrevious 
+          onClick={() => handlePageChange(currentPage - 1)} 
+          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+          aria-disabled={currentPage === 1} 
+        />
+      </PaginationItem>
+    );
+    
+    if (startPage > 1) {
+      pages.push(
+        <PaginationItem key={1}>
+          <PaginationLink onClick={() => handlePageChange(1)}>
+            1
+          </PaginationLink>
+        </PaginationItem>
+      );
+      
+      if (startPage > 2) {
+        pages.push(
+          <PaginationItem key="ellipsis-start">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <PaginationItem key={i}>
+          <PaginationLink 
+            isActive={i === currentPage}
+            onClick={() => handlePageChange(i)}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    if (endPage < totalPages - 1) {
+      pages.push(
+        <PaginationItem key="ellipsis-end">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+    
+    if (endPage < totalPages) {
+      pages.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink onClick={() => handlePageChange(totalPages)}>
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    pages.push(
+      <PaginationItem key="next">
+        <PaginationNext 
+          onClick={() => handlePageChange(currentPage + 1)} 
+          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+          aria-disabled={currentPage === totalPages} 
+        />
+      </PaginationItem>
+    );
+    
+    return (
+      <Pagination className="mt-4">
+        <PaginationContent>{pages}</PaginationContent>
+      </Pagination>
+    );
   };
 
   const addNewInvoice = () => {
@@ -249,8 +373,8 @@ const InvoiceDashboard: React.FC = () => {
     return Object.values(selectedInvoices).filter(Boolean).length;
   };
 
-  const allSelected = filteredFaturas.length > 0 && 
-    filteredFaturas.every(fatura => selectedInvoices[fatura.id]);
+  const allSelected = paginatedFaturas.length > 0 && 
+    paginatedFaturas.every(fatura => selectedInvoices[fatura.id]);
 
   return (
     <div>
@@ -301,7 +425,7 @@ const InvoiceDashboard: React.FC = () => {
           />
           
           <InvoiceTable
-            invoices={filteredFaturas}
+            invoices={paginatedFaturas}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onStatusChange={handleStatusChange}
@@ -311,6 +435,8 @@ const InvoiceDashboard: React.FC = () => {
             onSelectAll={handleSelectAll}
             allSelected={allSelected}
           />
+          
+          {renderPagination()}
         </TabsContent>
 
         <TabsContent value="visao-mensal">
