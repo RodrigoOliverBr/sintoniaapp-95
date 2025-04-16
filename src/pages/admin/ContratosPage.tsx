@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { format } from "date-fns"
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Check, Pencil, Trash2 } from "lucide-react";
 import { 
   ClienteSistema, 
@@ -31,7 +33,22 @@ import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 
 const ContratosPage: React.FC = () => {
-  const [contratos, setContratos] = useState<Contrato[]>(getContratos());
+  // Funções auxiliares para formatação e obtenção de dados
+  const getClienteNome = (clienteSistemaId: string) => {
+    const cliente = clientes.find(c => c.id === clienteSistemaId);
+    return cliente ? cliente.razaoSocial : "Cliente não encontrado";
+  };
+  
+  const getPlanoNome = (planoId: string) => {
+    const plano = planos.find(p => p.id === planoId);
+    return plano ? plano.nome : "Plano não encontrado";
+  };
+  
+  const formatarData = (data: number) => {
+    return format(new Date(data), "dd/MM/yyyy", { locale: ptBR });
+  };
+
+  const [contratos, setContratos] = useState<Contrato[]>([]);
   const [openNewModal, setOpenNewModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
@@ -49,23 +66,23 @@ const ContratosPage: React.FC = () => {
   const [formObservacoes, setFormObservacoes] = useState("");
   const [formCicloFaturamento, setFormCicloFaturamento] = useState<CicloFaturamento>("mensal");
   
-  const [clientes, setClientes] = useState<ClienteSistema[]>(
-    getClientesSistema().map(cliente => ({
+  const [clientes, setClientes] = useState<ClienteSistema[]>([]);
+  const [planos, setPlanos] = useState<Plano[]>([]);
+  
+  // Carregando dados
+  useEffect(() => {
+    const clientesData = getClientesSistema().map(cliente => ({
       ...cliente,
       nome: cliente.razaoSocial // Adicionar nome como alias para compatibilidade
-    }))
-  );
-  const [planos, setPlanos] = useState<Plano[]>(getPlanos());
-  
-  const getClienteNome = (clienteSistemaId: string) => {
-    const cliente = clientes.find(c => c.id === clienteSistemaId);
-    return cliente ? cliente.razaoSocial : "Cliente não encontrado";
-  };
-  
-  const getPlanoNome = (planoId: string) => {
-    const plano = planos.find(p => p.id === planoId);
-    return plano ? plano.nome : "Plano não encontrado";
-  };
+    }));
+    setClientes(clientesData);
+    
+    const planosData = getPlanos();
+    setPlanos(planosData);
+    
+    const contratosData = getContratos();
+    setContratos(contratosData);
+  }, []);
   
   const filteredContratos = contratos.filter(contrato => {
     const clienteNome = getClienteNome(contrato.clienteSistemaId);
@@ -109,6 +126,17 @@ const ContratosPage: React.FC = () => {
     setCurrentContrato(contrato);
     setOpenDeleteModal(true);
   };
+
+  // Efeito para atualizar o valor mensal quando o plano é selecionado
+  useEffect(() => {
+    if (formPlanoId) {
+      const planoSelecionado = planos.find(p => p.id === formPlanoId);
+      if (planoSelecionado) {
+        setFormValorMensal(planoSelecionado.valorMensal);
+        setFormTaxaImplantacao(planoSelecionado.valorImplantacao);
+      }
+    }
+  }, [formPlanoId, planos]);
   
   const handleAddContrato = () => {
     try {
@@ -203,7 +231,7 @@ const ContratosPage: React.FC = () => {
                     <SelectTrigger id="cliente">
                       <SelectValue placeholder="Selecione o cliente" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       {clientes.map(cliente => (
                         <SelectItem key={cliente.id} value={cliente.id}>{cliente.razaoSocial}</SelectItem>
                       ))}
@@ -219,7 +247,7 @@ const ContratosPage: React.FC = () => {
                     <SelectTrigger id="plano">
                       <SelectValue placeholder="Selecione o plano" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       {planos.map(plano => (
                         <SelectItem key={plano.id} value={plano.id}>{plano.nome}</SelectItem>
                       ))}
@@ -233,27 +261,28 @@ const ContratosPage: React.FC = () => {
                       <Button
                         variant={"outline"}
                         className={cn(
-                          "w-[240px] justify-start text-left font-normal",
+                          "w-full justify-start text-left font-normal",
                           !formDataInicio && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {formDataInicio ? (
-                          format(formDataInicio, "PPP")
+                          format(formDataInicio, "dd/MM/yyyy", { locale: ptBR })
                         ) : (
-                          <span>Pick a date</span>
+                          <span>Selecione uma data</span>
                         )}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                       <Calendar
                         mode="single"
                         selected={formDataInicio}
-                        onSelect={setFormDataInicio}
+                        onSelect={(date) => date && setFormDataInicio(date)}
                         disabled={(date) =>
                           date > new Date()
                         }
                         initialFocus
+                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
@@ -265,27 +294,28 @@ const ContratosPage: React.FC = () => {
                       <Button
                         variant={"outline"}
                         className={cn(
-                          "w-[240px] justify-start text-left font-normal",
+                          "w-full justify-start text-left font-normal",
                           !formDataFim && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {formDataFim ? (
-                          format(formDataFim, "PPP")
+                          format(formDataFim, "dd/MM/yyyy", { locale: ptBR })
                         ) : (
-                          <span>Pick a date</span>
+                          <span>Selecione uma data</span>
                         )}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                       <Calendar
                         mode="single"
                         selected={formDataFim}
-                        onSelect={setFormDataFim}
+                        onSelect={(date) => date && setFormDataFim(date)}
                         disabled={(date) =>
                           date < formDataInicio
                         }
                         initialFocus
+                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
@@ -297,27 +327,25 @@ const ContratosPage: React.FC = () => {
                       <Button
                         variant={"outline"}
                         className={cn(
-                          "w-[240px] justify-start text-left font-normal",
+                          "w-full justify-start text-left font-normal",
                           !formDataPrimeiroVencimento && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {formDataPrimeiroVencimento ? (
-                          format(formDataPrimeiroVencimento, "PPP")
+                          format(formDataPrimeiroVencimento, "dd/MM/yyyy", { locale: ptBR })
                         ) : (
-                          <span>Pick a date</span>
+                          <span>Selecione uma data</span>
                         )}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                       <Calendar
                         mode="single"
                         selected={formDataPrimeiroVencimento}
-                        onSelect={setFormDataPrimeiroVencimento}
-                        disabled={(date) =>
-                          date < new Date()
-                        }
+                        onSelect={(date) => date && setFormDataPrimeiroVencimento(date)}
                         initialFocus
+                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
@@ -340,7 +368,7 @@ const ContratosPage: React.FC = () => {
                     <SelectTrigger id="status">
                       <SelectValue placeholder="Selecione o status" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       <SelectItem value="ativo">Ativo</SelectItem>
                       <SelectItem value="em-analise">Em Análise</SelectItem>
                       <SelectItem value="cancelado">Cancelado</SelectItem>
@@ -365,7 +393,7 @@ const ContratosPage: React.FC = () => {
                     <SelectTrigger id="cicloFaturamento">
                       <SelectValue placeholder="Selecione o ciclo" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       <SelectItem value="mensal">Mensal</SelectItem>
                       <SelectItem value="trimestral">Trimestral</SelectItem>
                       <SelectItem value="anual">Anual</SelectItem>
@@ -418,8 +446,8 @@ const ContratosPage: React.FC = () => {
                 <TableRow key={contrato.id}>
                   <TableCell className="font-medium">{getClienteNome(contrato.clienteSistemaId)}</TableCell>
                   <TableCell>{getPlanoNome(contrato.planoId)}</TableCell>
-                  <TableCell>{format(new Date(contrato.dataInicio), "dd/MM/yyyy")}</TableCell>
-                  <TableCell>{format(new Date(contrato.dataFim), "dd/MM/yyyy")}</TableCell>
+                  <TableCell>{formatarData(contrato.dataInicio)}</TableCell>
+                  <TableCell>{formatarData(contrato.dataFim)}</TableCell>
                   <TableCell>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contrato.valorMensal)}
                   </TableCell>
@@ -481,7 +509,7 @@ const ContratosPage: React.FC = () => {
                 <SelectTrigger id="edit-cliente">
                   <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   {clientes.map(cliente => (
                     <SelectItem key={cliente.id} value={cliente.id}>{cliente.razaoSocial}</SelectItem>
                   ))}
@@ -497,7 +525,7 @@ const ContratosPage: React.FC = () => {
                 <SelectTrigger id="edit-plano">
                   <SelectValue placeholder="Selecione o plano" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   {planos.map(plano => (
                     <SelectItem key={plano.id} value={plano.id}>{plano.nome}</SelectItem>
                   ))}
@@ -511,27 +539,28 @@ const ContratosPage: React.FC = () => {
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-[240px] justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal",
                       !formDataInicio && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {formDataInicio ? (
-                      format(formDataInicio, "PPP")
+                      format(formDataInicio, "dd/MM/yyyy", { locale: ptBR })
                     ) : (
-                      <span>Pick a date</span>
+                      <span>Selecione uma data</span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                   <Calendar
                     mode="single"
                     selected={formDataInicio}
-                    onSelect={setFormDataInicio}
+                    onSelect={(date) => date && setFormDataInicio(date)}
                     disabled={(date) =>
                       date > new Date()
                     }
                     initialFocus
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -543,27 +572,28 @@ const ContratosPage: React.FC = () => {
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-[240px] justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal",
                       !formDataFim && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {formDataFim ? (
-                      format(formDataFim, "PPP")
+                      format(formDataFim, "dd/MM/yyyy", { locale: ptBR })
                     ) : (
-                      <span>Pick a date</span>
+                      <span>Selecione uma data</span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                   <Calendar
                     mode="single"
                     selected={formDataFim}
-                    onSelect={setFormDataFim}
+                    onSelect={(date) => date && setFormDataFim(date)}
                     disabled={(date) =>
                       date < formDataInicio
                     }
                     initialFocus
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -575,27 +605,25 @@ const ContratosPage: React.FC = () => {
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-[240px] justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal",
                       !formDataPrimeiroVencimento && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {formDataPrimeiroVencimento ? (
-                      format(formDataPrimeiroVencimento, "PPP")
+                      format(formDataPrimeiroVencimento, "dd/MM/yyyy", { locale: ptBR })
                     ) : (
-                      <span>Pick a date</span>
+                      <span>Selecione uma data</span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                   <Calendar
                     mode="single"
                     selected={formDataPrimeiroVencimento}
-                    onSelect={setFormDataPrimeiroVencimento}
-                    disabled={(date) =>
-                      date < new Date()
-                    }
+                    onSelect={(date) => date && setFormDataPrimeiroVencimento(date)}
                     initialFocus
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -618,7 +646,7 @@ const ContratosPage: React.FC = () => {
                 <SelectTrigger id="edit-status">
                   <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   <SelectItem value="ativo">Ativo</SelectItem>
                   <SelectItem value="em-analise">Em Análise</SelectItem>
                   <SelectItem value="cancelado">Cancelado</SelectItem>
@@ -643,7 +671,7 @@ const ContratosPage: React.FC = () => {
                 <SelectTrigger id="edit-cicloFaturamento">
                   <SelectValue placeholder="Selecione o ciclo" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   <SelectItem value="mensal">Mensal</SelectItem>
                   <SelectItem value="trimestral">Trimestral</SelectItem>
                   <SelectItem value="anual">Anual</SelectItem>

@@ -19,7 +19,7 @@ const Sidebar = () => {
   const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r bg-white md:flex">
+    <aside className="fixed inset-y-0 left-0 z-50 w-64 flex-col border-r bg-white hidden md:flex">
       <div className="flex h-16 items-center justify-center border-b px-6">
         <img
           src="/lovable-uploads/5fbfce9a-dae3-444b-99c8-9b92040ef7e2.png"
