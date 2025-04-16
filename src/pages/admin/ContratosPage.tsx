@@ -56,6 +56,22 @@ const ContratosPage: React.FC = () => {
   );
   const [planos, setPlanos] = useState<Plano[]>(getPlanos());
   
+  const getClienteNome = (clienteSistemaId: string) => {
+    const cliente = clientes.find(c => c.id === clienteSistemaId);
+    return cliente ? cliente.razaoSocial : "Cliente não encontrado";
+  };
+  
+  const getPlanoNome = (planoId: string) => {
+    const plano = planos.find(p => p.id === planoId);
+    return plano ? plano.nome : "Plano não encontrado";
+  };
+  
+  const filteredContratos = contratos.filter(contrato => {
+    const clienteNome = getClienteNome(contrato.clienteSistemaId);
+    return clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           contrato.numero.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+  
   const refreshContratos = () => {
     setContratos(getContratos());
   };
@@ -153,22 +169,6 @@ const ContratosPage: React.FC = () => {
     } catch (error) {
       toast.error("Erro ao excluir contrato.");
     }
-  };
-  
-  const filteredContratos = contratos.filter(contrato => {
-    const clienteNome = getClienteNome(contrato.clienteSistemaId);
-    return clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           contrato.numero.toLowerCase().includes(searchTerm.toLowerCase());
-  });
-  
-  const getClienteNome = (clienteSistemaId: string) => {
-    const cliente = clientes.find(c => c.id === clienteSistemaId);
-    return cliente ? cliente.razaoSocial : "Cliente não encontrado";
-  };
-  
-  const getPlanoNome = (planoId: string) => {
-    const plano = planos.find(p => p.id === planoId);
-    return plano ? plano.nome : "Plano não encontrado";
   };
 
   return (
@@ -629,7 +629,7 @@ const ContratosPage: React.FC = () => {
                 onChange={(e) => setFormTaxaImplantacao(Number(e.target.value))} 
               />
             </div>
-             <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="edit-cicloFaturamento">Ciclo de Faturamento</Label>
               <Select 
                 value={formCicloFaturamento} 
