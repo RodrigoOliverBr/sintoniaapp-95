@@ -31,6 +31,7 @@ import {
 } from "@/services/adminService";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
+import { supabase } from "@/integrations/supabase/client";
 
 const ContratosPage: React.FC = () => {
   // Funções auxiliares para formatação e obtenção de dados
@@ -69,19 +70,104 @@ const ContratosPage: React.FC = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
   
-  // Carregando dados
+  // Carregando dados do Supabase
   useEffect(() => {
-    const clientesData = getClientesSistema().map(cliente => ({
-      ...cliente,
-      nome: cliente.razaoSocial // Adicionar nome como alias para compatibilidade
-    }));
-    setClientes(clientesData);
-    
-    const planosData = getPlanos();
-    setPlanos(planosData);
-    
-    const contratosData = getContratos();
-    setContratos(contratosData);
+    async function fetchData() {
+      try {
+        // Carregar clientes do sistema
+        const { data: clientesData, error: clientesError } = await supabase
+          .from('clientes_sistema')
+          .select('*');
+        
+        if (clientesError) {
+          console.error('Erro ao carregar clientes:', clientesError);
+          return;
+        }
+        
+        const clientesFormatados = clientesData.map(cliente => ({
+          id: cliente.id,
+          razaoSocial: cliente.razao_social,
+          nome: cliente.razao_social, // Para compatibilidade
+          tipo: 'juridica' as const,
+          numeroEmpregados: 0,
+          dataInclusao: Date.now(),
+          situacao: cliente.situacao as 'liberado' | 'bloqueado',
+          cnpj: cliente.cnpj,
+          cpfCnpj: cliente.cnpj, // Para compatibilidade
+          email: cliente.email || '',
+          telefone: cliente.telefone || '',
+          responsavel: cliente.responsavel || '',
+          contato: cliente.responsavel, // Para compatibilidade
+          planoId: cliente.plano_id,
+          contratoId: cliente.contrato_id,
+        }));
+        
+        setClientes(clientesFormatados);
+        
+        // Carregar planos
+        const { data: planosData, error: planosError } = await supabase
+          .from('planos')
+          .select('*')
+          .eq('ativo', true);
+        
+        if (planosError) {
+          console.error('Erro ao carregar planos:', planosError);
+          return;
+        }
+        
+        const planosFormatados = planosData.map(plano => ({
+          id: plano.id,
+          nome: plano.nome,
+          descricao: plano.descricao || '',
+          valorMensal: Number(plano.valor_mensal),
+          valorImplantacao: Number(plano.valor_implantacao),
+          limiteEmpresas: plano.limite_empresas || 0,
+          empresasIlimitadas: plano.empresas_ilimitadas || false,
+          limiteEmpregados: plano.limite_empregados || 0,
+          empregadosIlimitados: plano.empregados_ilimitados || false,
+          dataValidade: plano.data_validade ? new Date(plano.data_validade).getTime() : null,
+          semVencimento: plano.sem_vencimento || false,
+          ativo: plano.ativo
+        }));
+        
+        setPlanos(planosFormatados);
+        
+        // Carregar contratos
+        const { data: contratosData, error: contratosError } = await supabase
+          .from('contratos')
+          .select('*');
+        
+        if (contratosError) {
+          console.error('Erro ao carregar contratos:', contratosError);
+          return;
+        }
+        
+        const contratosFormatados = contratosData.map(contrato => ({
+          id: contrato.id,
+          numero: contrato.numero,
+          clienteSistemaId: contrato.cliente_sistema_id || contrato.cliente_id,
+          clienteId: contrato.cliente_id,
+          planoId: contrato.plano_id,
+          dataInicio: new Date(contrato.data_inicio).getTime(),
+          dataFim: new Date(contrato.data_fim).getTime(),
+          dataPrimeiroVencimento: new Date(contrato.data_primeiro_vencimento).getTime(),
+          valorMensal: Number(contrato.valor_mensal),
+          status: contrato.status as StatusContrato,
+          taxaImplantacao: Number(contrato.taxa_implantacao),
+          observacoes: contrato.observacoes || '',
+          cicloFaturamento: contrato.ciclo_faturamento as CicloFaturamento,
+          proximaRenovacao: contrato.proxima_renovacao ? new Date(contrato.proxima_renovacao).getTime() : undefined,
+          ciclosGerados: contrato.ciclos_gerados || 0
+        }));
+        
+        setContratos(contratosFormatados);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        toast.error('Erro ao carregar dados');
+      }
+    }
+
+    fetchData();
   }, []);
   
   const filteredContratos = contratos.filter(contrato => {
@@ -90,8 +176,39 @@ const ContratosPage: React.FC = () => {
            contrato.numero.toLowerCase().includes(searchTerm.toLowerCase());
   });
   
-  const refreshContratos = () => {
-    setContratos(getContratos());
+  const refreshContratos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contratos')
+        .select('*');
+      
+      if (error) {
+        console.error('Erro ao recarregar contratos:', error);
+        return;
+      }
+      
+      const contratosFormatados = data.map(contrato => ({
+        id: contrato.id,
+        numero: contrato.numero,
+        clienteSistemaId: contrato.cliente_sistema_id || contrato.cliente_id,
+        clienteId: contrato.cliente_id,
+        planoId: contrato.plano_id,
+        dataInicio: new Date(contrato.data_inicio).getTime(),
+        dataFim: new Date(contrato.data_fim).getTime(),
+        dataPrimeiroVencimento: new Date(contrato.data_primeiro_vencimento).getTime(),
+        valorMensal: Number(contrato.valor_mensal),
+        status: contrato.status as StatusContrato,
+        taxaImplantacao: Number(contrato.taxa_implantacao),
+        observacoes: contrato.observacoes || '',
+        cicloFaturamento: contrato.ciclo_faturamento as CicloFaturamento,
+        proximaRenovacao: contrato.proxima_renovacao ? new Date(contrato.proxima_renovacao).getTime() : undefined,
+        ciclosGerados: contrato.ciclos_gerados || 0
+      }));
+      
+      setContratos(contratosFormatados);
+    } catch (error) {
+      console.error('Erro ao recarregar contratos:', error);
+    }
   };
   
   const clearForm = () => {
@@ -138,65 +255,121 @@ const ContratosPage: React.FC = () => {
     }
   }, [formPlanoId, planos]);
   
-  const handleAddContrato = () => {
+  const handleAddContrato = async () => {
+    if (!formClienteId || !formPlanoId) {
+      toast.error("Cliente e Plano são obrigatórios");
+      return;
+    }
+
     try {
-      addContrato({
-        clienteSistemaId: formClienteId,
-        planoId: formPlanoId,
-        dataInicio: formDataInicio.getTime(),
-        dataFim: formDataFim.getTime(),
-        dataPrimeiroVencimento: formDataPrimeiroVencimento.getTime(),
-        valorMensal: formValorMensal,
-        status: formStatus,
-        taxaImplantacao: formTaxaImplantacao,
-        observacoes: formObservacoes,
-        cicloFaturamento: formCicloFaturamento
-      });
-      refreshContratos();
+      // Gera um número de contrato baseado na data atual
+      const numeroContrato = `CONT-${Date.now().toString().slice(-6)}`;
+      
+      const { data, error } = await supabase
+        .from('contratos')
+        .insert([
+          {
+            numero: numeroContrato,
+            cliente_sistema_id: formClienteId,
+            plano_id: formPlanoId,
+            data_inicio: formDataInicio.toISOString(),
+            data_fim: formDataFim.toISOString(),
+            data_primeiro_vencimento: formDataPrimeiroVencimento.toISOString(),
+            valor_mensal: formValorMensal,
+            status: formStatus,
+            taxa_implantacao: formTaxaImplantacao,
+            observacoes: formObservacoes,
+            ciclo_faturamento: formCicloFaturamento
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.error("Erro ao adicionar contrato:", error);
+        toast.error("Erro ao adicionar contrato: " + error.message);
+        return;
+      }
+
+      // Atualiza o cliente com a referência ao contrato
+      await supabase
+        .from('clientes_sistema')
+        .update({ contrato_id: data![0].id })
+        .eq('id', formClienteId);
+
+      await refreshContratos();
       setOpenNewModal(false);
       clearForm();
       toast.success("Contrato adicionado com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao adicionar contrato.");
+    } catch (error: any) {
+      console.error("Erro ao adicionar contrato:", error);
+      toast.error("Erro ao adicionar contrato: " + error.message);
     }
   };
   
-  const handleUpdateContrato = () => {
+  const handleUpdateContrato = async () => {
     if (!currentContrato) return;
     
     try {
-      updateContrato({
-        ...currentContrato,
-        clienteSistemaId: formClienteId,
-        planoId: formPlanoId,
-        dataInicio: formDataInicio.getTime(),
-        dataFim: formDataFim.getTime(),
-        dataPrimeiroVencimento: formDataPrimeiroVencimento.getTime(),
-        valorMensal: formValorMensal,
-        status: formStatus,
-        taxaImplantacao: formTaxaImplantacao,
-        observacoes: formObservacoes,
-        cicloFaturamento: formCicloFaturamento
-      });
-      refreshContratos();
+      const { error } = await supabase
+        .from('contratos')
+        .update({
+          cliente_sistema_id: formClienteId,
+          plano_id: formPlanoId,
+          data_inicio: formDataInicio.toISOString(),
+          data_fim: formDataFim.toISOString(),
+          data_primeiro_vencimento: formDataPrimeiroVencimento.toISOString(),
+          valor_mensal: formValorMensal,
+          status: formStatus,
+          taxa_implantacao: formTaxaImplantacao,
+          observacoes: formObservacoes,
+          ciclo_faturamento: formCicloFaturamento
+        })
+        .eq('id', currentContrato.id);
+
+      if (error) {
+        console.error("Erro ao atualizar contrato:", error);
+        toast.error("Erro ao atualizar contrato: " + error.message);
+        return;
+      }
+
+      await refreshContratos();
       setOpenEditModal(false);
       clearForm();
       toast.success("Contrato atualizado com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao atualizar contrato.");
+    } catch (error: any) {
+      console.error("Erro ao atualizar contrato:", error);
+      toast.error("Erro ao atualizar contrato: " + error.message);
     }
   };
   
-  const handleDeleteContrato = () => {
+  const handleDeleteContrato = async () => {
     if (!currentContrato) return;
     
     try {
-      deleteContrato(currentContrato.id);
-      refreshContratos();
+      // Primeiro, atualiza o cliente para remover a referência ao contrato
+      await supabase
+        .from('clientes_sistema')
+        .update({ contrato_id: null })
+        .eq('id', currentContrato.clienteSistemaId);
+
+      // Depois exclui o contrato
+      const { error } = await supabase
+        .from('contratos')
+        .delete()
+        .eq('id', currentContrato.id);
+
+      if (error) {
+        console.error("Erro ao excluir contrato:", error);
+        toast.error("Erro ao excluir contrato: " + error.message);
+        return;
+      }
+
+      await refreshContratos();
       setOpenDeleteModal(false);
       toast.success("Contrato excluído com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao excluir contrato.");
+    } catch (error: any) {
+      console.error("Erro ao excluir contrato:", error);
+      toast.error("Erro ao excluir contrato: " + error.message);
     }
   };
 
@@ -278,9 +451,6 @@ const ContratosPage: React.FC = () => {
                         mode="single"
                         selected={formDataInicio}
                         onSelect={(date) => date && setFormDataInicio(date)}
-                        disabled={(date) =>
-                          date > new Date()
-                        }
                         initialFocus
                         className="pointer-events-auto"
                       />
@@ -556,9 +726,6 @@ const ContratosPage: React.FC = () => {
                     mode="single"
                     selected={formDataInicio}
                     onSelect={(date) => date && setFormDataInicio(date)}
-                    disabled={(date) =>
-                      date > new Date()
-                    }
                     initialFocus
                     className="pointer-events-auto"
                   />
