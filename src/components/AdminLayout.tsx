@@ -1,11 +1,19 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, User } from "lucide-react";
 import AdminSidebarLinks from "./AdminSidebarLinks";
 import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -96,6 +104,30 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                 {title}
               </h1>
               <div className="flex items-center gap-4">
+                <div className="hidden sm:flex items-center text-sm text-gray-600 mr-4">
+                  <span className="font-medium">eSocial Brasil</span>
+                  <span className="mx-2">•</span>
+                  <span>Admin</span>
+                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative">
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem onClick={() => navigate("/admin/usuarios")}>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Usuários</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -105,6 +137,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                   <LogOut size={16} />
                   <span className="hidden sm:inline">Sair</span>
                 </Button>
+                
                 <img 
                   src="/lovable-uploads/55c55435-602d-4685-ade6-6d83d636842d.png" 
                   alt="eSocial Brasil Logo" 

@@ -2,7 +2,16 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, User } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   title?: string;
@@ -10,6 +19,8 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentClient = localStorage.getItem("sintonia:currentCliente");
   
   const handleLogout = () => {
     localStorage.removeItem("sintonia:userType");
@@ -29,6 +40,30 @@ const Header: React.FC<HeaderProps> = () => {
             />
           </div>
           <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center text-sm text-gray-600 mr-4">
+              <span className="font-medium">{currentClient}</span>
+              <span className="mx-2">•</span>
+              <span>Usuário</span>
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => navigate("/minha-conta")}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Configurações</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="outline"
               size="sm"
@@ -38,6 +73,7 @@ const Header: React.FC<HeaderProps> = () => {
               <LogOut size={16} />
               <span className="hidden sm:inline">Sair</span>
             </Button>
+            
             <div className="p-2">
               <img 
                 src="/lovable-uploads/55c55435-602d-4685-ade6-6d83d636842d.png" 
@@ -53,4 +89,3 @@ const Header: React.FC<HeaderProps> = () => {
 };
 
 export default Header;
-
