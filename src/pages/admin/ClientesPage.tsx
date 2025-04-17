@@ -238,6 +238,7 @@ const ClientesPage = () => {
         options: {
           data: {
             name: formData.responsavel,
+            is_main_user: true // Add flag to identify main user
           }
         }
       });
@@ -256,7 +257,8 @@ const ClientesPage = () => {
           id: authData.user.id,
           nome: formData.responsavel,
           email: formData.email,
-          tipo: 'client'
+          tipo: 'client',
+          is_main_user: true // Add flag to identify main user
         });
 
       if (profileError) {

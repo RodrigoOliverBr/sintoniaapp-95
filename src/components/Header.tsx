@@ -20,7 +20,8 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const currentClient = localStorage.getItem("sintonia:currentCliente");
+  const currentClientData = localStorage.getItem("sintonia:currentCliente");
+  const currentClient = currentClientData ? JSON.parse(currentClientData) : null;
   
   const handleLogout = () => {
     localStorage.removeItem("sintonia:userType");
@@ -41,9 +42,9 @@ const Header: React.FC<HeaderProps> = () => {
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center text-sm text-gray-600 mr-4">
-              <span className="font-medium">{currentClient}</span>
+              <span className="font-medium">{currentClient?.razaoSocial || 'eSocial Brasil'}</span>
               <span className="mx-2">•</span>
-              <span>Usuário</span>
+              <span>{currentClient?.responsavel || 'Admin'}</span>
             </div>
 
             <DropdownMenu>
