@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PasswordChangeForm } from '@/components/auth/PasswordChangeForm';
+import PasswordChangeForm from '@/components/auth/PasswordChangeForm';
 
 const UserAccountPage: React.FC = () => {
   return (

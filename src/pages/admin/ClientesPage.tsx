@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,7 @@ const ClientesPage: React.FC = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('clientes')
+        .from('clientes_sistema')
         .select('*');
 
       if (error) {
@@ -67,7 +68,16 @@ const ClientesPage: React.FC = () => {
       }
 
       if (data) {
-        setClientes(data);
+        // Map the data to match our Cliente interface
+        const clientesFormatados: Cliente[] = data.map(cliente => ({
+          id: cliente.id,
+          nome: cliente.razao_social,
+          email: cliente.email || '',
+          telefone: cliente.telefone || '',
+          cnpj: cliente.cnpj,
+          status: cliente.situacao as "ativo" | "bloqueado" | "liberado"
+        }));
+        setClientes(clientesFormatados);
       }
     } finally {
       setLoading(false);
@@ -77,8 +87,8 @@ const ClientesPage: React.FC = () => {
   const handleStatusChange = async (clienteId: string, newStatus: "ativo" | "bloqueado" | "liberado") => {
     try {
       const { data, error } = await supabase
-        .from('clientes')
-        .update({ status: newStatus })
+        .from('clientes_sistema')
+        .update({ situacao: newStatus })
         .eq('id', clienteId)
         .select()
 
@@ -115,6 +125,12 @@ const ClientesPage: React.FC = () => {
         description: handleSupabaseError(error),
       })
     }
+  };
+
+  const handleAccessAsClient = (clienteId: string) => {
+    localStorage.setItem("sintonia:userType", "client");
+    localStorage.setItem("sintonia:currentCliente", clienteId);
+    navigate("/");
   };
 
   const filteredClientes = clientes.filter(cliente =>
@@ -173,6 +189,9 @@ const ClientesPage: React.FC = () => {
                         <DropdownMenuItem onClick={() => navigate(`/admin/clientes/${cliente.id}`)}>
                           Visualizar
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAccessAsClient(cliente.id)}>
+                          Acessar como cliente
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleStatusChange(cliente.id, cliente.status === "ativo" ? "bloqueado" : "ativo")}>
                           {cliente.status === "ativo" ? "Bloquear" : "Ativar"}
@@ -194,4 +213,3 @@ const ClientesPage: React.FC = () => {
 };
 
 export default ClientesPage;
-

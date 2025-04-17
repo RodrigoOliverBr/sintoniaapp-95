@@ -1,6 +1,7 @@
+
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { Building2, ClipboardList, FileQuestion, FileSearch, FileText, Users, BarChart2, BookOpen, Settings } from "lucide-react";
+import { Building2, ClipboardList, FileQuestion, FileSearch, FileText, Users, BarChart2, BookOpen, Settings, User } from "lucide-react";
 
 const SidebarLinks: React.FC = () => {
   const activeClassName = 
@@ -55,7 +56,7 @@ const SidebarLinks: React.FC = () => {
         to="/minha-conta" 
         className={({ isActive }) => isActive ? activeClassName : inactiveClassName}
       >
-        <Settings size={20} />
+        <User size={20} />
         <span>Minha Conta</span>
       </NavLink>
       
