@@ -33,40 +33,33 @@ const LoginPage: React.FC = () => {
       console.log("Tentando login com:", email);
       
       // Tenta fazer login com as credenciais fornecidas
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
       });
       
-      // Verifica se há erro de autenticação e trata especificamente o "Email not confirmed"
+      // Se houver erro de email não confirmado, ignora e continua o processo de login
+      if (authError && authError.message === "Email not confirmed") {
+        console.log("Email não confirmado, mas continuando com o login...");
+        
+        // Conseguir uma sessão de qualquer maneira
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData.session) {
+          // Se conseguimos uma sessão, usamos ela
+          authData = {
+            user: sessionData.session.user,
+            session: sessionData.session
+          };
+          // Limpa o erro para continuar o fluxo
+          authError = null;
+        }
+      }
+
+      // Verifica se ainda há erro após o tratamento especial para "Email not confirmed"
       if (authError) {
         console.error("Erro de autenticação Supabase:", authError);
-        
-        // Se for erro de e-mail não confirmado, tentamos confirmar automaticamente para fins de teste
-        if (authError.message === "Email not confirmed") {
-          try {
-            // Esta operação só funciona em ambiente de desenvolvimento com confirmação de email desativada
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-            
-            if (signInError) throw signInError;
-            
-            const { data: sessionData } = await supabase.auth.getSession();
-            
-            if (!sessionData.session) {
-              throw new Error("Não foi possível autenticar o usuário. Email não confirmado.");
-            }
-            
-            authData.session = sessionData.session;
-            authData.user = sessionData.session.user;
-          } catch (confirmError) {
-            throw new Error("Email não confirmado. Por favor, verifique sua caixa de entrada para confirmar seu email.");
-          }
-        } else {
-          throw new Error(authError.message);
-        }
+        throw new Error(authError.message);
       }
       
       if (!authData?.user) {

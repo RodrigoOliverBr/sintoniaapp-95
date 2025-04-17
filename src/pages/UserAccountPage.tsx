@@ -51,10 +51,12 @@ const UserAccountPage = () => {
           
           if (error) throw error;
           
-          setUser({
+          const userProfile = {
             ...profile,
             email: session.user.email,
-          });
+          };
+          
+          setUser(userProfile);
           
           form.reset({
             nome: profile?.nome || '',
