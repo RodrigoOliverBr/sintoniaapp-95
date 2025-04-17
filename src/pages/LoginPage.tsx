@@ -32,31 +32,31 @@ const LoginPage: React.FC = () => {
     try {
       console.log("Tentando login com:", email);
       
-      // Tenta fazer login com as credenciais fornecidas
+      // Attempt login with provided credentials
       let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
       });
       
-      // Se houver erro de email não confirmado, ignora e continua o processo de login
+      // Handle special case for unconfirmed emails but continue login process
       if (authError && authError.message === "Email not confirmed") {
         console.log("Email não confirmado, mas continuando com o login...");
         
-        // Conseguir uma sessão de qualquer maneira
+        // Try to get a session anyway
         const { data: sessionData } = await supabase.auth.getSession();
         
         if (sessionData.session) {
-          // Se conseguimos uma sessão, usamos ela
+          // If we got a session, use it
           authData = {
             user: sessionData.session.user,
             session: sessionData.session
           };
-          // Limpa o erro para continuar o fluxo
+          // Clear the error to continue the flow
           authError = null;
         }
       }
 
-      // Verifica se ainda há erro após o tratamento especial para "Email not confirmed"
+      // Check if there's still an error after the special treatment
       if (authError) {
         console.error("Erro de autenticação Supabase:", authError);
         throw new Error(authError.message);
@@ -68,6 +68,7 @@ const LoginPage: React.FC = () => {
       
       console.log("Usuário autenticado com sucesso:", authData.user);
       
+      // Get user profile to determine their type (admin or client)
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
@@ -87,12 +88,11 @@ const LoginPage: React.FC = () => {
         throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
-      // Verificação explícita do tipo de usuário para garantir o redirecionamento correto
+      // Explicit verification of user type for correct redirection
       const userType = perfilData.tipo.toLowerCase();
       
-      // Verifica o tipo de perfil (admin ou cliente)
       if (userType === 'client') {
-        // Busca o cliente pelo email (não pelo ID, já que podem ser diferentes)
+        // For client users, verify their status in the clientes_sistema table
         const { data: clienteData, error: clienteError } = await supabase
           .from('clientes_sistema')
           .select('*')
@@ -113,16 +113,17 @@ const LoginPage: React.FC = () => {
           throw new Error("Dados do cliente não encontrados. Email: " + email);
         }
         
-        // NOVA VALIDAÇÃO: verificar o status do cliente
-        if (clienteData.situacao !== 'liberado') {
+        // Check if client is allowed to access the system
+        if (clienteData.situacao !== 'liberado' && clienteData.situacao !== 'ativo') {
           await supabase.auth.signOut();
           throw new Error("Acesso indisponível. Entre em contato com o time de suporte do aplicativo Sintonia.");
         }
         
-        // Armazena os dados do cliente no localStorage para uso na aplicação
+        // Store client data and user type in localStorage for use in the application
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
         localStorage.setItem("sintonia:userType", "client");
         
+        // Redirect clients to the client home page
         setTimeout(() => {
           navigate("/");
           setIsLoading(false);
@@ -130,7 +131,7 @@ const LoginPage: React.FC = () => {
         
         toast.success("Login realizado com sucesso como Cliente");
       } else if (userType === 'admin') {
-        // Para administradores, armazenamos o tipo e redirecionamos para o dashboard admin
+        // For admin users, store the type and redirect to admin dashboard
         localStorage.setItem("sintonia:userType", "admin");
         
         setTimeout(() => {
@@ -140,7 +141,7 @@ const LoginPage: React.FC = () => {
         
         toast.success("Login realizado com sucesso como Administrador");
       } else {
-        // Tipo de usuário desconhecido ou não suportado
+        // Unknown user type
         console.error("Tipo de perfil desconhecido:", userType);
         await supabase.auth.signOut();
         throw new Error(`Tipo de usuário "${userType}" não reconhecido. Entre em contato com o suporte.`);
