@@ -14,50 +14,15 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  // Effect to check if user is already logged in
   useEffect(() => {
-    const checkCurrentSession = async () => {
-      // Check if user is already logged in
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        // Clear any existing userType to avoid conflicts
-        localStorage.removeItem("sintonia:userType");
-        
-        // Get actual user type from the database to verify
-        const { data: profileData, error: profileError } = await supabase
-          .from('perfis')
-          .select('tipo')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profileError) {
-          console.error("Error fetching user profile:", profileError);
-          await supabase.auth.signOut();
-          localStorage.clear();
-          return;
-        }
-        
-        if (profileData) {
-          const userType = profileData.tipo.toLowerCase();
-          
-          if (userType === 'admin') {
-            localStorage.setItem("sintonia:userType", "admin");
-            navigate("/admin/dashboard");
-          } else {
-            localStorage.setItem("sintonia:userType", "client");
-            navigate("/");
-          }
-        } else {
-          // No profile found - unexpected state
-          await supabase.auth.signOut();
-          localStorage.clear();
-          toast.error("Perfil de usuário não encontrado. Entre em contato com o suporte.");
-        }
+    const userType = localStorage.getItem("sintonia:userType");
+    if (userType) {
+      if (userType === 'admin') {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
       }
-    };
-    
-    checkCurrentSession();
+    }
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -67,50 +32,47 @@ const LoginPage: React.FC = () => {
     try {
       console.log("Tentando login com:", email);
       
-      // Attempt login with provided credentials
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      // Tenta fazer login com as credenciais fornecidas
+      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
       });
       
-      // Handle error cases first
-      if (authError) {
-        // Special case for unconfirmed emails - we'll attempt to continue
-        if (authError.message === "Email not confirmed") {
-          console.log("Email não confirmado, mas continuando com o login...");
-          
-          // Let's see if we can get a session anyway
-          const { data: sessionData } = await supabase.auth.getSession();
-          
-          // If no session despite the email not being confirmed, throw the original error
-          if (!sessionData.session) {
-            throw new Error(authError.message);
-          }
-          
-          // If we have a session, we'll use it to continue with the login flow
-          console.log("Sessão recuperada apesar do email não confirmado");
-        } else {
-          // For other auth errors, just throw
-          console.error("Erro de autenticação:", authError);
-          throw new Error(authError.message);
+      // Se houver erro de email não confirmado, ignora e continua o processo de login
+      if (authError && authError.message === "Email not confirmed") {
+        console.log("Email não confirmado, mas continuando com o login...");
+        
+        // Conseguir uma sessão de qualquer maneira
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData.session) {
+          // Se conseguimos uma sessão, usamos ela
+          authData = {
+            user: sessionData.session.user,
+            session: sessionData.session
+          };
+          // Limpa o erro para continuar o fluxo
+          authError = null;
         }
       }
-      
-      // Get the current session (either from successful login or from the special case above)
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error("Não foi possível estabelecer uma sessão de usuário");
+
+      // Verifica se ainda há erro após o tratamento especial para "Email not confirmed"
+      if (authError) {
+        console.error("Erro de autenticação Supabase:", authError);
+        throw new Error(authError.message);
       }
       
-      console.log("Usuário autenticado com sucesso:", session.user);
+      if (!authData?.user) {
+        throw new Error("Não foi possível autenticar o usuário");
+      }
       
-      // Get user profile to determine their type
+      console.log("Usuário autenticado com sucesso:", authData.user);
+      
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
-        .eq('id', session.user.id)
-        .single();
+        .eq('id', authData.user.id)
+        .maybeSingle();
       
       if (perfilError) {
         console.error("Erro ao obter perfil:", perfilError);
@@ -118,22 +80,16 @@ const LoginPage: React.FC = () => {
         throw new Error("Erro ao buscar perfil de usuário");
       }
       
+      console.log("Perfil encontrado:", perfilData);
+      
       if (!perfilData) {
         await supabase.auth.signOut();
         throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
-      console.log("Perfil encontrado:", perfilData);
-      
-      // Determine user type from profile data
-      const userType = perfilData.tipo.toLowerCase();
-      console.log("Tipo de usuário detectado:", userType);
-      
-      // Clear any existing userType to avoid conflicts
-      localStorage.removeItem("sintonia:userType");
-      
-      if (userType === 'client' || userType === 'cliente') {
-        // For client users, verify their status in the clientes_sistema table
+      // Verifica o tipo de perfil (admin ou cliente)
+      if (perfilData.tipo === 'client') {
+        // Busca o cliente pelo email (não pelo ID, já que podem ser diferentes)
         const { data: clienteData, error: clienteError } = await supabase
           .from('clientes_sistema')
           .select('*')
@@ -154,36 +110,28 @@ const LoginPage: React.FC = () => {
           throw new Error("Dados do cliente não encontrados. Email: " + email);
         }
         
-        // Check if client is allowed to access the system
-        if (clienteData.situacao !== 'liberado' && clienteData.situacao !== 'ativo') {
+        if (clienteData.situacao === 'bloqueado' || clienteData.situacao === 'bloqueado-manualmente') {
           await supabase.auth.signOut();
-          throw new Error("Acesso indisponível. Entre em contato com o time de suporte do aplicativo Sintonia.");
+          throw new Error("Seu acesso está bloqueado. Entre em contato com o administrador.");
         }
         
-        // Store client data and user type in localStorage
+        // Armazena os dados do cliente no localStorage para uso na aplicação
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
-        localStorage.setItem("sintonia:userType", "client");
-        
-        toast.success("Login realizado com sucesso como Cliente");
-        
-        // Reset loading state and navigate IMMEDIATELY
-        setIsLoading(false);
-        navigate("/");
-      } else if (userType === 'admin') {
-        // For admin users, store the type and redirect to admin dashboard
-        localStorage.setItem("sintonia:userType", "admin");
-        
-        toast.success("Login realizado com sucesso como Administrador");
-        
-        // Reset loading state and navigate IMMEDIATELY
-        setIsLoading(false);
-        navigate("/admin/dashboard");
-      } else {
-        // Unknown user type
-        console.error("Tipo de perfil desconhecido:", userType);
-        await supabase.auth.signOut();
-        throw new Error(`Tipo de usuário "${userType}" não reconhecido. Entre em contato com o suporte.`);
       }
+      
+      const userType = perfilData.tipo === 'client' ? 'client' : 'admin';
+      localStorage.setItem("sintonia:userType", userType);
+      
+      setTimeout(() => {
+        if (userType === 'admin') {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/");
+        }
+        setIsLoading(false);
+      }, 1000);
+      
+      toast.success(`Login realizado com sucesso como ${userType === 'admin' ? 'Administrador' : 'Cliente'}`);
     } catch (error: any) {
       console.error("Erro no processo de login:", error);
       toast.error(error.message || "Credenciais inválidas. Verifique seu e-mail e senha.");
