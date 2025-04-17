@@ -33,7 +33,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
 
   return (
     <ThemeProvider defaultTheme="light" forcedTheme="light">
-      <div className="flex h-full min-h-screen bg-gray-50">
+      <div className="flex h-full min-h-screen bg-white">
         {/* Sidebar for desktop */}
         <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-white border-r print:hidden">
           <div className="flex-1 flex flex-col min-h-0 border-r border-gray-200">
@@ -149,7 +149,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
               </div>
             </div>
           </header>
-          <main className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <main className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-white">
             {children}
           </main>
         </div>
