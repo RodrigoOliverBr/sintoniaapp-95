@@ -42,6 +42,7 @@ export const useContratos = () => {
       }));
       
       setContratos(contratosFormatados);
+      console.log("Contratos atualizados:", contratosFormatados);
     } catch (error) {
       console.error('Erro ao recarregar contratos:', error);
     }
@@ -53,6 +54,8 @@ export const useContratos = () => {
     statusContrato: string
   ) => {
     try {
+      console.log(`Atualizando situação do cliente ${clienteId} com base no status do contrato: ${statusContrato}`);
+      
       // Primeiro, verificar se o cliente está bloqueado manualmente
       const { data: clienteData, error: clienteError } = await supabase
         .from('clientes_sistema')
@@ -90,6 +93,8 @@ export const useContratos = () => {
           novaSituacao = 'sem-contrato';
       }
       
+      console.log(`Atualizando cliente ${clienteId} para situação: ${novaSituacao}`);
+      
       // Atualizar a situação do cliente
       const { error } = await supabase
         .from('clientes_sistema')
@@ -108,6 +113,8 @@ export const useContratos = () => {
 
   const loadData = async () => {
     try {
+      setIsLoading(true);
+      
       // Carregar clientes do sistema
       const { data: clientesData, error: clientesError } = await supabase
         .from('clientes_sistema')
@@ -137,6 +144,7 @@ export const useContratos = () => {
       }));
       
       setClientes(clientesFormatados);
+      console.log("Clientes carregados:", clientesFormatados);
       
       // Carregar planos
       const { data: planosData, error: planosError } = await supabase
@@ -165,11 +173,14 @@ export const useContratos = () => {
       }));
       
       setPlanos(planosFormatados);
+      console.log("Planos carregados:", planosFormatados);
       
       await refreshContratos();
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast.error('Erro ao carregar dados');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -234,6 +245,8 @@ export const useContratos = () => {
         return false;
       }
 
+      console.log("Contrato adicionado:", data[0]);
+
       // Atualiza o cliente com a referência ao contrato
       await supabase
         .from('clientes_sistema')
@@ -266,6 +279,7 @@ export const useContratos = () => {
       }
 
       await refreshContratos();
+      await loadData(); // Recarregar todos os dados para garantir consistência
       return true;
     } catch (error: any) {
       console.error("Erro ao adicionar contrato:", error);
@@ -354,10 +368,13 @@ export const useContratos = () => {
         return false;
       }
       
+      console.log(`Contrato ${id} atualizado com status: ${formStatus}`);
+      
       // Atualizar a situação do cliente com base no status do contrato
       await atualizarSituacaoCliente(formClienteId, formStatus);
 
       await refreshContratos();
+      await loadData(); // Recarregar todos os dados para garantir consistência
       toast.success("Contrato atualizado com sucesso!");
       return true;
     } catch (error: any) {
@@ -408,6 +425,7 @@ export const useContratos = () => {
       }
 
       await refreshContratos();
+      await loadData(); // Recarregar todos os dados para garantir consistência
       toast.success("Contrato excluído com sucesso!");
       return true;
     } catch (error: any) {

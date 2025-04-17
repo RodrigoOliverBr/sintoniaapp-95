@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -113,19 +112,17 @@ const ContratosPage: React.FC = () => {
   };
 
   const verificarContratoAtivoExistente = async (clienteId: string) => {
-    // Filtra os contratos existentes para esse cliente
     const contratosDoCliente = contratos.filter(c => 
       c.clienteSistemaId === clienteId && c.status === 'ativo'
     );
     
-    // Se há contratos ativos e não estamos editando o contrato atual
     if (contratosDoCliente.length > 0) {
       if (!currentContrato || (currentContrato && currentContrato.id !== contratosDoCliente[0].id)) {
-        return true; // Existe contrato ativo
+        return true;
       }
     }
     
-    return false; // Não existe contrato ativo
+    return false;
   };
 
   const handleAddContrato = async () => {
@@ -134,7 +131,6 @@ const ContratosPage: React.FC = () => {
       return;
     }
 
-    // Verifica se já existe um contrato ativo para este cliente
     if (formStatus === 'ativo') {
       const contratoAtivoExiste = await verificarContratoAtivoExistente(formClienteId);
       if (contratoAtivoExiste) {
@@ -165,7 +161,6 @@ const ContratosPage: React.FC = () => {
   const handleUpdateContrato = async () => {
     if (!currentContrato) return;
     
-    // Verifica se já existe um contrato ativo para este cliente
     if (formStatus === 'ativo' && currentContrato.status !== 'ativo') {
       const contratoAtivoExiste = await verificarContratoAtivoExistente(formClienteId);
       if (contratoAtivoExiste) {

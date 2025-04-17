@@ -52,6 +52,40 @@ const ClientesPage = () => {
     }
   };
 
+  const fetchContratos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contratos')
+        .select('*');
+        
+      if (error) {
+        console.error("Erro ao buscar contratos:", error);
+        return [];
+      }
+      
+      return data.map(contrato => ({
+        id: contrato.id,
+        numero: contrato.numero,
+        clienteSistemaId: contrato.cliente_sistema_id || contrato.cliente_id,
+        clienteId: contrato.cliente_id,
+        planoId: contrato.plano_id,
+        dataInicio: new Date(contrato.data_inicio).getTime(),
+        dataFim: new Date(contrato.data_fim).getTime(),
+        dataPrimeiroVencimento: new Date(contrato.data_primeiro_vencimento).getTime(),
+        valorMensal: Number(contrato.valor_mensal),
+        status: contrato.status,
+        taxaImplantacao: Number(contrato.taxa_implantacao),
+        observacoes: contrato.observacoes || '',
+        cicloFaturamento: contrato.ciclo_faturamento,
+        proximaRenovacao: contrato.proxima_renovacao ? new Date(contrato.proxima_renovacao).getTime() : undefined,
+        ciclosGerados: contrato.ciclos_gerados || 0
+      }));
+    } catch (error) {
+      console.error("Erro ao buscar contratos:", error);
+      return [];
+    }
+  };
+
   const fetchClientes = async () => {
     try {
       const { data, error } = await supabase
@@ -79,78 +113,85 @@ const ClientesPage = () => {
         contratoId: item.contrato_id || undefined,
       })) || [];
       
+      // Obter todos os contratos
+      const contratos = await fetchContratos();
+      console.log("Contratos obtidos:", contratos);
+      
       // Obter status do contrato para cada cliente
-      const clientesComContrato: ClienteComContrato[] = await Promise.all(
-        mappedClientes.map(async (cliente) => {
-          const contratos = getContratosByClienteSistemaId(cliente.id);
+      const clientesComContrato: ClienteComContrato[] = mappedClientes.map(cliente => {
+        // Filtrar contratos para este cliente
+        const contratosDoCliente = contratos.filter(c => 
+          c.clienteSistemaId === cliente.id || c.clienteId === cliente.id
+        );
+        
+        console.log(`Contratos para cliente ${cliente.razaoSocial}:`, contratosDoCliente);
+        
+        // Se não tem contratos, define como 'sem-contrato'
+        if (!contratosDoCliente || contratosDoCliente.length === 0) {
+          return {
+            ...cliente,
+            statusContrato: 'sem-contrato',
+            situacao: cliente.situacao === 'bloqueado-manualmente' ? 'bloqueado-manualmente' : 'sem-contrato'
+          };
+        }
+        
+        // Verificar se há contrato ativo
+        const contratosAtivos = contratosDoCliente.filter(c => c.status === 'ativo');
+        
+        // Pega o contrato ativo se existir
+        const contratoAtivo = contratosAtivos.length > 0 ? contratosAtivos[0] : null;
+        
+        if (contratoAtivo) {
+          // Verificar se está próximo ao vencimento (45 dias)
+          const hoje = new Date();
+          const dataVencimento = new Date(contratoAtivo.dataFim);
+          const diasParaVencimento = Math.ceil((dataVencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
           
-          // Se não tem contratos, define como 'sem-contrato'
-          if (!contratos || contratos.length === 0) {
-            return {
-              ...cliente,
-              statusContrato: 'sem-contrato',
-              situacao: cliente.situacao === 'bloqueado-manualmente' ? 'bloqueado-manualmente' : 'sem-contrato'
-            };
-          }
-          
-          // Verificar se há mais de um contrato ativo
-          const contratosAtivos = contratos.filter(c => c.status === 'ativo');
-          
-          // Pega o contrato mais recente (assumindo que é o ativo)
-          const contratoAtivo = contratosAtivos[0];
-          
-          if (contratoAtivo) {
-            // Verificar se está próximo ao vencimento (45 dias)
-            const hoje = new Date();
-            const dataVencimento = new Date(contratoAtivo.dataFim);
-            const diasParaVencimento = Math.ceil((dataVencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-            
-            // Atualizar situação do cliente com base no status do contrato
-            // A menos que esteja 'bloqueado-manualmente'
-            let situacaoAtualizada = cliente.situacao;
-            if (cliente.situacao !== 'bloqueado-manualmente') {
-              situacaoAtualizada = contratoAtivo.status as ClienteStatus;
-            }
-            
-            if (diasParaVencimento <= 45 && diasParaVencimento > 0) {
-              return {
-                ...cliente,
-                situacao: situacaoAtualizada,
-                statusContrato: 'vencimento-proximo',
-                diasParaVencimento
-              };
-            }
-            
-            return {
-              ...cliente,
-              situacao: situacaoAtualizada,
-              statusContrato: contratoAtivo.status as StatusContrato
-            };
-          }
-          
-          // Se tem contrato mas nenhum ativo, pega o status do mais recente
-          const contratoMaisRecente = contratos.sort((a, b) => 
-            new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime()
-          )[0];
-          
-          // Atualizar situação do cliente para refletir o status do contrato mais recente
+          // Atualizar situação do cliente com base no status do contrato
           // A menos que esteja 'bloqueado-manualmente'
           let situacaoAtualizada = cliente.situacao;
           if (cliente.situacao !== 'bloqueado-manualmente') {
-            if (contratoMaisRecente.status === 'cancelado') {
-              situacaoAtualizada = 'sem-contrato';
-            } else {
-              situacaoAtualizada = contratoMaisRecente.status as ClienteStatus;
-            }
+            situacaoAtualizada = contratoAtivo.status as ClienteStatus;
+          }
+          
+          if (diasParaVencimento <= 45 && diasParaVencimento > 0) {
+            return {
+              ...cliente,
+              situacao: situacaoAtualizada,
+              statusContrato: 'vencimento-proximo',
+              diasParaVencimento
+            };
           }
           
           return {
             ...cliente,
             situacao: situacaoAtualizada,
-            statusContrato: contratoMaisRecente.status as StatusContrato
+            statusContrato: contratoAtivo.status as StatusContrato
           };
-        })
-      );
+        }
+        
+        // Se tem contrato mas nenhum ativo, pega o status do mais recente
+        const contratoMaisRecente = contratosDoCliente.sort((a, b) => 
+          new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime()
+        )[0];
+        
+        // Atualizar situação do cliente para refletir o status do contrato mais recente
+        // A menos que esteja 'bloqueado-manualmente'
+        let situacaoAtualizada = cliente.situacao;
+        if (cliente.situacao !== 'bloqueado-manualmente') {
+          if (contratoMaisRecente.status === 'cancelado') {
+            situacaoAtualizada = 'sem-contrato';
+          } else {
+            situacaoAtualizada = contratoMaisRecente.status as ClienteStatus;
+          }
+        }
+        
+        return {
+          ...cliente,
+          situacao: situacaoAtualizada,
+          statusContrato: contratoMaisRecente.status as StatusContrato
+        };
+      });
       
       console.log("Clientes carregados com informações de contrato:", clientesComContrato);
       setClientes(clientesComContrato);
@@ -347,11 +388,13 @@ const ClientesPage = () => {
 
   const handleLoginAsClient = async (cliente: ClienteSistema) => {
     try {
-      // Implementação futura para impersonação de cliente
-      // Esta é uma funcionalidade avançada que precisará ser implementada
+      // Armazenar ID do cliente no sessionStorage
+      sessionStorage.setItem('impersonatedClientId', cliente.id);
+      sessionStorage.setItem('impersonatedClientName', cliente.razaoSocial);
+      
+      // Redirecionar para a tela inicial do cliente
       toast.success(`Acessando como cliente: ${cliente.razaoSocial}`);
-      // Aqui você pode armazenar o ID do cliente em localStorage/sessionStorage
-      // e redirecionar para a área do cliente
+      navigate('/');
     } catch (error) {
       toast.error("Erro ao acessar como cliente");
     }
@@ -523,14 +566,14 @@ const ClientesPage = () => {
           </DialogHeader>
           <ClienteForm 
             onSubmit={handleUpdateCliente}
-            defaultValues={currentCliente ? {
-              razao_social: currentCliente.razaoSocial,
-              cnpj: currentCliente.cnpj,
-              email: currentCliente.email,
-              telefone: currentCliente.telefone || '',
-              responsavel: currentCliente.responsavel,
-              situacao: currentCliente.situacao
-            } : undefined}
+            defaultValues={{
+              razao_social: currentCliente?.razaoSocial || '',
+              cnpj: currentCliente?.cnpj || '',
+              email: currentCliente?.email || '',
+              telefone: currentCliente?.telefone || '',
+              responsavel: currentCliente?.responsavel || '',
+              situacao: currentCliente?.situacao || 'liberado'
+            }}
             isLoading={isLoading}
             isEditing={true}
           />
