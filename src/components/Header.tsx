@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
@@ -12,6 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ClienteSistema } from "@/types/admin";
+import { getClienteIdAtivo } from "@/utils/clientContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface HeaderProps {
   title?: string;
@@ -20,12 +23,71 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const currentClientData = localStorage.getItem("sintonia:currentCliente");
-  const currentClient = currentClientData ? JSON.parse(currentClientData) : null;
+  const [currentClient, setCurrentClient] = useState<ClienteSistema | null>(null);
+  
+  useEffect(() => {
+    const loadCurrentClient = async () => {
+      const clienteId = getClienteIdAtivo();
+      
+      if (!clienteId) {
+        const currentClientData = localStorage.getItem("sintonia:currentCliente");
+        if (currentClientData) {
+          try {
+            setCurrentClient(JSON.parse(currentClientData));
+          } catch (error) {
+            console.error("Error parsing client data:", error);
+          }
+        }
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from("clientes_sistema")
+          .select("*")
+          .eq("id", clienteId)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          // Transform to match ClienteSistema interface
+          const transformedData: ClienteSistema = {
+            id: data.id,
+            razaoSocial: data.razao_social,
+            nome: data.razao_social, // For backward compatibility
+            tipo: "juridica", // Default value
+            numeroEmpregados: 0, // Default value
+            dataInclusao: new Date(data.created_at).getTime(),
+            situacao: data.situacao,
+            cnpj: data.cnpj,
+            cpfCnpj: data.cnpj, // For backward compatibility
+            email: data.email || "",
+            telefone: data.telefone || "",
+            responsavel: data.responsavel || "",
+            contato: data.responsavel, // For backward compatibility
+            planoId: data.plano_id || undefined,
+            contratoId: data.contrato_id || undefined,
+            clienteId: data.id, // For backward compatibility
+          };
+          
+          setCurrentClient(transformedData);
+          
+          // Store in localStorage for persistence
+          localStorage.setItem("sintonia:currentCliente", JSON.stringify(transformedData));
+        }
+      } catch (err) {
+        console.error("Error loading client data:", err);
+      }
+    };
+    
+    loadCurrentClient();
+  }, [location.pathname]); // Reload when route changes to ensure current data
   
   const handleLogout = () => {
     localStorage.removeItem("sintonia:userType");
     localStorage.removeItem("sintonia:currentCliente");
+    sessionStorage.removeItem("impersonatedClientId");
     navigate("/login");
   };
 

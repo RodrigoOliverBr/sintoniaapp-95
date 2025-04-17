@@ -3,6 +3,7 @@ export interface Company {
   id: string;
   name: string;
   departments: Department[];
+  clienteId?: string; // Added to associate companies with clients
 }
 
 export interface Department {

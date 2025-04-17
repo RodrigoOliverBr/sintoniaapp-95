@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import SidebarLinks from "./SidebarLinks";
@@ -8,11 +8,13 @@ import { cn } from "@/lib/utils";
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem("sintonia:userType");
     localStorage.removeItem("sintonia:currentCliente");
-    window.location.href = "/login";
+    sessionStorage.removeItem("impersonatedClientId");
+    navigate("/login");
   };
 
   // Verificação se está em uma rota de admin ou cliente

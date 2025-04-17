@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addCompany } from "@/services/storageService";
 import { useToast } from "@/hooks/use-toast";
+import { getClienteIdAtivo } from "@/utils/clientContext";
 
 interface NewCompanyModalProps {
   open: boolean;
@@ -39,8 +40,19 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       });
       return;
     }
+    
+    const clienteId = getClienteIdAtivo();
+    
+    if (!clienteId) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível identificar o cliente atual",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    addCompany({ name });
+    addCompany({ name }, clienteId);
     
     toast({
       title: "Sucesso",

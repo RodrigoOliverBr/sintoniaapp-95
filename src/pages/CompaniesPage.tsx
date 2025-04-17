@@ -29,6 +29,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import NewDepartmentModal from "@/components/modals/NewDepartmentModal";
+import { getClienteIdAtivo } from "@/utils/clientContext";
 
 const CompaniesPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -38,7 +39,8 @@ const CompaniesPage: React.FC = () => {
   const { toast } = useToast();
 
   const loadCompanies = () => {
-    const loadedCompanies = getCompanies();
+    const clienteId = getClienteIdAtivo();
+    const loadedCompanies = getCompanies(clienteId);
     setCompanies(loadedCompanies || []);
   };
 

@@ -1,3 +1,4 @@
+
 export type ClienteStatus = 'liberado' | 'bloqueado' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
 export type TipoPessoa = 'fisica' | 'juridica';
 export type StatusContrato = 'ativo' | 'em-analise' | 'cancelado' | 'bloqueado-manualmente';

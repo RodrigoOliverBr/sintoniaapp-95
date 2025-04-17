@@ -1,298 +1,246 @@
-import { Company, Department, Employee, JobRole } from "@/types/cadastro";
-import { FormResult, StoredFormResult } from "@/types/form";
-import { formData } from "@/data/formData";
 
-// Keys for localStorage
-const COMPANIES_KEY = "istas21:companies";
-const EMPLOYEES_KEY = "istas21:employees";
-const JOB_ROLES_KEY = "istas21:jobRoles";
-const FORM_RESULTS_KEY = "istas21:formResults";
+// Current implementation - we'll extend this
+import { v4 as uuidv4 } from 'uuid';
+import { Company, Department, Employee, JobRole } from '@/types/cadastro';
+import { getClienteIdAtivo } from '@/utils/clientContext';
 
-// Initial data
-const initialCompanies: Company[] = [
-  { 
-    id: "1", 
-    name: "eSocial Brasil",
-    departments: [
-      { id: "1-1", name: "Recursos Humanos", companyId: "1" },
-      { id: "1-2", name: "Tecnologia da Informação", companyId: "1" },
-      { id: "1-3", name: "Administrativo", companyId: "1" }
-    ]
-  },
-  { 
-    id: "2", 
-    name: "Tech Solutions Ltda.",
-    departments: [
-      { id: "2-1", name: "Desenvolvimento", companyId: "2" },
-      { id: "2-2", name: "Suporte", companyId: "2" },
-      { id: "2-3", name: "Comercial", companyId: "2" }
-    ]
-  }
-];
+const COMPANIES_KEY = 'companies';
+const EMPLOYEES_KEY = 'employees';
+const JOB_ROLES_KEY = 'jobRoles';
 
-// Updated to include companyId
-const initialJobRoles: JobRole[] = [
-  { id: "1", name: "Analista de Recursos Humanos", companyId: "1" },
-  { id: "2", name: "Engenheiro de Software", companyId: "1" },
-  { id: "3", name: "Técnico de Segurança", companyId: "2" },
-  { id: "4", name: "Analista Administrativo", companyId: "2" },
-  { id: "5", name: "Gerente de Projetos", companyId: "1" }
-];
-
-// Companies
-export const getCompanies = (): Company[] => {
-  const companies = localStorage.getItem(COMPANIES_KEY);
-  if (!companies) {
-    localStorage.setItem(COMPANIES_KEY, JSON.stringify(initialCompanies));
-    return initialCompanies;
-  }
-  return JSON.parse(companies);
+// Helper to get client-specific storage key
+const getClientStorageKey = (baseKey: string, clientId: string | null): string => {
+  return clientId ? `${clientId}:${baseKey}` : baseKey;
 };
 
-export const addCompany = (company: Omit<Company, "id" | "departments">): Company => {
-  const companies = getCompanies();
+// Company functions with client ID support
+export const getCompanies = (clientId: string | null = getClienteIdAtivo()): Company[] => {
+  const key = getClientStorageKey(COMPANIES_KEY, clientId);
+  const companiesJSON = localStorage.getItem(key);
+  try {
+    return companiesJSON ? JSON.parse(companiesJSON) : [];
+  } catch (error) {
+    console.error('Error parsing companies:', error);
+    return [];
+  }
+};
+
+export const addCompany = (companyData: Partial<Company>, clientId: string | null = getClienteIdAtivo()): Company => {
+  const companies = getCompanies(clientId);
   const newCompany: Company = {
-    ...company,
-    id: Date.now().toString(),
-    departments: []
+    id: uuidv4(),
+    name: companyData.name || 'Nova Empresa',
+    departments: [],
+    ...companyData,
+    clienteId: clientId || undefined,
   };
-  localStorage.setItem(COMPANIES_KEY, JSON.stringify([...companies, newCompany]));
+  
+  companies.push(newCompany);
+  const key = getClientStorageKey(COMPANIES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(companies));
   return newCompany;
 };
 
-export const updateCompany = (company: Company): void => {
-  const companies = getCompanies();
-  const updatedCompanies = companies.map(c => c.id === company.id ? company : c);
-  localStorage.setItem(COMPANIES_KEY, JSON.stringify(updatedCompanies));
-};
-
-export const deleteCompany = (id: string): void => {
-  const companies = getCompanies();
-  const filteredCompanies = companies.filter(c => c.id !== id);
-  localStorage.setItem(COMPANIES_KEY, JSON.stringify(filteredCompanies));
+export const updateCompany = (companyId: string, companyData: Partial<Company>, clientId: string | null = getClienteIdAtivo()): Company | null => {
+  const companies = getCompanies(clientId);
+  const index = companies.findIndex(c => c.id === companyId);
   
-  // Also delete all employees of this company
-  const employees = getEmployees();
-  const filteredEmployees = employees.filter(e => e.companyId !== id);
-  localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(filteredEmployees));
-};
-
-// Departments
-export const addDepartmentToCompany = (companyId: string, departmentName: string): Department => {
-  const companies = getCompanies();
-  const company = companies.find(c => c.id === companyId);
+  if (index === -1) return null;
   
-  if (!company) {
-    throw new Error("Empresa não encontrada");
-  }
-  
-  // Garantir que a propriedade departments existe
-  if (!company.departments) {
-    company.departments = [];
-  }
-  
-  const newDepartment: Department = {
-    id: `${companyId}-${Date.now()}`,
-    name: departmentName,
-    companyId
+  const updatedCompany = {
+    ...companies[index],
+    ...companyData,
   };
   
-  company.departments.push(newDepartment);
-  updateCompany(company);
+  companies[index] = updatedCompany;
+  const key = getClientStorageKey(COMPANIES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(companies));
+  return updatedCompany;
+};
+
+export const deleteCompany = (companyId: string, clientId: string | null = getClienteIdAtivo()): boolean => {
+  const companies = getCompanies(clientId);
+  const filteredCompanies = companies.filter(c => c.id !== companyId);
   
+  if (filteredCompanies.length === companies.length) return false;
+  
+  const key = getClientStorageKey(COMPANIES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(filteredCompanies));
+  
+  // Also delete associated employees
+  const employees = getEmployees(clientId);
+  const remainingEmployees = employees.filter(e => e.companyId !== companyId);
+  const employeesKey = getClientStorageKey(EMPLOYEES_KEY, clientId);
+  localStorage.setItem(employeesKey, JSON.stringify(remainingEmployees));
+  
+  return true;
+};
+
+// Department functions
+export const addDepartmentToCompany = (companyId: string, departmentData: Partial<Department>, clientId: string | null = getClienteIdAtivo()): Department | null => {
+  const companies = getCompanies(clientId);
+  const companyIndex = companies.findIndex(c => c.id === companyId);
+  
+  if (companyIndex === -1) return null;
+  
+  const newDepartment: Department = {
+    id: uuidv4(),
+    name: departmentData.name || 'Novo Setor',
+    companyId,
+    ...departmentData,
+  };
+  
+  companies[companyIndex].departments.push(newDepartment);
+  const key = getClientStorageKey(COMPANIES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(companies));
   return newDepartment;
 };
 
-export const getDepartmentsByCompany = (companyId: string): Department[] => {
-  const company = getCompanyById(companyId);
-  return company && company.departments ? company.departments : [];
-};
-
-export const deleteDepartment = (companyId: string, departmentId: string): void => {
-  const companies = getCompanies();
-  const company = companies.find(c => c.id === companyId);
+export const deleteDepartment = (companyId: string, departmentId: string, clientId: string | null = getClienteIdAtivo()): boolean => {
+  const companies = getCompanies(clientId);
+  const companyIndex = companies.findIndex(c => c.id === companyId);
   
-  if (!company || !company.departments) return;
+  if (companyIndex === -1) return false;
   
-  company.departments = company.departments.filter(d => d.id !== departmentId);
-  updateCompany(company);
+  const departments = companies[companyIndex].departments;
+  const filteredDepartments = departments.filter(d => d.id !== departmentId);
   
-  // Update employees that had this department
-  const employees = getEmployees();
-  const updatedEmployees = employees.map(e => {
-    if (e.departmentId === departmentId) {
-      return { ...e, departmentId: "" };
+  if (filteredDepartments.length === departments.length) return false;
+  
+  companies[companyIndex].departments = filteredDepartments;
+  const key = getClientStorageKey(COMPANIES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(companies));
+  
+  // Also update employees to remove this department
+  const employees = getEmployees(clientId);
+  const updatedEmployees = employees.map(employee => {
+    if (employee.departmentId === departmentId) {
+      return { ...employee, departmentId: '' };
     }
-    return e;
+    return employee;
   });
   
-  localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
+  const employeesKey = getClientStorageKey(EMPLOYEES_KEY, clientId);
+  localStorage.setItem(employeesKey, JSON.stringify(updatedEmployees));
+  
+  return true;
 };
 
-// Job Roles
-export const getJobRoles = (): JobRole[] => {
-  const jobRoles = localStorage.getItem(JOB_ROLES_KEY);
-  if (!jobRoles) {
-    localStorage.setItem(JOB_ROLES_KEY, JSON.stringify(initialJobRoles));
-    return initialJobRoles;
+// Job roles functions with client ID support
+export const getJobRoles = (clientId: string | null = getClienteIdAtivo()): JobRole[] => {
+  const key = getClientStorageKey(JOB_ROLES_KEY, clientId);
+  const rolesJSON = localStorage.getItem(key);
+  try {
+    return rolesJSON ? JSON.parse(rolesJSON) : [];
+  } catch (error) {
+    console.error('Error parsing job roles:', error);
+    return [];
   }
-  return JSON.parse(jobRoles);
 };
 
-export const getJobRolesByCompany = (companyId: string): JobRole[] => {
-  const jobRoles = getJobRoles();
-  return jobRoles.filter(role => role.companyId === companyId);
-};
-
-export const addJobRole = (jobRole: Omit<JobRole, "id">): JobRole => {
-  const jobRoles = getJobRoles();
-  
-  // Check for similar names within the same company to avoid duplicates
-  const normalizedName = jobRole.name.toLowerCase().trim();
-  const similarExists = jobRoles.some(role => 
-    role.name.toLowerCase().trim() === normalizedName && 
-    role.companyId === jobRole.companyId
-  );
-  
-  if (similarExists) {
-    throw new Error("Uma função com nome similar já existe nesta empresa");
-  }
-  
+export const addJobRole = (roleData: Partial<JobRole>, clientId: string | null = getClienteIdAtivo()): JobRole => {
+  const roles = getJobRoles(clientId);
   const newRole: JobRole = {
-    id: Date.now().toString(),
-    name: jobRole.name,
-    companyId: jobRole.companyId
+    id: uuidv4(),
+    name: roleData.name || 'Nova Função',
+    companyId: roleData.companyId || '',
   };
   
-  localStorage.setItem(JOB_ROLES_KEY, JSON.stringify([...jobRoles, newRole]));
+  roles.push(newRole);
+  const key = getClientStorageKey(JOB_ROLES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(roles));
   return newRole;
 };
 
-export const updateJobRole = (jobRole: JobRole): void => {
-  const jobRoles = getJobRoles();
-  const updatedRoles = jobRoles.map(role => 
-    role.id === jobRole.id ? jobRole : role
-  );
-  localStorage.setItem(JOB_ROLES_KEY, JSON.stringify(updatedRoles));
+export const deleteJobRole = (roleId: string, clientId: string | null = getClienteIdAtivo()): boolean => {
+  const roles = getJobRoles(clientId);
+  const filteredRoles = roles.filter(r => r.id !== roleId);
+  
+  if (filteredRoles.length === roles.length) return false;
+  
+  const key = getClientStorageKey(JOB_ROLES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(filteredRoles));
+  
+  // Update employees to remove this role
+  const employees = getEmployees(clientId);
+  const updatedEmployees = employees.map(employee => {
+    if (employee.roleId === roleId) {
+      return { ...employee, roleId: '' };
+    }
+    return employee;
+  });
+  
+  const employeesKey = getClientStorageKey(EMPLOYEES_KEY, clientId);
+  localStorage.setItem(employeesKey, JSON.stringify(updatedEmployees));
+  
+  return true;
 };
 
-export const deleteJobRole = (id: string): void => {
-  const jobRoles = getJobRoles();
-  const filteredRoles = jobRoles.filter(r => r.id !== id);
-  localStorage.setItem(JOB_ROLES_KEY, JSON.stringify(filteredRoles));
-};
-
-export const getJobRoleById = (id: string): JobRole | undefined => {
-  return getJobRoles().find(r => r.id === id);
-};
-
-// Employees
-export const getEmployees = (): Employee[] => {
-  const employees = localStorage.getItem(EMPLOYEES_KEY);
-  if (!employees) {
+// Employee functions with client ID support
+export const getEmployees = (clientId: string | null = getClienteIdAtivo()): Employee[] => {
+  const key = getClientStorageKey(EMPLOYEES_KEY, clientId);
+  const employeesJSON = localStorage.getItem(key);
+  try {
+    return employeesJSON ? JSON.parse(employeesJSON) : [];
+  } catch (error) {
+    console.error('Error parsing employees:', error);
     return [];
   }
-  return JSON.parse(employees);
 };
 
-export const getEmployeesByCompany = (companyId: string): Employee[] => {
-  const employees = getEmployees();
-  return employees.filter(e => e.companyId === companyId);
-};
-
-export const addEmployee = (employee: Omit<Employee, "id">): Employee => {
-  const employees = getEmployees();
+export const addEmployee = (employeeData: Partial<Employee>, clientId: string | null = getClienteIdAtivo()): Employee => {
+  const employees = getEmployees(clientId);
   const newEmployee: Employee = {
-    ...employee,
-    id: Date.now().toString()
+    id: uuidv4(),
+    name: employeeData.name || '',
+    cpf: employeeData.cpf || '',
+    roleId: employeeData.roleId || '',
+    departmentId: employeeData.departmentId || '',
+    companyId: employeeData.companyId || '',
   };
-  localStorage.setItem(EMPLOYEES_KEY, JSON.stringify([...employees, newEmployee]));
+  
+  employees.push(newEmployee);
+  const key = getClientStorageKey(EMPLOYEES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(employees));
   return newEmployee;
 };
 
-export const updateEmployee = (employee: Employee): void => {
-  const employees = getEmployees();
-  const updatedEmployees = employees.map(e => e.id === employee.id ? employee : e);
-  localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
-};
-
-export const getDepartmentById = (companyId: string, departmentId: string): Department | undefined => {
-  const company = getCompanyById(companyId);
-  return company?.departments?.find(d => d.id === departmentId);
-};
-
-export const getCompanyById = (id: string): Company | undefined => {
-  return getCompanies().find(c => c.id === id);
-};
-
-// Form Results
-export const getFormResults = (): StoredFormResult[] => {
-  const results = localStorage.getItem(FORM_RESULTS_KEY);
-  if (!results) {
-    return [];
-  }
-  return JSON.parse(results);
-};
-
-export const getFormResultByEmployeeId = (employeeId: string): StoredFormResult | undefined => {
-  const results = getFormResults();
-  return results.find(r => r.employeeId === employeeId);
-};
-
-export const saveFormResult = (employeeId: string, result: FormResult): StoredFormResult => {
-  const results = getFormResults();
+export const updateEmployee = (employeeId: string, employeeData: Partial<Employee>, clientId: string | null = getClienteIdAtivo()): Employee | null => {
+  const employees = getEmployees(clientId);
+  const index = employees.findIndex(e => e.id === employeeId);
   
-  // Calculate if the form is complete
-  const allQuestions = formData.sections.flatMap(section => section.questions);
-  const totalQuestions = allQuestions.length;
-  const answeredQuestions = Object.values(result.answers).filter(a => a.answer !== null).length;
-  const isComplete = answeredQuestions === totalQuestions;
+  if (index === -1) return null;
   
-  const newResult: StoredFormResult = {
-    ...result,
-    employeeId,
-    lastUpdated: Date.now(),
-    isComplete
+  const updatedEmployee = {
+    ...employees[index],
+    ...employeeData,
   };
   
-  // Update existing or add new
-  const existingIndex = results.findIndex(r => r.employeeId === employeeId);
-  if (existingIndex >= 0) {
-    results[existingIndex] = newResult;
-  } else {
-    results.push(newResult);
-  }
-  
-  localStorage.setItem(FORM_RESULTS_KEY, JSON.stringify(results));
-  return newResult;
+  employees[index] = updatedEmployee;
+  const key = getClientStorageKey(EMPLOYEES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(employees));
+  return updatedEmployee;
 };
 
-export const getFormStatusByEmployeeId = (employeeId: string): 'not-started' | 'in-progress' | 'completed' => {
-  const result = getFormResultByEmployeeId(employeeId);
+export const deleteEmployee = (employeeId: string, clientId: string | null = getClienteIdAtivo()): boolean => {
+  const employees = getEmployees(clientId);
+  const filteredEmployees = employees.filter(e => e.id !== employeeId);
   
-  if (!result) {
-    return 'not-started';
-  }
+  if (filteredEmployees.length === employees.length) return false;
   
-  if (result.isComplete) {
-    return 'completed';
-  }
-  
-  return 'in-progress';
+  const key = getClientStorageKey(EMPLOYEES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(filteredEmployees));
+  return true;
 };
 
-export const deleteFormResultsByEmployeeId = (employeeId: string): void => {
-  const results = getFormResults();
-  const filteredResults = results.filter(r => r.employeeId !== employeeId);
-  localStorage.setItem(FORM_RESULTS_KEY, JSON.stringify(filteredResults));
+// Helper to find an employee by ID
+export const getEmployeeById = (employeeId: string, clientId: string | null = getClienteIdAtivo()): Employee | null => {
+  const employees = getEmployees(clientId);
+  return employees.find(e => e.id === employeeId) || null;
 };
 
-// Keep only this enhanced version of deleteEmployee that also removes form results
-export const deleteEmployee = (id: string): void => {
-  const employees = getEmployees();
-  const filteredEmployees = employees.filter(e => e.id !== id);
-  localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(filteredEmployees));
-  
-  // Also delete any form results for this employee
-  deleteFormResultsByEmployeeId(id);
+// Helper to get employees by company ID
+export const getEmployeesByCompanyId = (companyId: string, clientId: string | null = getClienteIdAtivo()): Employee[] => {
+  const employees = getEmployees(clientId);
+  return employees.filter(e => e.companyId === companyId);
 };
