@@ -43,7 +43,8 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
     }
 
     try {
-      addDepartmentToCompany(companyId, name);
+      // Fix: Pass an object instead of a string
+      addDepartmentToCompany(companyId, { name: name });
       
       toast({
         title: "Sucesso",

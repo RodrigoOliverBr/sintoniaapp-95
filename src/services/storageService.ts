@@ -3,10 +3,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Company, Department, Employee, JobRole } from '@/types/cadastro';
 import { getClienteIdAtivo } from '@/utils/clientContext';
+import { FormStatus } from '@/types/form';
 
 const COMPANIES_KEY = 'companies';
 const EMPLOYEES_KEY = 'employees';
 const JOB_ROLES_KEY = 'jobRoles';
+const FORM_RESULTS_KEY = 'formResults';
 
 // Helper to get client-specific storage key
 const getClientStorageKey = (baseKey: string, clientId: string | null): string => {
@@ -23,6 +25,11 @@ export const getCompanies = (clientId: string | null = getClienteIdAtivo()): Com
     console.error('Error parsing companies:', error);
     return [];
   }
+};
+
+export const getCompanyById = (companyId: string, clientId: string | null = getClienteIdAtivo()): Company | null => {
+  const companies = getCompanies(clientId);
+  return companies.find(c => c.id === companyId) || null;
 };
 
 export const addCompany = (companyData: Partial<Company>, clientId: string | null = getClienteIdAtivo()): Company => {
@@ -96,6 +103,20 @@ export const addDepartmentToCompany = (companyId: string, departmentData: Partia
   return newDepartment;
 };
 
+export const getDepartmentById = (departmentId: string, clientId: string | null = getClienteIdAtivo()): Department | null => {
+  const companies = getCompanies(clientId);
+  for (const company of companies) {
+    const department = company.departments.find(d => d.id === departmentId);
+    if (department) return department;
+  }
+  return null;
+};
+
+export const getDepartmentsByCompany = (companyId: string, clientId: string | null = getClienteIdAtivo()): Department[] => {
+  const company = getCompanyById(companyId, clientId);
+  return company ? company.departments : [];
+};
+
 export const deleteDepartment = (companyId: string, departmentId: string, clientId: string | null = getClienteIdAtivo()): boolean => {
   const companies = getCompanies(clientId);
   const companyIndex = companies.findIndex(c => c.id === companyId);
@@ -138,6 +159,16 @@ export const getJobRoles = (clientId: string | null = getClienteIdAtivo()): JobR
   }
 };
 
+export const getJobRoleById = (roleId: string, clientId: string | null = getClienteIdAtivo()): JobRole | null => {
+  const roles = getJobRoles(clientId);
+  return roles.find(r => r.id === roleId) || null;
+};
+
+export const getJobRolesByCompany = (companyId: string, clientId: string | null = getClienteIdAtivo()): JobRole[] => {
+  const roles = getJobRoles(clientId);
+  return roles.filter(r => r.companyId === companyId);
+};
+
 export const addJobRole = (roleData: Partial<JobRole>, clientId: string | null = getClienteIdAtivo()): JobRole => {
   const roles = getJobRoles(clientId);
   const newRole: JobRole = {
@@ -150,6 +181,23 @@ export const addJobRole = (roleData: Partial<JobRole>, clientId: string | null =
   const key = getClientStorageKey(JOB_ROLES_KEY, clientId);
   localStorage.setItem(key, JSON.stringify(roles));
   return newRole;
+};
+
+export const updateJobRole = (roleId: string, roleData: Partial<JobRole>, clientId: string | null = getClienteIdAtivo()): JobRole | null => {
+  const roles = getJobRoles(clientId);
+  const index = roles.findIndex(r => r.id === roleId);
+  
+  if (index === -1) return null;
+  
+  const updatedRole = {
+    ...roles[index],
+    ...roleData,
+  };
+  
+  roles[index] = updatedRole;
+  const key = getClientStorageKey(JOB_ROLES_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(roles));
+  return updatedRole;
 };
 
 export const deleteJobRole = (roleId: string, clientId: string | null = getClienteIdAtivo()): boolean => {
@@ -186,6 +234,10 @@ export const getEmployees = (clientId: string | null = getClienteIdAtivo()): Emp
     console.error('Error parsing employees:', error);
     return [];
   }
+};
+
+export const getEmployeesByCompany = (companyId: string, clientId: string | null = getClienteIdAtivo()): Employee[] => {
+  return getEmployeesByCompanyId(companyId, clientId);
 };
 
 export const addEmployee = (employeeData: Partial<Employee>, clientId: string | null = getClienteIdAtivo()): Employee => {
@@ -243,4 +295,59 @@ export const getEmployeeById = (employeeId: string, clientId: string | null = ge
 export const getEmployeesByCompanyId = (companyId: string, clientId: string | null = getClienteIdAtivo()): Employee[] => {
   const employees = getEmployees(clientId);
   return employees.filter(e => e.companyId === companyId);
+};
+
+// Form results related functions
+interface FormResult {
+  employeeId: string;
+  data: any;
+  lastUpdated: number;
+}
+
+export const getFormResults = (clientId: string | null = getClienteIdAtivo()): FormResult[] => {
+  const key = getClientStorageKey(FORM_RESULTS_KEY, clientId);
+  const resultsJSON = localStorage.getItem(key);
+  try {
+    return resultsJSON ? JSON.parse(resultsJSON) : [];
+  } catch (error) {
+    console.error('Error parsing form results:', error);
+    return [];
+  }
+};
+
+export const getFormResultByEmployeeId = (employeeId: string, clientId: string | null = getClienteIdAtivo()): FormResult | null => {
+  const results = getFormResults(clientId);
+  return results.find(r => r.employeeId === employeeId) || null;
+};
+
+export const saveFormResult = (employeeId: string, data: any, clientId: string | null = getClienteIdAtivo()): FormResult => {
+  const results = getFormResults(clientId);
+  const existingIndex = results.findIndex(r => r.employeeId === employeeId);
+  
+  const formResult: FormResult = {
+    employeeId,
+    data,
+    lastUpdated: Date.now()
+  };
+  
+  if (existingIndex >= 0) {
+    results[existingIndex] = formResult;
+  } else {
+    results.push(formResult);
+  }
+  
+  const key = getClientStorageKey(FORM_RESULTS_KEY, clientId);
+  localStorage.setItem(key, JSON.stringify(results));
+  return formResult;
+};
+
+export const getFormStatusByEmployeeId = (employeeId: string, clientId: string | null = getClienteIdAtivo()): FormStatus => {
+  const result = getFormResultByEmployeeId(employeeId, clientId);
+  
+  if (!result) return 'not-started';
+  
+  // Logic to determine if form is complete or in progress
+  // This is a simplified example - adjust based on your actual form completion criteria
+  const isComplete = result.data && result.data.completed === true;
+  return isComplete ? 'completed' : 'in-progress';
 };
