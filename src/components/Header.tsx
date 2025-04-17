@@ -1,8 +1,8 @@
 
 import React from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 interface HeaderProps {
   title?: string;
@@ -28,19 +28,7 @@ const Header: React.FC<HeaderProps> = () => {
               className="h-8 mr-2 md:hidden"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="flex items-center gap-1"
-            >
-              <Link to="/minha-conta">
-                <User size={16} />
-                <span className="hidden sm:inline">Minha Conta</span>
-              </Link>
-            </Button>
-            
+          <div className="flex items-center gap-4">
             <Button
               variant="outline"
               size="sm"
@@ -50,7 +38,6 @@ const Header: React.FC<HeaderProps> = () => {
               <LogOut size={16} />
               <span className="hidden sm:inline">Sair</span>
             </Button>
-            
             <div className="p-2">
               <img 
                 src="/lovable-uploads/55c55435-602d-4685-ade6-6d83d636842d.png" 
@@ -66,3 +53,4 @@ const Header: React.FC<HeaderProps> = () => {
 };
 
 export default Header;
+
