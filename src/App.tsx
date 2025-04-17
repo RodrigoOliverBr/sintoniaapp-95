@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -42,46 +41,55 @@ const ProtectedRoute = ({
   
   useEffect(() => {
     const checkAuthorization = async () => {
-      // First check if we have a session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        setChecking(false);
-        return;
-      }
-      
-      // Always get the user type directly from the database for security
-      // This prevents tampering with localStorage
-      if (session.user) {
-        const { data: profileData } = await supabase
-          .from('perfis')
-          .select('tipo')
-          .eq('id', session.user.id)
-          .single();
+      try {
+        // First check if we have a session
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (profileData) {
-          const actualUserType = profileData.tipo.toLowerCase();
-          
-          // Update local storage with the correct type from database
-          const storedType = actualUserType === 'admin' ? 'admin' : 'client';
-          localStorage.setItem("sintonia:userType", storedType);
-          
-          // Check if the user has the required role
-          const hasRequiredRole = userTypes.includes('all') || userTypes.includes(storedType as any);
-          setAuthorized(hasRequiredRole);
-          
-          // If trying to access admin routes as non-admin, show an error message
-          if (!hasRequiredRole && location.pathname.startsWith('/admin') && storedType !== 'admin') {
-            toast.error("Você não tem permissão para acessar esta área administrativa.");
-          }
-        } else {
-          // No profile found, not authorized
-          setAuthorized(false);
-          localStorage.removeItem("sintonia:userType");
+        if (!session) {
+          console.log("No session found, redirecting to login");
+          setChecking(false);
+          return;
         }
+        
+        // Always get the user type directly from the database for security
+        if (session.user) {
+          const { data: profileData } = await supabase
+            .from('perfis')
+            .select('tipo')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profileData) {
+            const actualUserType = profileData.tipo.toLowerCase();
+            console.log("User type from database:", actualUserType);
+            
+            // Update local storage with the correct type from database
+            const storedType = actualUserType === 'admin' ? 'admin' : 'client';
+            localStorage.setItem("sintonia:userType", storedType);
+            
+            // Check if the user has the required role
+            const hasRequiredRole = userTypes.includes('all') || userTypes.includes(storedType as any);
+            console.log("Has required role:", hasRequiredRole, "Required roles:", userTypes);
+            
+            setAuthorized(hasRequiredRole);
+            
+            // If trying to access admin routes as non-admin, show an error message
+            if (!hasRequiredRole && location.pathname.startsWith('/admin') && storedType !== 'admin') {
+              toast.error("Você não tem permissão para acessar esta área administrativa.");
+            }
+          } else {
+            // No profile found, not authorized
+            console.log("No profile found for user");
+            setAuthorized(false);
+            localStorage.removeItem("sintonia:userType");
+          }
+        }
+      } catch (error) {
+        console.error("Error checking authorization:", error);
+        setAuthorized(false);
+      } finally {
+        setChecking(false);
       }
-      
-      setChecking(false);
     };
     
     checkAuthorization();
@@ -94,6 +102,7 @@ const ProtectedRoute = ({
   
   // If not authorized, redirect
   if (!authorized) {
+    console.log("Not authorized, redirecting to:", redirectTo);
     return <Navigate to={redirectTo} replace state={{ from: location }} />;
   }
   
@@ -104,13 +113,13 @@ const ProtectedRoute = ({
 // Admin routes protection wrapper - STRICT check for admin only
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return (
-    <ProtectedRoute userTypes={['admin']} redirectTo="/">
+    <ProtectedRoute userTypes={['admin']} redirectTo="/login">
       {children}
     </ProtectedRoute>
   );
 };
 
-// Client routes protection wrapper
+// Client routes protection wrapper - allows both client and admin access
 const ClientRoute = ({ children }: { children: React.ReactNode }) => {
   return (
     <ProtectedRoute userTypes={['client', 'admin']} redirectTo="/login">
@@ -120,35 +129,44 @@ const ClientRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+  // Keep track of authentication state globally
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     // Check authentication on initial load and listen for changes
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-      
-      if (session) {
-        // Get user type directly from database to prevent tampering
-        const { data: profileData } = await supabase
-          .from('perfis')
-          .select('tipo')
-          .eq('id', session.user.id)
-          .single();
+      try {
+        // Get session
+        const { data: { session } } = await supabase.auth.getSession();
+        setIsAuthenticated(!!session);
         
-        if (profileData) {
-          const actualType = profileData.tipo.toLowerCase();
-          const storedType = actualType === 'admin' ? 'admin' : 'client';
-          localStorage.setItem("sintonia:userType", storedType);
-          setUserType(storedType);
+        if (session) {
+          // Get user type directly from database to prevent tampering
+          const { data: profileData } = await supabase
+            .from('perfis')
+            .select('tipo')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profileData) {
+            const actualType = profileData.tipo.toLowerCase();
+            const storedType = actualType === 'admin' ? 'admin' : 'client';
+            localStorage.setItem("sintonia:userType", storedType);
+            setUserType(storedType);
+          } else {
+            setUserType(null);
+            localStorage.removeItem("sintonia:userType");
+          }
         } else {
           setUserType(null);
           localStorage.removeItem("sintonia:userType");
         }
-      } else {
-        setUserType(null);
-        localStorage.removeItem("sintonia:userType");
+      } catch (error) {
+        console.error("Error checking auth:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -180,6 +198,15 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
   
+  // If still loading the initial auth state, show a simple loading indicator
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+  
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster />
@@ -187,7 +214,11 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Login route (public) */}
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={
+            isAuthenticated ? 
+              <Navigate to={userType === "admin" ? "/admin/dashboard" : "/"} replace /> : 
+              <LoginPage />
+          } />
           
           {/* Client system routes - accessible by client and admin */}
           <Route 

@@ -14,6 +14,7 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
+  // Effect to check if user is already logged in
   useEffect(() => {
     const checkCurrentSession = async () => {
       // Check if user is already logged in
@@ -39,11 +40,12 @@ const LoginPage: React.FC = () => {
         
         if (profileData) {
           const userType = profileData.tipo.toLowerCase();
-          localStorage.setItem("sintonia:userType", userType === 'admin' ? 'admin' : 'client');
           
           if (userType === 'admin') {
+            localStorage.setItem("sintonia:userType", "admin");
             navigate("/admin/dashboard");
           } else {
+            localStorage.setItem("sintonia:userType", "client");
             navigate("/");
           }
         } else {
@@ -65,53 +67,49 @@ const LoginPage: React.FC = () => {
     try {
       console.log("Tentando login com:", email);
       
-      // First, handle the special case for unconfirmed emails
-      let userData = null;
-      let userSession = null;
-      
       // Attempt login with provided credentials
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
       });
       
-      // Handle special case for unconfirmed emails but continue login process
-      if (authError && authError.message === "Email not confirmed") {
-        console.log("Email não confirmado, mas continuando com o login...");
-        
-        // Try to get a session anyway
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        if (sessionData.session) {
-          // If we got a session, use it
-          userData = sessionData.session.user;
-          userSession = sessionData.session;
+      // Handle error cases first
+      if (authError) {
+        // Special case for unconfirmed emails - we'll attempt to continue
+        if (authError.message === "Email not confirmed") {
+          console.log("Email não confirmado, mas continuando com o login...");
+          
+          // Let's see if we can get a session anyway
+          const { data: sessionData } = await supabase.auth.getSession();
+          
+          // If no session despite the email not being confirmed, throw the original error
+          if (!sessionData.session) {
+            throw new Error(authError.message);
+          }
+          
+          // If we have a session, we'll use it to continue with the login flow
+          console.log("Sessão recuperada apesar do email não confirmado");
         } else {
-          // If no session was retrieved, handle the original error
-          console.error("Erro de autenticação Supabase:", authError);
+          // For other auth errors, just throw
+          console.error("Erro de autenticação:", authError);
           throw new Error(authError.message);
         }
-      } else if (authError) {
-        // Handle other authentication errors
-        console.error("Erro de autenticação Supabase:", authError);
-        throw new Error(authError.message);
-      } else {
-        // Normal flow - authentication succeeded
-        userData = authData?.user;
-        userSession = authData?.session;
       }
       
-      if (!userData) {
-        throw new Error("Não foi possível autenticar o usuário");
+      // Get the current session (either from successful login or from the special case above)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("Não foi possível estabelecer uma sessão de usuário");
       }
       
-      console.log("Usuário autenticado com sucesso:", userData);
+      console.log("Usuário autenticado com sucesso:", session.user);
       
       // Get user profile to determine their type
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
-        .eq('id', userData.id)
+        .eq('id', session.user.id)
         .single();
       
       if (perfilError) {
@@ -120,15 +118,14 @@ const LoginPage: React.FC = () => {
         throw new Error("Erro ao buscar perfil de usuário");
       }
       
-      console.log("Perfil encontrado:", perfilData);
-      
       if (!perfilData) {
         await supabase.auth.signOut();
         throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
-      // Ensure we get the actual user type directly from the database
-      // This is critical for security - we don't rely on the localStorage value
+      console.log("Perfil encontrado:", perfilData);
+      
+      // Determine user type from profile data
       const userType = perfilData.tipo.toLowerCase();
       console.log("Tipo de usuário detectado:", userType);
       
@@ -167,30 +164,26 @@ const LoginPage: React.FC = () => {
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
         localStorage.setItem("sintonia:userType", "client");
         
-        // Redirect clients to the client home page
-        setTimeout(() => {
-          navigate("/");
-          setIsLoading(false);
-        }, 1000);
-        
         toast.success("Login realizado com sucesso como Cliente");
+        
+        // Reset loading state and navigate IMMEDIATELY
+        setIsLoading(false);
+        navigate("/");
       } else if (userType === 'admin') {
         // For admin users, store the type and redirect to admin dashboard
         localStorage.setItem("sintonia:userType", "admin");
         
-        setTimeout(() => {
-          navigate("/admin/dashboard");
-          setIsLoading(false);
-        }, 1000);
-        
         toast.success("Login realizado com sucesso como Administrador");
+        
+        // Reset loading state and navigate IMMEDIATELY
+        setIsLoading(false);
+        navigate("/admin/dashboard");
       } else {
         // Unknown user type
         console.error("Tipo de perfil desconhecido:", userType);
         await supabase.auth.signOut();
         throw new Error(`Tipo de usuário "${userType}" não reconhecido. Entre em contato com o suporte.`);
       }
-      
     } catch (error: any) {
       console.error("Erro no processo de login:", error);
       toast.error(error.message || "Credenciais inválidas. Verifique seu e-mail e senha.");
