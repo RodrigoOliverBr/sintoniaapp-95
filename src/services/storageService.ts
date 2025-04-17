@@ -1,21 +1,15 @@
-
-// Current implementation - we'll extend this
 import { v4 as uuidv4 } from 'uuid';
-import { Company, Department, Employee, JobRole } from '@/types/cadastro';
 import { getClienteIdAtivo } from '@/utils/clientContext';
-import { FormStatus } from '@/types/form';
 
 const COMPANIES_KEY = 'companies';
 const EMPLOYEES_KEY = 'employees';
 const JOB_ROLES_KEY = 'jobRoles';
 const FORM_RESULTS_KEY = 'formResults';
 
-// Helper to get client-specific storage key
 const getClientStorageKey = (baseKey: string, clientId: string | null): string => {
   return clientId ? `${clientId}:${baseKey}` : baseKey;
 };
 
-// Company functions with client ID support
 export const getCompanies = (clientId: string | null = getClienteIdAtivo()): Company[] => {
   const key = getClientStorageKey(COMPANIES_KEY, clientId);
   const companiesJSON = localStorage.getItem(key);
@@ -74,7 +68,6 @@ export const deleteCompany = (companyId: string, clientId: string | null = getCl
   const key = getClientStorageKey(COMPANIES_KEY, clientId);
   localStorage.setItem(key, JSON.stringify(filteredCompanies));
   
-  // Also delete associated employees
   const employees = getEmployees(clientId);
   const remainingEmployees = employees.filter(e => e.companyId !== companyId);
   const employeesKey = getClientStorageKey(EMPLOYEES_KEY, clientId);
@@ -83,7 +76,6 @@ export const deleteCompany = (companyId: string, clientId: string | null = getCl
   return true;
 };
 
-// Department functions
 export const addDepartmentToCompany = (companyId: string, departmentData: Partial<Department>, clientId: string | null = getClienteIdAtivo()): Department | null => {
   const companies = getCompanies(clientId);
   const companyIndex = companies.findIndex(c => c.id === companyId);
@@ -132,7 +124,6 @@ export const deleteDepartment = (companyId: string, departmentId: string, client
   const key = getClientStorageKey(COMPANIES_KEY, clientId);
   localStorage.setItem(key, JSON.stringify(companies));
   
-  // Also update employees to remove this department
   const employees = getEmployees(clientId);
   const updatedEmployees = employees.map(employee => {
     if (employee.departmentId === departmentId) {
@@ -147,7 +138,6 @@ export const deleteDepartment = (companyId: string, departmentId: string, client
   return true;
 };
 
-// Job roles functions with client ID support
 export const getJobRoles = (clientId: string | null = getClienteIdAtivo()): JobRole[] => {
   const key = getClientStorageKey(JOB_ROLES_KEY, clientId);
   const rolesJSON = localStorage.getItem(key);
@@ -209,7 +199,6 @@ export const deleteJobRole = (roleId: string, clientId: string | null = getClien
   const key = getClientStorageKey(JOB_ROLES_KEY, clientId);
   localStorage.setItem(key, JSON.stringify(filteredRoles));
   
-  // Update employees to remove this role
   const employees = getEmployees(clientId);
   const updatedEmployees = employees.map(employee => {
     if (employee.roleId === roleId) {
@@ -224,7 +213,6 @@ export const deleteJobRole = (roleId: string, clientId: string | null = getClien
   return true;
 };
 
-// Employee functions with client ID support
 export const getEmployees = (clientId: string | null = getClienteIdAtivo()): Employee[] => {
   const key = getClientStorageKey(EMPLOYEES_KEY, clientId);
   const employeesJSON = localStorage.getItem(key);
@@ -285,24 +273,15 @@ export const deleteEmployee = (employeeId: string, clientId: string | null = get
   return true;
 };
 
-// Helper to find an employee by ID
 export const getEmployeeById = (employeeId: string, clientId: string | null = getClienteIdAtivo()): Employee | null => {
   const employees = getEmployees(clientId);
   return employees.find(e => e.id === employeeId) || null;
 };
 
-// Helper to get employees by company ID
 export const getEmployeesByCompanyId = (companyId: string, clientId: string | null = getClienteIdAtivo()): Employee[] => {
   const employees = getEmployees(clientId);
   return employees.filter(e => e.companyId === companyId);
 };
-
-// Form results related functions
-interface FormResult {
-  employeeId: string;
-  data: any;
-  lastUpdated: number;
-}
 
 export const getFormResults = (clientId: string | null = getClienteIdAtivo()): FormResult[] => {
   const key = getClientStorageKey(FORM_RESULTS_KEY, clientId);
@@ -346,8 +325,6 @@ export const getFormStatusByEmployeeId = (employeeId: string, clientId: string |
   
   if (!result) return 'not-started';
   
-  // Logic to determine if form is complete or in progress
-  // This is a simplified example - adjust based on your actual form completion criteria
   const isComplete = result.data && result.data.completed === true;
   return isComplete ? 'completed' : 'in-progress';
 };
