@@ -2,7 +2,6 @@
 import React from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
-import { Toaster } from "@/components/ui/toaster";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -19,7 +18,6 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           {children}
         </main>
       </div>
-      <Toaster />
     </div>
   );
 };

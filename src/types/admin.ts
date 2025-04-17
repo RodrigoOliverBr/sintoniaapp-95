@@ -21,3 +21,10 @@ export interface ClienteSistema {
 
 // Explicitly define ClienteStatus type
 export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente';
+
+// Add FormResult interface that was missing
+export interface FormResult {
+  employeeId: string;
+  data: any;
+  lastUpdated: number;
+}

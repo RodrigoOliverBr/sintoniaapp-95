@@ -31,7 +31,7 @@ import {
 import NewDepartmentModal from "@/components/modals/NewDepartmentModal";
 import { getClienteIdAtivo } from "@/utils/clientContext";
 
-const CompaniesPage: React.FC = () => {
+const CompaniesPage = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isNewCompanyModalOpen, setIsNewCompanyModalOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);

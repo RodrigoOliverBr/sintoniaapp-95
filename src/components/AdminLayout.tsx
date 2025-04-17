@@ -1,5 +1,5 @@
+
 import React from "react";
-import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, X, LogOut, User } from "lucide-react";
@@ -151,7 +151,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
           {children}
         </main>
       </div>
-      <Toaster />
     </div>
   );
 };
