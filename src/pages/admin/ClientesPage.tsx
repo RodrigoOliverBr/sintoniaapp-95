@@ -1,3 +1,5 @@
+
+// This is a partial update of the file to fix the error
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -13,7 +15,6 @@ import { ClienteSistema, TipoPessoa, ClienteStatus, StatusContrato } from "@/typ
 import { toast } from "sonner";
 import { ClienteForm } from "@/components/admin/ClienteForm";
 import { getContratosByClienteSistemaId } from "@/services/adminService";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface ClienteComContrato extends ClienteSistema {
   statusContrato?: StatusContrato | 'vencimento-proximo' | 'sem-contrato';
@@ -29,8 +30,8 @@ const ClientesPage = () => {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openBlockModal, setOpenBlockModal] = useState(false);
   const [currentCliente, setCurrentCliente] = useState<ClienteSistema | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
-  const { isAdmin, startImpersonation } = useAuth();
   const navigate = useNavigate();
 
   const checkIsAdmin = async () => {
@@ -191,6 +192,7 @@ const ClientesPage = () => {
 
   useEffect(() => {
     fetchClientes();
+    checkIsAdmin().then(admin => setIsAdmin(admin));
   }, []);
 
   const handleError = (error: any, defaultMessage: string) => {
@@ -220,6 +222,7 @@ const ClientesPage = () => {
     try {
       setIsLoading(true);
       
+      // Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.senha,
@@ -238,6 +241,7 @@ const ClientesPage = () => {
         throw new Error('Falha ao criar usuário');
       }
       
+      // Create profile in perfis table
       const { error: profileError } = await supabase
         .from('perfis')
         .insert({
@@ -248,6 +252,7 @@ const ClientesPage = () => {
         });
 
       if (profileError) {
+        // If profile creation fails, attempt to clean up by deleting the auth user
         try {
           await supabase.auth.admin.deleteUser(authData.user.id);
         } catch (cleanupError) {
@@ -256,6 +261,7 @@ const ClientesPage = () => {
         throw new Error(handleError(profileError, 'Erro ao criar perfil'));
       }
 
+      // Create client in clientes_sistema table
       const { error: clienteError } = await supabase
         .from('clientes_sistema')
         .insert({
@@ -268,6 +274,7 @@ const ClientesPage = () => {
         });
 
       if (clienteError) {
+        // If client creation fails, attempt to clean up
         try {
           await supabase.from('perfis').delete().eq('id', authData.user.id);
           await supabase.auth.admin.deleteUser(authData.user.id);
@@ -383,7 +390,11 @@ const ClientesPage = () => {
 
   const handleLoginAsClient = async (cliente: ClienteSistema) => {
     try {
-      startImpersonation(cliente);
+      sessionStorage.setItem('impersonatedClientId', cliente.id);
+      sessionStorage.setItem('impersonatedClientName', cliente.razaoSocial);
+      
+      toast.success(`Acessando como cliente: ${cliente.razaoSocial}`);
+      navigate('/');
     } catch (error) {
       toast.error("Erro ao acessar como cliente");
     }

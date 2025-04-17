@@ -1,133 +1,210 @@
 
-import React, { useState, useEffect } from "react";
-import Layout from "@/components/Layout";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import PasswordChangeForm from '@/components/auth/PasswordChangeForm';
 
-const UserAccountPage: React.FC = () => {
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+// Schema simplificado para evitar problemas de tipagem
+const profileFormSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido").optional(),
+  telefone: z.string().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+const UserAccountPage = () => {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      nome: '',
+      email: '',
+      telefone: '',
+    },
+    mode: 'onChange',
+  });
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (!session) {
-          return;
-        }
-        
-        const { data, error } = await supabase
-          .from('perfis')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (error) throw error;
-        
-        if (data) {
-          setNome(data.nome || '');
-          setEmail(data.email || '');
-          // Check if telefone exists before accessing it
-          setTelefone(data.telefone || '');
+        if (session?.user) {
+          const { data: profile, error } = await supabase
+            .from('perfis')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) throw error;
+          
+          const userProfile = {
+            ...profile,
+            email: session.user.email,
+          };
+          
+          setUser(userProfile);
+          
+          form.reset({
+            nome: profile?.nome || '',
+            email: session.user.email || '',
+            telefone: profile?.telefone || '',
+          });
         }
       } catch (error) {
-        console.error("Erro ao carregar perfil:", error);
-        toast.error("Erro ao carregar informações do perfil");
+        console.error('Erro ao carregar usuário:', error);
+        toast.error('Não foi possível carregar os dados do usuário');
+      } finally {
+        setLoading(false);
       }
     };
-
-    fetchUserProfile();
-  }, []);
-
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
     
+    fetchUser();
+  }, [form]);
+  
+  const onSubmit = async (data: ProfileFormValues) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      setLoading(true);
       
-      if (!session) {
-        throw new Error("Usuário não autenticado");
-      }
-      
+      // Atualiza o perfil no banco de dados
       const { error } = await supabase
         .from('perfis')
         .update({
-          nome,
-          telefone
+          nome: data.nome,
+          telefone: data.telefone,
         })
-        .eq('id', session.user.id);
+        .eq('id', user.id);
       
       if (error) throw error;
       
-      toast.success("Perfil atualizado com sucesso!");
-    } catch (error: any) {
-      console.error("Erro ao atualizar perfil:", error);
-      toast.error("Erro ao atualizar perfil. Tente novamente.");
+      toast.success('Perfil atualizado com sucesso');
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast.error('Erro ao atualizar perfil');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-
+  
   return (
     <Layout>
-      <div className="container mx-auto p-4 max-w-3xl">
+      <div className="container mx-auto py-6">
         <h1 className="text-2xl font-bold mb-6">Minha Conta</h1>
         
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Informações do Perfil</CardTitle>
-            <CardDescription>
-              Atualize suas informações pessoais
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleUpdateProfile} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome Completo</Label>
-                <Input
-                  id="nome"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  placeholder="Seu nome completo"
-                  required
-                />
-              </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="md:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Meu Perfil</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center">
+                <Avatar className="w-24 h-24 mb-4">
+                  <AvatarFallback>{user?.nome?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="text-center">
+                  <h3 className="text-lg font-medium">{user?.nome}</h3>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  <p className="text-sm text-muted-foreground">{user?.tipo}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="md:col-span-2">
+            <Tabs defaultValue="informacoes">
+              <TabsList className="mb-4">
+                <TabsTrigger value="informacoes">Informações Pessoais</TabsTrigger>
+                <TabsTrigger value="senha">Alterar Senha</TabsTrigger>
+              </TabsList>
               
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  value={email}
-                  disabled
-                  placeholder="Seu e-mail"
-                />
-                <p className="text-sm text-gray-500">O e-mail não pode ser alterado</p>
-              </div>
+              <TabsContent value="informacoes">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Informações Pessoais</CardTitle>
+                    <CardDescription>Atualize suas informações pessoais</CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent>
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="nome"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nome</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input {...field} disabled />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="telefone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Telefone</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <Button type="submit" disabled={loading}>
+                          {loading ? "Salvando..." : "Salvar Alterações"}
+                        </Button>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
               
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
-                <Input
-                  id="telefone"
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  placeholder="Seu telefone"
-                />
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Salvando..." : "Salvar Alterações"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              <TabsContent value="senha">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Alterar Senha</CardTitle>
+                    <CardDescription>Atualize sua senha de acesso</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <PasswordChangeForm />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       </div>
     </Layout>
   );

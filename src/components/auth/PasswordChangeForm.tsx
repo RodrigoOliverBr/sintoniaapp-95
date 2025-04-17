@@ -1,121 +1,153 @@
 
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
 
 const passwordSchema = z.object({
-  currentPassword: z.string().min(6, "A senha atual deve ter pelo menos 6 caracteres"),
-  newPassword: z.string().min(6, "A nova senha deve ter pelo menos 6 caracteres"),
-  confirmPassword: z.string().min(6, "A confirmação de senha deve ter pelo menos 6 caracteres"),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "As senhas não coincidem",
+  currentPassword: z.string().min(1, "Senha atual é obrigatória"),
+  newPassword: z.string().min(8, "A nova senha precisa ter pelo menos 8 caracteres"),
+  confirmPassword: z.string().min(8, "A confirmação de senha precisa ter pelo menos 8 caracteres"),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "As senhas não conferem",
   path: ["confirmPassword"],
 });
 
-type PasswordFormValues = z.infer<typeof passwordSchema>;
+type PasswordFormData = z.infer<typeof passwordSchema>;
 
-const PasswordChangeForm = () => {
+const PasswordChangeForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
-
-  const form = useForm<PasswordFormValues>({
+  
+  const form = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    },
-    mode: 'onChange',
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    }
   });
 
-  const onSubmit = async (data: PasswordFormValues) => {
+  const handlePasswordChange = async (data: PasswordFormData) => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-
-      // Primeiro, verifica se a senha atual está correta
+      // Primeiro, reautenticar o usuário com a senha atual
+      const { data: userData } = await supabase.auth.getSession();
+      const email = userData.session?.user?.email;
+      
+      if (!email) {
+        throw new Error("Usuário não encontrado");
+      }
+      
+      // Tentativa de reautenticação com a senha atual
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: (await supabase.auth.getSession()).data.session?.user.email || '',
-        password: data.currentPassword,
+        email,
+        password: data.currentPassword
       });
-
+      
       if (signInError) {
-        throw new Error('Senha atual incorreta');
+        throw new Error("Senha atual incorreta");
       }
-
-      // Se a senha atual estiver correta, altera para a nova senha
+      
+      // Atualizar a senha
       const { error: updateError } = await supabase.auth.updateUser({
-        password: data.newPassword,
+        password: data.newPassword
       });
-
+      
       if (updateError) {
-        throw new Error('Erro ao atualizar senha');
+        throw new Error(updateError.message);
       }
-
-      toast.success('Senha alterada com sucesso');
+      
+      toast.success("Senha alterada com sucesso");
       form.reset();
     } catch (error: any) {
-      console.error('Erro ao alterar senha:', error);
-      toast.error(error.message || 'Erro ao alterar senha');
+      toast.error(error.message || "Erro ao alterar senha");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="currentPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Senha atual</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="Digite sua senha atual" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="newPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nova senha</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="Digite sua nova senha" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="confirmPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Confirmar nova senha</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="Confirme sua nova senha" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Alterando...' : 'Alterar Senha'}
-        </Button>
-      </form>
-    </Form>
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle>Alterar Senha</CardTitle>
+        <CardDescription>
+          Atualize sua senha de acesso ao sistema
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handlePasswordChange)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="currentPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha Atual</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="password" 
+                      placeholder="Digite sua senha atual" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="newPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nova Senha</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="password" 
+                      placeholder="Mínimo 8 caracteres" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirmar Nova Senha</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="password" 
+                      placeholder="Digite novamente a nova senha" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading}
+            >
+              {isLoading ? "Processando..." : "Alterar Senha"}
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 };
 

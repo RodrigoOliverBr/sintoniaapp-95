@@ -24,18 +24,17 @@ export interface Cliente {
   contratoId?: string; // Reference to associated contract
 }
 
-// Update ClienteSistema interface to match auth.ts
+// ClienteSistema with both new field names and aliases for backward compatibility
 export interface ClienteSistema {
   id: string;
-  razao_social: string;
-  razaoSocial?: string;
-  nome?: string;
+  razaoSocial: string;
+  nome?: string; // Alias for backward compatibility
   tipo: TipoPessoa;
   numeroEmpregados: number;
   dataInclusao: number; // timestamp
   situacao: ClienteStatus;
   cnpj: string;
-  cpfCnpj?: string;
+  cpfCnpj?: string; // Alias for backward compatibility
   email: string;
   telefone: string;
   endereco?: string;
@@ -43,28 +42,12 @@ export interface ClienteSistema {
   estado?: string;
   cep?: string;
   responsavel: string;
-  contato?: string;
-  plano_id?: string;
-  planoId?: string;
-  contrato_id?: string;
-  contratoId?: string;
-  clienteId?: string;
-  created_at?: string;
-  updated_at?: string;
+  contato?: string; // Alias for backward compatibility
+  planoId?: string; // Reference to associated plan
+  contratoId?: string; // Reference to associated contract
+  clienteId?: string; // For backward compatibility
 }
 
-// Interface for user profile data
-export interface UserProfile {
-  id: string;
-  nome: string;
-  email?: string;
-  telefone?: string;
-  tipo: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// Keep existing export interfaces
 export interface Plano {
   id: string;
   nome: string;

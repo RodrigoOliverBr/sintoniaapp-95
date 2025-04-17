@@ -2,18 +2,17 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, ArrowLeftCircle } from "lucide-react";
+import { LogOut } from "lucide-react";
 import SidebarLinks from "./SidebarLinks";
-import AdminSidebarLinks from "./AdminSidebarLinks";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
 
 const Sidebar = () => {
   const location = useLocation();
-  const { logout, isAdmin, isImpersonating, impersonatedClient, endImpersonation } = useAuth();
 
   const handleLogout = () => {
-    logout();
+    localStorage.removeItem("sintonia:userType");
+    localStorage.removeItem("sintonia:currentCliente");
+    window.location.href = "/login";
   };
 
   // Verificação se está em uma rota de admin ou cliente
@@ -28,29 +27,8 @@ const Sidebar = () => {
           className="h-10"
         />
       </div>
-      
-      {isImpersonating && impersonatedClient && (
-        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-sm">
-          <div className="font-medium text-yellow-800">
-            Acessando como cliente
-          </div>
-          <div className="text-yellow-700">
-            {impersonatedClient.razao_social || impersonatedClient.razaoSocial || impersonatedClient.nome || "Cliente"}
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="mt-1 text-yellow-800 hover:bg-yellow-200 w-full flex items-center gap-2"
-            onClick={endImpersonation}
-          >
-            <ArrowLeftCircle size={16} />
-            Voltar para Admin
-          </Button>
-        </div>
-      )}
-      
       <nav className="flex-1 overflow-y-auto py-2">
-        {isAdminRoute ? <AdminSidebarLinks /> : <SidebarLinks />}
+        <SidebarLinks />
       </nav>
       <div className="border-t p-4">
         <Button
