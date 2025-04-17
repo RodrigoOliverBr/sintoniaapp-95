@@ -22,6 +22,7 @@ import UsersAdminPage from "./pages/admin/UsersAdminPage";
 import { useEffect, useState } from "react";
 import { TestClientInsertion } from './components/admin/TestClientInsertion';
 import { toast } from "sonner";
+import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
@@ -35,29 +36,76 @@ const ProtectedRoute = ({
   userTypes: ('admin' | 'client' | 'all')[], 
   redirectTo?: string 
 }) => {
-  const currentUserType = localStorage.getItem("sintonia:userType") || "";
+  const [checking, setChecking] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
   const location = useLocation();
   
-  // Check if user is authenticated
-  if (!currentUserType) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+  useEffect(() => {
+    const checkAuthorization = async () => {
+      // First check if we have a session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setChecking(false);
+        return;
+      }
+      
+      // Get the stored user type
+      let storedUserType = localStorage.getItem("sintonia:userType");
+      
+      // Double check with the database to prevent tampering
+      if (session.user) {
+        const { data: profileData } = await supabase
+          .from('perfis')
+          .select('tipo')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        
+        if (profileData) {
+          const actualUserType = profileData.tipo.toLowerCase();
+          
+          // If stored type doesn't match actual type, update it
+          if (storedUserType !== actualUserType) {
+            console.warn("Stored user type doesn't match profile. Updating...");
+            storedUserType = actualUserType === 'admin' ? 'admin' : 'client';
+            localStorage.setItem("sintonia:userType", storedUserType);
+          }
+          
+          // Check if the user has the required role
+          const hasRequiredRole = userTypes.includes('all') || userTypes.includes(storedUserType as any);
+          setAuthorized(hasRequiredRole);
+          
+          // If trying to access admin routes as non-admin, show an error message
+          if (!hasRequiredRole && location.pathname.startsWith('/admin') && storedUserType !== 'admin') {
+            toast.error("Você não tem permissão para acessar esta área administrativa.");
+          }
+        } else {
+          // No profile found, not authorized
+          setAuthorized(false);
+        }
+      }
+      
+      setChecking(false);
+    };
+    
+    checkAuthorization();
+  }, [location, userTypes]);
+  
+  // Still checking authorization
+  if (checking) {
+    return <div className="flex items-center justify-center h-screen">Verificando acesso...</div>;
   }
   
-  // Check if user has the required role
-  const hasRequiredRole = userTypes.includes('all') || userTypes.includes(currentUserType as any);
-  
-  if (!hasRequiredRole) {
-    // If trying to access admin routes as a client, show an error message
-    if (currentUserType === 'client' && location.pathname.startsWith('/admin')) {
-      toast.error("Você não tem permissão para acessar esta área.");
-    }
-    return <Navigate to={redirectTo} replace />;
+  // If not authorized, redirect
+  if (!authorized) {
+    return <Navigate to={redirectTo} replace state={{ from: location }} />;
   }
   
+  // Authorized, render children
   return <>{children}</>;
 };
 
-// Admin routes protection wrapper
+// Admin routes protection wrapper - STRICT check for admin only
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return (
     <ProtectedRoute userTypes={['admin']} redirectTo="/">
@@ -77,11 +125,36 @@ const ClientRoute = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userType, setUserType] = useState<string | null>(null);
   
   useEffect(() => {
-    // Verificar autenticação no carregamento inicial
-    const userType = localStorage.getItem("sintonia:userType");
-    setIsAuthenticated(!!userType);
+    // Check authentication on initial load and listen for changes
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+      
+      if (session) {
+        const currentType = localStorage.getItem("sintonia:userType");
+        setUserType(currentType);
+      } else {
+        setUserType(null);
+      }
+    };
+    
+    checkAuth();
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+      if (!session) {
+        setUserType(null);
+      } else {
+        const currentType = localStorage.getItem("sintonia:userType");
+        setUserType(currentType);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
   }, []);
   
   return (
@@ -90,10 +163,10 @@ function App() {
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Rota de Login (pública) */}
+          {/* Login route (public) */}
           <Route path="/login" element={<LoginPage />} />
           
-          {/* Rotas do sistema cliente - acessível por cliente e admin */}
+          {/* Client system routes - accessible by client and admin */}
           <Route 
             path="/" 
             element={
@@ -166,7 +239,7 @@ function App() {
             } 
           />
           
-          {/* Rotas do sistema administrativo - acessível APENAS por admin */}
+          {/* Admin system routes - accessible ONLY by admin */}
           <Route 
             path="/admin/dashboard" 
             element={
@@ -221,17 +294,17 @@ function App() {
             } 
           />
           
-          {/* Rota inicial redireciona para o login se não autenticado */}
+          {/* Root redirect based on authentication status and user type */}
           <Route 
             path="/" 
             element={
               isAuthenticated ? 
-                <Navigate to={localStorage.getItem("sintonia:userType") === "admin" ? "/admin/dashboard" : "/"} replace /> : 
+                <Navigate to={userType === "admin" ? "/admin/dashboard" : "/"} replace /> : 
                 <Navigate to="/login" replace />
             } 
           />
           
-          {/* Rota de fallback */}
+          {/* Fallback route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

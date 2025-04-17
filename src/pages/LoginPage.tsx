@@ -15,14 +15,27 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
-    const userType = localStorage.getItem("sintonia:userType");
-    if (userType) {
-      if (userType === 'admin') {
-        navigate("/admin/dashboard");
-      } else {
-        navigate("/");
+    const checkCurrentSession = async () => {
+      // Check if user is already logged in
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const userType = localStorage.getItem("sintonia:userType");
+        if (userType) {
+          if (userType === 'admin') {
+            navigate("/admin/dashboard");
+          } else {
+            navigate("/");
+          }
+        } else {
+          // If session exists but no userType, sign out to avoid inconsistent state
+          await supabase.auth.signOut();
+          localStorage.clear();
+        }
       }
-    }
+    };
+    
+    checkCurrentSession();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -68,7 +81,7 @@ const LoginPage: React.FC = () => {
       
       console.log("Usuário autenticado com sucesso:", authData.user);
       
-      // Get user profile to determine their type (admin or client)
+      // CRITICAL FIX: Get user profile to determine their type (admin or client)
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
@@ -88,10 +101,15 @@ const LoginPage: React.FC = () => {
         throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
-      // Explicit verification of user type for correct redirection
+      // CRITICAL FIX: Explicit verification of user type for correct redirection
+      // Ensure we're getting the actual type from the database and not from localStorage
       const userType = perfilData.tipo.toLowerCase();
+      console.log("Tipo de usuário detectado:", userType);
       
-      if (userType === 'client') {
+      // Clear any existing userType to avoid conflicts
+      localStorage.removeItem("sintonia:userType");
+      
+      if (userType === 'client' || userType === 'cliente') {
         // For client users, verify their status in the clientes_sistema table
         const { data: clienteData, error: clienteError } = await supabase
           .from('clientes_sistema')
