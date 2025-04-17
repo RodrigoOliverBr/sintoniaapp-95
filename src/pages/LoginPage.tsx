@@ -65,6 +65,10 @@ const LoginPage: React.FC = () => {
     try {
       console.log("Tentando login com:", email);
       
+      // First, handle the special case for unconfirmed emails
+      let userData = null;
+      let userSession = null;
+      
       // Attempt login with provided credentials
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
@@ -80,32 +84,34 @@ const LoginPage: React.FC = () => {
         
         if (sessionData.session) {
           // If we got a session, use it
-          authData = {
-            user: sessionData.session.user,
-            session: sessionData.session
-          };
-          // Clear the error to continue the flow
-          authError = null;
+          userData = sessionData.session.user;
+          userSession = sessionData.session;
+        } else {
+          // If no session was retrieved, handle the original error
+          console.error("Erro de autenticação Supabase:", authError);
+          throw new Error(authError.message);
         }
-      }
-
-      // Check if there's still an error after the special treatment
-      if (authError) {
+      } else if (authError) {
+        // Handle other authentication errors
         console.error("Erro de autenticação Supabase:", authError);
         throw new Error(authError.message);
+      } else {
+        // Normal flow - authentication succeeded
+        userData = authData?.user;
+        userSession = authData?.session;
       }
       
-      if (!authData?.user) {
+      if (!userData) {
         throw new Error("Não foi possível autenticar o usuário");
       }
       
-      console.log("Usuário autenticado com sucesso:", authData.user);
+      console.log("Usuário autenticado com sucesso:", userData);
       
       // Get user profile to determine their type
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
-        .eq('id', authData.user.id)
+        .eq('id', userData.id)
         .single();
       
       if (perfilError) {
