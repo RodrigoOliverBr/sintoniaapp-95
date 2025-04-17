@@ -87,8 +87,11 @@ const LoginPage: React.FC = () => {
         throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
+      // Verificação explícita do tipo de usuário para garantir o redirecionamento correto
+      const userType = perfilData.tipo.toLowerCase();
+      
       // Verifica o tipo de perfil (admin ou cliente)
-      if (perfilData.tipo === 'client') {
+      if (userType === 'client') {
         // Busca o cliente pelo email (não pelo ID, já que podem ser diferentes)
         const { data: clienteData, error: clienteError } = await supabase
           .from('clientes_sistema')
@@ -117,21 +120,31 @@ const LoginPage: React.FC = () => {
         
         // Armazena os dados do cliente no localStorage para uso na aplicação
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
+        localStorage.setItem("sintonia:userType", "client");
+        
+        setTimeout(() => {
+          navigate("/");
+          setIsLoading(false);
+        }, 1000);
+        
+        toast.success("Login realizado com sucesso como Cliente");
+      } else if (userType === 'admin') {
+        // Para administradores, armazenamos o tipo e redirecionamos para o dashboard admin
+        localStorage.setItem("sintonia:userType", "admin");
+        
+        setTimeout(() => {
+          navigate("/admin/dashboard");
+          setIsLoading(false);
+        }, 1000);
+        
+        toast.success("Login realizado com sucesso como Administrador");
+      } else {
+        // Tipo de usuário desconhecido ou não suportado
+        console.error("Tipo de perfil desconhecido:", userType);
+        await supabase.auth.signOut();
+        throw new Error(`Tipo de usuário "${userType}" não reconhecido. Entre em contato com o suporte.`);
       }
       
-      const userType = perfilData.tipo === 'client' ? 'client' : 'admin';
-      localStorage.setItem("sintonia:userType", userType);
-      
-      setTimeout(() => {
-        if (userType === 'admin') {
-          navigate("/admin/dashboard");
-        } else {
-          navigate("/");
-        }
-        setIsLoading(false);
-      }, 1000);
-      
-      toast.success(`Login realizado com sucesso como ${userType === 'admin' ? 'Administrador' : 'Cliente'}`);
     } catch (error: any) {
       console.error("Erro no processo de login:", error);
       toast.error(error.message || "Credenciais inválidas. Verifique seu e-mail e senha.");
