@@ -2,7 +2,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
 import FormularioPage from "./pages/FormularioPage";
 import ComoPreencher from "./pages/ComoPreencher";
 import ComoAvaliar from "./pages/ComoAvaliar";
@@ -21,21 +21,58 @@ import UserAccountPage from "./pages/UserAccountPage";
 import UsersAdminPage from "./pages/admin/UsersAdminPage";
 import { useEffect, useState } from "react";
 import { TestClientInsertion } from './components/admin/TestClientInsertion';
+import { toast } from "sonner";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, userType: 'admin' | 'cliente' | 'all' }) => {
+// Enhanced Protected Route component with role verification
+const ProtectedRoute = ({ 
+  children, 
+  userTypes, 
+  redirectTo = "/login" 
+}: { 
+  children: React.ReactNode, 
+  userTypes: ('admin' | 'client' | 'all')[], 
+  redirectTo?: string 
+}) => {
   const currentUserType = localStorage.getItem("sintonia:userType") || "";
+  const location = useLocation();
   
+  // Check if user is authenticated
   if (!currentUserType) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
   
-  if (userType !== 'all' && currentUserType !== userType) {
-    return <Navigate to="/" replace />;
+  // Check if user has the required role
+  const hasRequiredRole = userTypes.includes('all') || userTypes.includes(currentUserType as any);
+  
+  if (!hasRequiredRole) {
+    // If trying to access admin routes as a client, show an error message
+    if (currentUserType === 'client' && location.pathname.startsWith('/admin')) {
+      toast.error("Você não tem permissão para acessar esta área.");
+    }
+    return <Navigate to={redirectTo} replace />;
   }
   
-  return children;
+  return <>{children}</>;
+};
+
+// Admin routes protection wrapper
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <ProtectedRoute userTypes={['admin']} redirectTo="/">
+      {children}
+    </ProtectedRoute>
+  );
+};
+
+// Client routes protection wrapper
+const ClientRoute = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <ProtectedRoute userTypes={['client', 'admin']} redirectTo="/login">
+      {children}
+    </ProtectedRoute>
+  );
 };
 
 function App() {
@@ -56,119 +93,131 @@ function App() {
           {/* Rota de Login (pública) */}
           <Route path="/login" element={<LoginPage />} />
           
-          {/* Rotas do sistema cliente */}
+          {/* Rotas do sistema cliente - acessível por cliente e admin */}
           <Route 
             path="/" 
             element={
-              <ProtectedRoute userType="all">
+              <ClientRoute>
                 <FormularioPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/como-preencher" 
-            element={
-              <ProtectedRoute userType="all">
-                <ComoPreencher />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/como-avaliar" 
-            element={
-              <ProtectedRoute userType="all">
-                <ComoAvaliar />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/mitigacoes" 
-            element={
-              <ProtectedRoute userType="all">
-                <Mitigacoes />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/minha-conta" 
-            element={
-              <ProtectedRoute userType="all">
-                <UserAccountPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/cadastros/empresas" 
-            element={
-              <ProtectedRoute userType="all">
-                <CompaniesPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/cadastros/funcionarios" 
-            element={
-              <ProtectedRoute userType="all">
-                <EmployeesPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/relatorios" 
-            element={
-              <ProtectedRoute userType="all">
-                <RelatoriosPage />
-              </ProtectedRoute>
+              </ClientRoute>
             } 
           />
           
-          {/* Rotas do sistema administrativo */}
+          <Route 
+            path="/como-preencher" 
+            element={
+              <ClientRoute>
+                <ComoPreencher />
+              </ClientRoute>
+            } 
+          />
+          
+          <Route 
+            path="/como-avaliar" 
+            element={
+              <ClientRoute>
+                <ComoAvaliar />
+              </ClientRoute>
+            } 
+          />
+          
+          <Route 
+            path="/mitigacoes" 
+            element={
+              <ClientRoute>
+                <Mitigacoes />
+              </ClientRoute>
+            } 
+          />
+          
+          <Route 
+            path="/minha-conta" 
+            element={
+              <ClientRoute>
+                <UserAccountPage />
+              </ClientRoute>
+            } 
+          />
+          
+          <Route 
+            path="/cadastros/empresas" 
+            element={
+              <ClientRoute>
+                <CompaniesPage />
+              </ClientRoute>
+            } 
+          />
+          
+          <Route 
+            path="/cadastros/funcionarios" 
+            element={
+              <ClientRoute>
+                <EmployeesPage />
+              </ClientRoute>
+            } 
+          />
+          
+          <Route 
+            path="/relatorios" 
+            element={
+              <ClientRoute>
+                <RelatoriosPage />
+              </ClientRoute>
+            } 
+          />
+          
+          {/* Rotas do sistema administrativo - acessível APENAS por admin */}
           <Route 
             path="/admin/dashboard" 
             element={
-              <ProtectedRoute userType="admin">
+              <AdminRoute>
                 <DashboardPage />
-              </ProtectedRoute>
+              </AdminRoute>
             } 
           />
+          
           <Route 
             path="/admin/clientes" 
             element={
-              <ProtectedRoute userType="admin">
+              <AdminRoute>
                 <ClientesPage />
-              </ProtectedRoute>
+              </AdminRoute>
             } 
           />
+          
           <Route 
             path="/admin/planos" 
             element={
-              <ProtectedRoute userType="admin">
+              <AdminRoute>
                 <PlanosPage />
-              </ProtectedRoute>
+              </AdminRoute>
             } 
           />
+          
           <Route 
             path="/admin/contratos" 
             element={
-              <ProtectedRoute userType="admin">
+              <AdminRoute>
                 <ContratosPage />
-              </ProtectedRoute>
+              </AdminRoute>
             } 
           />
+          
           <Route 
             path="/admin/faturamento" 
             element={
-              <ProtectedRoute userType="admin">
+              <AdminRoute>
                 <FaturamentoPage />
-              </ProtectedRoute>
+              </AdminRoute>
             } 
           />
+          
           <Route 
             path="/admin/usuarios" 
             element={
-              <ProtectedRoute userType="admin">
+              <AdminRoute>
                 <UsersAdminPage />
-              </ProtectedRoute>
+              </AdminRoute>
             } 
           />
           
@@ -177,8 +226,8 @@ function App() {
             path="/" 
             element={
               isAuthenticated ? 
-              <FormularioPage /> : 
-              <Navigate to="/login" replace />
+                <Navigate to={localStorage.getItem("sintonia:userType") === "admin" ? "/admin/dashboard" : "/"} replace /> : 
+                <Navigate to="/login" replace />
             } 
           />
           

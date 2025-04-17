@@ -113,9 +113,10 @@ const LoginPage: React.FC = () => {
           throw new Error("Dados do cliente não encontrados. Email: " + email);
         }
         
-        if (clienteData.situacao === 'bloqueado' || clienteData.situacao === 'bloqueado-manualmente') {
+        // NOVA VALIDAÇÃO: verificar o status do cliente
+        if (clienteData.situacao !== 'liberado') {
           await supabase.auth.signOut();
-          throw new Error("Seu acesso está bloqueado. Entre em contato com o administrador.");
+          throw new Error("Acesso indisponível. Entre em contato com o time de suporte do aplicativo Sintonia.");
         }
         
         // Armazena os dados do cliente no localStorage para uso na aplicação
