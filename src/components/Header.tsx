@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,10 @@ import { ThemeProvider } from "next-themes";
 interface HeaderProps {
   title?: string;
 }
+
+// Adicionando tipos temporários enquanto não atualizamos os arquivos de tipos
+type TipoPessoa = "fisica" | "juridica";
+type ClienteStatus = "liberado" | "bloqueado" | "ativo" | "em-analise" | "sem-contrato" | "bloqueado-manualmente";
 
 const Header: React.FC<HeaderProps> = () => {
   const navigate = useNavigate();

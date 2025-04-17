@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -53,28 +54,28 @@ export default {
           foreground: 'hsl(var(--card-foreground))'
         },
         sidebar: {
-          DEFAULT: 'hsl(var(--sidebar-background))',
-          foreground: 'hsl(var(--sidebar-foreground))',
-          primary: 'hsl(var(--sidebar-primary))',
-          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-          accent: 'hsl(var(--sidebar-accent))',
-          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-          border: 'hsl(var(--sidebar-border))',
-          ring: 'hsl(var(--sidebar-ring))'
+          DEFAULT: '#FFFFFF',
+          foreground: '#000000',
+          primary: 'hsl(211 63% 42%)',
+          'primary-foreground': '#FFFFFF',
+          accent: '#F1F1F1',
+          'accent-foreground': '#000000',
+          border: '#E5E7EB',
+          ring: 'hsl(211 63% 42%)'
         },
         esocial: {
-          blue: '#1EAEDB',          // Azul principal
-          oceanBlue: '#2271B3',     // Azul mais escuro do logo
-          green: '#4CA146',         // Verde do ícone
-          yellow: '#F8C300',        // Amarelo do ícone 
+          blue: '#1EAEDB',
+          oceanBlue: '#2271B3',
+          green: '#4CA146',
+          yellow: '#F8C300',
           lightGray: '#F1F1F1',
           gray: '#C8C8C9',
           darkGray: '#333333'
         },
         severity: {
-          light: '#FFD700',    // Levemente prejudicial (amarelo)
-          medium: '#FF8C00',   // Prejudicial (laranja)
-          high: '#FF4500'      // Extremamente prejudicial (vermelho)
+          light: '#FFD700',
+          medium: '#FF8C00',
+          high: '#FF4500'
         }
       },
       borderRadius: {
