@@ -23,8 +23,18 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+interface UserProfile {
+  id: string;
+  nome: string;
+  email?: string;
+  telefone?: string;
+  tipo: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const UserAccountPage = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   
   const form = useForm<ProfileFormValues>({
@@ -51,7 +61,7 @@ const UserAccountPage = () => {
           
           if (error) throw error;
           
-          const userProfile = {
+          const userProfile: UserProfile = {
             ...profile,
             email: session.user.email,
           };
@@ -86,7 +96,7 @@ const UserAccountPage = () => {
           nome: data.nome,
           telefone: data.telefone,
         })
-        .eq('id', user.id);
+        .eq('id', user?.id);
       
       if (error) throw error;
       

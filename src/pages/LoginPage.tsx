@@ -87,12 +87,16 @@ const LoginPage: React.FC = () => {
         throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
+      // Verifica o tipo de perfil (admin ou cliente)
       if (perfilData.tipo === 'client') {
+        // Busca o cliente pelo email (não pelo ID, já que podem ser diferentes)
         const { data: clienteData, error: clienteError } = await supabase
           .from('clientes_sistema')
           .select('*')
           .eq('email', email)
           .maybeSingle();
+        
+        console.log("Dados do cliente:", clienteData, "Erro:", clienteError);
         
         if (clienteError) {
           console.error("Erro ao buscar dados do cliente:", clienteError);
@@ -101,15 +105,17 @@ const LoginPage: React.FC = () => {
         }
         
         if (!clienteData) {
+          console.error("Cliente não encontrado para o email:", email);
           await supabase.auth.signOut();
-          throw new Error("Dados do cliente não encontrados");
+          throw new Error("Dados do cliente não encontrados. Email: " + email);
         }
         
-        if (clienteData.situacao === 'bloqueado') {
+        if (clienteData.situacao === 'bloqueado' || clienteData.situacao === 'bloqueado-manualmente') {
           await supabase.auth.signOut();
           throw new Error("Seu acesso está bloqueado. Entre em contato com o administrador.");
         }
         
+        // Armazena os dados do cliente no localStorage para uso na aplicação
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
       }
       

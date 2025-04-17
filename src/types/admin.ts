@@ -48,6 +48,18 @@ export interface ClienteSistema {
   clienteId?: string; // For backward compatibility
 }
 
+// Interface for user profile data
+export interface UserProfile {
+  id: string;
+  nome: string;
+  email?: string;
+  telefone?: string;
+  tipo: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Keep existing export interfaces
 export interface Plano {
   id: string;
   nome: string;
