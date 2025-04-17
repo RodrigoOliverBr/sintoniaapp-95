@@ -1,4 +1,3 @@
-
 export type SeverityLevel = 'LEVEMENTE PREJUDICIAL' | 'PREJUDICIAL' | 'EXTREMAMENTE PREJUDICIAL';
 
 export type FormSection = {
@@ -28,14 +27,25 @@ export type FormData = {
   sections: FormSection[];
 };
 
-export type FormResult = {
+export interface FormResult {
   answers: Record<number, FormAnswer>;
   totalYes: number;
   totalNo: number;
-  severityCounts: Record<SeverityLevel, number>;
-  yesPerSeverity: Record<SeverityLevel, number>;
+  severityCounts: {
+    "LEVEMENTE PREJUDICIAL": number;
+    "PREJUDICIAL": number;
+    "EXTREMAMENTE PREJUDICIAL": number;
+  };
+  yesPerSeverity: {
+    "LEVEMENTE PREJUDICIAL": number;
+    "PREJUDICIAL": number;
+    "EXTREMAMENTE PREJUDICIAL": number;
+  };
   analyistNotes: string;
-};
+  isComplete?: boolean;
+  lastUpdated?: number;
+  employeeId?: string;
+}
 
 export type StoredFormResult = FormResult & {
   employeeId: string;
