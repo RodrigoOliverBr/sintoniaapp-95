@@ -20,17 +20,37 @@ const LoginPage: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
-        const userType = localStorage.getItem("sintonia:userType");
-        if (userType) {
+        // Clear any existing userType to avoid conflicts
+        localStorage.removeItem("sintonia:userType");
+        
+        // Get actual user type from the database to verify
+        const { data: profileData, error: profileError } = await supabase
+          .from('perfis')
+          .select('tipo')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          await supabase.auth.signOut();
+          localStorage.clear();
+          return;
+        }
+        
+        if (profileData) {
+          const userType = profileData.tipo.toLowerCase();
+          localStorage.setItem("sintonia:userType", userType === 'admin' ? 'admin' : 'client');
+          
           if (userType === 'admin') {
             navigate("/admin/dashboard");
           } else {
             navigate("/");
           }
         } else {
-          // If session exists but no userType, sign out to avoid inconsistent state
+          // No profile found - unexpected state
           await supabase.auth.signOut();
           localStorage.clear();
+          toast.error("Perfil de usuário não encontrado. Entre em contato com o suporte.");
         }
       }
     };
@@ -46,7 +66,7 @@ const LoginPage: React.FC = () => {
       console.log("Tentando login com:", email);
       
       // Attempt login with provided credentials
-      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
       });
@@ -81,12 +101,12 @@ const LoginPage: React.FC = () => {
       
       console.log("Usuário autenticado com sucesso:", authData.user);
       
-      // CRITICAL FIX: Get user profile to determine their type (admin or client)
+      // Get user profile to determine their type
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
         .eq('id', authData.user.id)
-        .maybeSingle();
+        .single();
       
       if (perfilError) {
         console.error("Erro ao obter perfil:", perfilError);
@@ -101,8 +121,8 @@ const LoginPage: React.FC = () => {
         throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
-      // CRITICAL FIX: Explicit verification of user type for correct redirection
-      // Ensure we're getting the actual type from the database and not from localStorage
+      // Ensure we get the actual user type directly from the database
+      // This is critical for security - we don't rely on the localStorage value
       const userType = perfilData.tipo.toLowerCase();
       console.log("Tipo de usuário detectado:", userType);
       
@@ -137,7 +157,7 @@ const LoginPage: React.FC = () => {
           throw new Error("Acesso indisponível. Entre em contato com o time de suporte do aplicativo Sintonia.");
         }
         
-        // Store client data and user type in localStorage for use in the application
+        // Store client data and user type in localStorage
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
         localStorage.setItem("sintonia:userType", "client");
         

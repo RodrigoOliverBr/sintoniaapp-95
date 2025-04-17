@@ -50,38 +50,34 @@ const ProtectedRoute = ({
         return;
       }
       
-      // Get the stored user type
-      let storedUserType = localStorage.getItem("sintonia:userType");
-      
-      // Double check with the database to prevent tampering
+      // Always get the user type directly from the database for security
+      // This prevents tampering with localStorage
       if (session.user) {
         const { data: profileData } = await supabase
           .from('perfis')
           .select('tipo')
           .eq('id', session.user.id)
-          .maybeSingle();
+          .single();
         
         if (profileData) {
           const actualUserType = profileData.tipo.toLowerCase();
           
-          // If stored type doesn't match actual type, update it
-          if (storedUserType !== actualUserType) {
-            console.warn("Stored user type doesn't match profile. Updating...");
-            storedUserType = actualUserType === 'admin' ? 'admin' : 'client';
-            localStorage.setItem("sintonia:userType", storedUserType);
-          }
+          // Update local storage with the correct type from database
+          const storedType = actualUserType === 'admin' ? 'admin' : 'client';
+          localStorage.setItem("sintonia:userType", storedType);
           
           // Check if the user has the required role
-          const hasRequiredRole = userTypes.includes('all') || userTypes.includes(storedUserType as any);
+          const hasRequiredRole = userTypes.includes('all') || userTypes.includes(storedType as any);
           setAuthorized(hasRequiredRole);
           
           // If trying to access admin routes as non-admin, show an error message
-          if (!hasRequiredRole && location.pathname.startsWith('/admin') && storedUserType !== 'admin') {
+          if (!hasRequiredRole && location.pathname.startsWith('/admin') && storedType !== 'admin') {
             toast.error("Você não tem permissão para acessar esta área administrativa.");
           }
         } else {
           // No profile found, not authorized
           setAuthorized(false);
+          localStorage.removeItem("sintonia:userType");
         }
       }
       
@@ -134,23 +130,50 @@ function App() {
       setIsAuthenticated(!!session);
       
       if (session) {
-        const currentType = localStorage.getItem("sintonia:userType");
-        setUserType(currentType);
+        // Get user type directly from database to prevent tampering
+        const { data: profileData } = await supabase
+          .from('perfis')
+          .select('tipo')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileData) {
+          const actualType = profileData.tipo.toLowerCase();
+          const storedType = actualType === 'admin' ? 'admin' : 'client';
+          localStorage.setItem("sintonia:userType", storedType);
+          setUserType(storedType);
+        } else {
+          setUserType(null);
+          localStorage.removeItem("sintonia:userType");
+        }
       } else {
         setUserType(null);
+        localStorage.removeItem("sintonia:userType");
       }
     };
     
     checkAuth();
     
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setIsAuthenticated(!!session);
       if (!session) {
         setUserType(null);
+        localStorage.removeItem("sintonia:userType");
       } else {
-        const currentType = localStorage.getItem("sintonia:userType");
-        setUserType(currentType);
+        // Get fresh user type from database on auth state change
+        const { data: profileData } = await supabase
+          .from('perfis')
+          .select('tipo')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileData) {
+          const actualType = profileData.tipo.toLowerCase();
+          const storedType = actualType === 'admin' ? 'admin' : 'client';
+          localStorage.setItem("sintonia:userType", storedType);
+          setUserType(storedType);
+        }
       }
     });
     
