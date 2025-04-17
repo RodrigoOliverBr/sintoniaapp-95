@@ -1,3 +1,5 @@
+
+// This is a partial update of the file to fix the error
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -205,6 +207,9 @@ const ClientesPage = () => {
     if (error.message?.includes('duplicate key')) {
       return 'Este registro já existe no sistema.';
     }
+    if (error.message?.includes('is_main_user')) {
+      return 'Erro na estrutura do banco de dados: a coluna "is_main_user" não foi encontrada. Contate o administrador.';
+    }
     
     if (error.message) {
       return error.message;
@@ -217,13 +222,13 @@ const ClientesPage = () => {
     try {
       setIsLoading(true);
       
+      // Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.senha,
         options: {
           data: {
-            name: formData.responsavel,
-            is_main_user: true
+            name: formData.responsavel
           }
         }
       });
@@ -236,21 +241,27 @@ const ClientesPage = () => {
         throw new Error('Falha ao criar usuário');
       }
       
+      // Create profile in perfis table
       const { error: profileError } = await supabase
         .from('perfis')
         .insert({
           id: authData.user.id,
           nome: formData.responsavel,
           email: formData.email,
-          tipo: 'client',
-          is_main_user: true
+          tipo: 'client'
         });
 
       if (profileError) {
-        await supabase.auth.admin.deleteUser(authData.user.id);
+        // If profile creation fails, attempt to clean up by deleting the auth user
+        try {
+          await supabase.auth.admin.deleteUser(authData.user.id);
+        } catch (cleanupError) {
+          console.error("Erro ao limpar usuário após falha:", cleanupError);
+        }
         throw new Error(handleError(profileError, 'Erro ao criar perfil'));
       }
 
+      // Create client in clientes_sistema table
       const { error: clienteError } = await supabase
         .from('clientes_sistema')
         .insert({
@@ -263,8 +274,13 @@ const ClientesPage = () => {
         });
 
       if (clienteError) {
-        await supabase.from('perfis').delete().eq('id', authData.user.id);
-        await supabase.auth.admin.deleteUser(authData.user.id);
+        // If client creation fails, attempt to clean up
+        try {
+          await supabase.from('perfis').delete().eq('id', authData.user.id);
+          await supabase.auth.admin.deleteUser(authData.user.id);
+        } catch (cleanupError) {
+          console.error("Erro ao limpar dados após falha:", cleanupError);
+        }
         throw new Error(handleError(clienteError, 'Erro ao criar cliente'));
       }
 
@@ -291,8 +307,7 @@ const ClientesPage = () => {
           cnpj: formData.cnpj,
           email: formData.email,
           telefone: formData.telefone || '',
-          responsavel: formData.responsavel,
-          situacao: formData.situacao
+          responsavel: formData.responsavel
         })
         .eq('id', currentCliente.id);
 
