@@ -47,6 +47,65 @@ export const useContratos = () => {
     }
   };
 
+  // Função para atualizar a situação do cliente com base no status do contrato
+  const atualizarSituacaoCliente = async (
+    clienteId: string,
+    statusContrato: string
+  ) => {
+    try {
+      // Primeiro, verificar se o cliente está bloqueado manualmente
+      const { data: clienteData, error: clienteError } = await supabase
+        .from('clientes_sistema')
+        .select('situacao')
+        .eq('id', clienteId)
+        .single();
+      
+      if (clienteError) {
+        console.error('Erro ao verificar situação do cliente:', clienteError);
+        return;
+      }
+      
+      // Se o cliente estiver bloqueado manualmente, não atualizamos a situação
+      if (clienteData?.situacao === 'bloqueado-manualmente') {
+        console.log('Cliente está bloqueado manualmente, não atualizando situação');
+        return;
+      }
+      
+      // Mapear o status do contrato para a situação do cliente
+      let novaSituacao;
+      switch (statusContrato) {
+        case 'ativo':
+          novaSituacao = 'ativo';
+          break;
+        case 'em-analise':
+          novaSituacao = 'em-analise';
+          break;
+        case 'cancelado':
+          novaSituacao = 'sem-contrato';
+          break;
+        case 'bloqueado-manualmente':
+          novaSituacao = 'bloqueado-manualmente';
+          break;
+        default:
+          novaSituacao = 'sem-contrato';
+      }
+      
+      // Atualizar a situação do cliente
+      const { error } = await supabase
+        .from('clientes_sistema')
+        .update({ situacao: novaSituacao })
+        .eq('id', clienteId);
+      
+      if (error) {
+        console.error('Erro ao atualizar situação do cliente:', error);
+      } else {
+        console.log(`Situação do cliente ${clienteId} atualizada para ${novaSituacao}`);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar situação do cliente:', error);
+    }
+  };
+
   const loadData = async () => {
     try {
       // Carregar clientes do sistema
@@ -66,7 +125,7 @@ export const useContratos = () => {
         tipo: 'juridica' as const,
         numeroEmpregados: 0,
         dataInclusao: Date.now(),
-        situacao: cliente.situacao as 'liberado' | 'bloqueado',
+        situacao: cliente.situacao as 'liberado' | 'bloqueado' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente',
         cnpj: cliente.cnpj,
         cpfCnpj: cliente.cnpj, // Para compatibilidade
         email: cliente.email || '',
@@ -130,6 +189,26 @@ export const useContratos = () => {
     try {
       setIsLoading(true);
       
+      // Verificar se já existe um contrato ativo para este cliente
+      if (formStatus === 'ativo') {
+        const { data: contratosAtivos, error: checkError } = await supabase
+          .from('contratos')
+          .select('id')
+          .eq('cliente_sistema_id', formClienteId)
+          .eq('status', 'ativo');
+          
+        if (checkError) {
+          console.error("Erro ao verificar contratos existentes:", checkError);
+          toast.error("Erro ao verificar contratos existentes");
+          return false;
+        }
+        
+        if (contratosAtivos && contratosAtivos.length > 0) {
+          toast.error("Este cliente já possui um contrato ativo. Cancele o contrato existente antes de criar um novo.");
+          return false;
+        }
+      }
+      
       // Inserir o contrato
       const { data, error } = await supabase
         .from('contratos')
@@ -161,6 +240,9 @@ export const useContratos = () => {
         .update({ contrato_id: data[0].id })
         .eq('id', formClienteId);
 
+      // Atualizar a situação do cliente com base no status do contrato
+      await atualizarSituacaoCliente(formClienteId, formStatus);
+      
       // Se o contrato for ativo, gerar faturas automáticas
       let faturasGeradas = false;
       if (formStatus === 'ativo') {
@@ -210,6 +292,44 @@ export const useContratos = () => {
   ) => {
     try {
       setIsLoading(true);
+      
+      // Se estamos alterando para ativo, verificar se já existe um contrato ativo para este cliente
+      if (formStatus === 'ativo') {
+        // Buscar o contrato atual para verificar seu status
+        const { data: contratoAtual, error: getError } = await supabase
+          .from('contratos')
+          .select('status')
+          .eq('id', id)
+          .single();
+        
+        if (getError) {
+          console.error("Erro ao obter contrato:", getError);
+          toast.error("Erro ao obter contrato: " + getError.message);
+          return false;
+        }
+        
+        // Se o contrato atual já não é ativo, verificar outros contratos ativos
+        if (contratoAtual?.status !== 'ativo') {
+          const { data: contratosAtivos, error: checkError } = await supabase
+            .from('contratos')
+            .select('id')
+            .eq('cliente_sistema_id', formClienteId)
+            .eq('status', 'ativo')
+            .neq('id', id); // Exclui o contrato atual da verificação
+            
+          if (checkError) {
+            console.error("Erro ao verificar contratos existentes:", checkError);
+            toast.error("Erro ao verificar contratos existentes");
+            return false;
+          }
+          
+          if (contratosAtivos && contratosAtivos.length > 0) {
+            toast.error("Este cliente já possui um contrato ativo. Cancele o contrato existente antes de ativar este.");
+            return false;
+          }
+        }
+      }
+      
       const { error } = await supabase
         .from('contratos')
         .update({
@@ -233,6 +353,9 @@ export const useContratos = () => {
         toast.error("Erro ao atualizar contrato: " + error.message);
         return false;
       }
+      
+      // Atualizar a situação do cliente com base no status do contrato
+      await atualizarSituacaoCliente(formClienteId, formStatus);
 
       await refreshContratos();
       toast.success("Contrato atualizado com sucesso!");
@@ -255,6 +378,22 @@ export const useContratos = () => {
         .from('clientes_sistema')
         .update({ contrato_id: null })
         .eq('id', clienteSistemaId);
+      
+      // Obter o status do contrato antes de excluí-lo
+      const { data: contratoData, error: getError } = await supabase
+        .from('contratos')
+        .select('status')
+        .eq('id', id)
+        .single();
+      
+      if (getError) {
+        console.error("Erro ao obter contrato:", getError);
+      } else if (contratoData) {
+        // Se o contrato estava ativo, atualizar o status do cliente para "sem-contrato"
+        if (contratoData.status === 'ativo') {
+          await atualizarSituacaoCliente(clienteSistemaId, 'cancelado');
+        }
+      }
 
       // Depois exclui o contrato
       const { error } = await supabase

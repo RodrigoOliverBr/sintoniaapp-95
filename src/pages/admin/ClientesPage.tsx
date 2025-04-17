@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, LogIn, Ban, AlertCircle } from "lucide-react";
 import { ClienteSistema, TipoPessoa, ClienteStatus, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
 import { ClienteForm } from "@/components/admin/ClienteForm";
@@ -28,9 +28,29 @@ const ClientesPage = () => {
   const [openNewModal, setOpenNewModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openBlockModal, setOpenBlockModal] = useState(false);
   const [currentCliente, setCurrentCliente] = useState<ClienteSistema | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   const navigate = useNavigate();
+
+  // Verificar se o usuário atual é admin
+  const checkIsAdmin = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return false;
+      
+      const { data } = await supabase
+        .from('perfis')
+        .select('tipo')
+        .eq('id', session.session.user.id)
+        .single();
+      
+      return data?.tipo === 'admin';
+    } catch (error) {
+      return false;
+    }
+  };
 
   const fetchClientes = async () => {
     try {
@@ -68,12 +88,16 @@ const ClientesPage = () => {
           if (!contratos || contratos.length === 0) {
             return {
               ...cliente,
-              statusContrato: 'sem-contrato'
+              statusContrato: 'sem-contrato',
+              situacao: cliente.situacao === 'bloqueado-manualmente' ? 'bloqueado-manualmente' : 'sem-contrato'
             };
           }
           
+          // Verificar se há mais de um contrato ativo
+          const contratosAtivos = contratos.filter(c => c.status === 'ativo');
+          
           // Pega o contrato mais recente (assumindo que é o ativo)
-          const contratoAtivo = contratos.find(c => c.status === 'ativo');
+          const contratoAtivo = contratosAtivos[0];
           
           if (contratoAtivo) {
             // Verificar se está próximo ao vencimento (45 dias)
@@ -81,9 +105,17 @@ const ClientesPage = () => {
             const dataVencimento = new Date(contratoAtivo.dataFim);
             const diasParaVencimento = Math.ceil((dataVencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
             
+            // Atualizar situação do cliente com base no status do contrato
+            // A menos que esteja 'bloqueado-manualmente'
+            let situacaoAtualizada = cliente.situacao;
+            if (cliente.situacao !== 'bloqueado-manualmente') {
+              situacaoAtualizada = contratoAtivo.status as ClienteStatus;
+            }
+            
             if (diasParaVencimento <= 45 && diasParaVencimento > 0) {
               return {
                 ...cliente,
+                situacao: situacaoAtualizada,
                 statusContrato: 'vencimento-proximo',
                 diasParaVencimento
               };
@@ -91,6 +123,7 @@ const ClientesPage = () => {
             
             return {
               ...cliente,
+              situacao: situacaoAtualizada,
               statusContrato: contratoAtivo.status as StatusContrato
             };
           }
@@ -100,8 +133,20 @@ const ClientesPage = () => {
             new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime()
           )[0];
           
+          // Atualizar situação do cliente para refletir o status do contrato mais recente
+          // A menos que esteja 'bloqueado-manualmente'
+          let situacaoAtualizada = cliente.situacao;
+          if (cliente.situacao !== 'bloqueado-manualmente') {
+            if (contratoMaisRecente.status === 'cancelado') {
+              situacaoAtualizada = 'sem-contrato';
+            } else {
+              situacaoAtualizada = contratoMaisRecente.status as ClienteStatus;
+            }
+          }
+          
           return {
             ...cliente,
+            situacao: situacaoAtualizada,
             statusContrato: contratoMaisRecente.status as StatusContrato
           };
         })
@@ -119,6 +164,7 @@ const ClientesPage = () => {
 
   useEffect(() => {
     fetchClientes();
+    checkIsAdmin().then(admin => setIsAdmin(admin));
   }, []);
 
   const handleError = (error: any, defaultMessage: string) => {
@@ -257,6 +303,33 @@ const ClientesPage = () => {
     }
   };
 
+  const handleBlockCliente = async () => {
+    if (!currentCliente) return;
+
+    try {
+      setIsLoading(true);
+      
+      const { error } = await supabase
+        .from('clientes_sistema')
+        .update({
+          situacao: 'bloqueado-manualmente'
+        })
+        .eq('id', currentCliente.id);
+
+      if (error) {
+        throw new Error(handleError(error, 'Erro ao bloquear cliente'));
+      }
+
+      toast.success("Cliente bloqueado com sucesso!");
+      setOpenBlockModal(false);
+      fetchClientes();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao bloquear cliente");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleOpenEditModal = (cliente: ClienteSistema) => {
     setCurrentCliente(cliente);
     setOpenEditModal(true);
@@ -267,22 +340,40 @@ const ClientesPage = () => {
     setOpenDeleteModal(true);
   };
 
+  const handleOpenBlockModal = (cliente: ClienteSistema) => {
+    setCurrentCliente(cliente);
+    setOpenBlockModal(true);
+  };
+
+  const handleLoginAsClient = async (cliente: ClienteSistema) => {
+    try {
+      // Implementação futura para impersonação de cliente
+      // Esta é uma funcionalidade avançada que precisará ser implementada
+      toast.success(`Acessando como cliente: ${cliente.razaoSocial}`);
+      // Aqui você pode armazenar o ID do cliente em localStorage/sessionStorage
+      // e redirecionar para a área do cliente
+    } catch (error) {
+      toast.error("Erro ao acessar como cliente");
+    }
+  };
+
   // Helper para renderizar o badge de status baseado no contrato
   const renderStatusBadge = (cliente: ClienteComContrato) => {
-    switch (cliente.statusContrato) {
+    switch (cliente.situacao) {
       case 'ativo':
         return <Badge variant="default">Ativo</Badge>;
       case 'em-analise':
         return <Badge variant="secondary">Em análise</Badge>;
-      case 'cancelado':
-        return <Badge variant="destructive">Cancelado</Badge>;
-      case 'vencimento-proximo':
-        return <Badge variant="warning" className="bg-yellow-500 hover:bg-yellow-600">
-          Vencimento em {cliente.diasParaVencimento} dias
-        </Badge>;
+      case 'bloqueado-manualmente':
+        return <Badge variant="destructive">Bloqueado Manualmente</Badge>;
       case 'sem-contrato':
         return <Badge variant="outline">Sem contrato</Badge>;
       default:
+        if (cliente.statusContrato === 'vencimento-proximo') {
+          return <Badge variant="warning" className="bg-yellow-500 hover:bg-yellow-600">
+            Vencimento em {cliente.diasParaVencimento} dias
+          </Badge>;
+        }
         return <Badge variant={cliente.situacao === "liberado" ? "default" : "destructive"}>
           {cliente.situacao === "liberado" ? "Liberado" : "Bloqueado"}
         </Badge>;
@@ -374,6 +465,29 @@ const ClientesPage = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        {isAdmin && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex items-center gap-1"
+                            onClick={() => handleLoginAsClient(cliente)}
+                          >
+                            <LogIn size={14} />
+                            Acessar
+                          </Button>
+                        )}
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex items-center gap-1 text-red-500 hover:text-red-700"
+                          onClick={() => handleOpenBlockModal(cliente)}
+                          disabled={cliente.situacao === 'bloqueado-manualmente'}
+                        >
+                          <Ban size={14} />
+                          Bloquear
+                        </Button>
+                        
                         <Button 
                           variant="ghost" 
                           size="icon"
@@ -381,6 +495,7 @@ const ClientesPage = () => {
                         >
                           <Pencil size={16} />
                         </Button>
+                        
                         <Button 
                           variant="ghost" 
                           size="icon"
@@ -444,6 +559,41 @@ const ClientesPage = () => {
             >
               {isLoading ? 'Excluindo...' : 'Excluir'}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={openBlockModal} onOpenChange={setOpenBlockModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirmar bloqueio</DialogTitle>
+            <DialogDescription>
+              Você está prestes a bloquear manualmente o acesso do cliente "{currentCliente?.razaoSocial}". 
+              O cliente não poderá acessar o sistema após esta ação.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 mt-4">
+            <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <AlertCircle size={20} className="text-yellow-600" />
+              <p className="text-sm text-yellow-700">
+                Este bloqueio é manual e não será alterado automaticamente pela situação do contrato.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setOpenBlockModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleBlockCliente}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Bloqueando...' : 'Bloquear Cliente'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,7 +1,7 @@
 
-export type ClienteStatus = 'liberado' | 'bloqueado';
+export type ClienteStatus = 'liberado' | 'bloqueado' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
 export type TipoPessoa = 'fisica' | 'juridica';
-export type StatusContrato = 'ativo' | 'em-analise' | 'cancelado';
+export type StatusContrato = 'ativo' | 'em-analise' | 'cancelado' | 'bloqueado-manualmente';
 export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
 

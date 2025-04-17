@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -111,10 +112,35 @@ const ContratosPage: React.FC = () => {
     setOpenDeleteModal(true);
   };
 
+  const verificarContratoAtivoExistente = async (clienteId: string) => {
+    // Filtra os contratos existentes para esse cliente
+    const contratosDoCliente = contratos.filter(c => 
+      c.clienteSistemaId === clienteId && c.status === 'ativo'
+    );
+    
+    // Se há contratos ativos e não estamos editando o contrato atual
+    if (contratosDoCliente.length > 0) {
+      if (!currentContrato || (currentContrato && currentContrato.id !== contratosDoCliente[0].id)) {
+        return true; // Existe contrato ativo
+      }
+    }
+    
+    return false; // Não existe contrato ativo
+  };
+
   const handleAddContrato = async () => {
     if (!formClienteId || !formPlanoId || !formNumeroContrato) {
       toast.error("Cliente, Plano e Número do Contrato são obrigatórios");
       return;
+    }
+
+    // Verifica se já existe um contrato ativo para este cliente
+    if (formStatus === 'ativo') {
+      const contratoAtivoExiste = await verificarContratoAtivoExistente(formClienteId);
+      if (contratoAtivoExiste) {
+        toast.error("Este cliente já possui um contrato ativo. Por favor, cancele o contrato existente antes de criar um novo.");
+        return;
+      }
     }
 
     const success = await addContrato(
@@ -138,6 +164,15 @@ const ContratosPage: React.FC = () => {
   
   const handleUpdateContrato = async () => {
     if (!currentContrato) return;
+    
+    // Verifica se já existe um contrato ativo para este cliente
+    if (formStatus === 'ativo' && currentContrato.status !== 'ativo') {
+      const contratoAtivoExiste = await verificarContratoAtivoExistente(formClienteId);
+      if (contratoAtivoExiste) {
+        toast.error("Este cliente já possui um contrato ativo. Por favor, cancele o contrato existente antes de ativar este.");
+        return;
+      }
+    }
     
     const success = await updateContrato(
       currentContrato.id,
