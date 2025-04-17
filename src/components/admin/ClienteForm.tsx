@@ -1,13 +1,10 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ClienteStatus } from "@/types/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Lock } from 'lucide-react';
 
@@ -17,11 +14,9 @@ const clienteFormSchema = z.object({
   email: z.string().email('Email inválido'),
   telefone: z.string().optional(),
   responsavel: z.string().min(1, 'Nome do responsável é obrigatório'),
-  situacao: z.enum(['liberado', 'bloqueado'] as const),
   senha: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres').optional(),
   confirmarSenha: z.string().optional()
 }).refine((data) => {
-  // Só valida as senhas se uma delas estiver presente
   if (data.senha || data.confirmarSenha) {
     return data.senha === data.confirmarSenha;
   }
@@ -49,7 +44,6 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading, isEditing }: C
       email: '',
       telefone: '',
       responsavel: '',
-      situacao: 'liberado',
       senha: '',
       confirmarSenha: '',
       ...defaultValues
@@ -168,28 +162,6 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading, isEditing }: C
               <FormControl>
                 <Input {...field} />
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="situacao"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Situação</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a situação" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="liberado">Liberado</SelectItem>
-                  <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                </SelectContent>
-              </Select>
               <FormMessage />
             </FormItem>
           )}

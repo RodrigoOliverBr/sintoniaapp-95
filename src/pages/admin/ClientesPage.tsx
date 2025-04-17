@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -15,7 +14,6 @@ import { toast } from "sonner";
 import { ClienteForm } from "@/components/admin/ClienteForm";
 import { getContratosByClienteSistemaId } from "@/services/adminService";
 
-// Interface para representar o cliente com informações do contrato
 interface ClienteComContrato extends ClienteSistema {
   statusContrato?: StatusContrato | 'vencimento-proximo' | 'sem-contrato';
   diasParaVencimento?: number;
@@ -34,7 +32,6 @@ const ClientesPage = () => {
   
   const navigate = useNavigate();
 
-  // Verificar se o usuário atual é admin
   const checkIsAdmin = async () => {
     try {
       const { data: session } = await supabase.auth.getSession();
@@ -113,20 +110,16 @@ const ClientesPage = () => {
         contratoId: item.contrato_id || undefined,
       })) || [];
       
-      // Obter todos os contratos
       const contratos = await fetchContratos();
       console.log("Contratos obtidos:", contratos);
       
-      // Obter status do contrato para cada cliente
       const clientesComContrato: ClienteComContrato[] = mappedClientes.map(cliente => {
-        // Filtrar contratos para este cliente
         const contratosDoCliente = contratos.filter(c => 
           c.clienteSistemaId === cliente.id || c.clienteId === cliente.id
         );
         
         console.log(`Contratos para cliente ${cliente.razaoSocial}:`, contratosDoCliente);
         
-        // Se não tem contratos, define como 'sem-contrato'
         if (!contratosDoCliente || contratosDoCliente.length === 0) {
           return {
             ...cliente,
@@ -135,20 +128,15 @@ const ClientesPage = () => {
           };
         }
         
-        // Verificar se há contrato ativo
         const contratosAtivos = contratosDoCliente.filter(c => c.status === 'ativo');
         
-        // Pega o contrato ativo se existir
         const contratoAtivo = contratosAtivos.length > 0 ? contratosAtivos[0] : null;
         
         if (contratoAtivo) {
-          // Verificar se está próximo ao vencimento (45 dias)
           const hoje = new Date();
           const dataVencimento = new Date(contratoAtivo.dataFim);
           const diasParaVencimento = Math.ceil((dataVencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
           
-          // Atualizar situação do cliente com base no status do contrato
-          // A menos que esteja 'bloqueado-manualmente'
           let situacaoAtualizada = cliente.situacao;
           if (cliente.situacao !== 'bloqueado-manualmente') {
             situacaoAtualizada = contratoAtivo.status as ClienteStatus;
@@ -170,13 +158,10 @@ const ClientesPage = () => {
           };
         }
         
-        // Se tem contrato mas nenhum ativo, pega o status do mais recente
         const contratoMaisRecente = contratosDoCliente.sort((a, b) => 
           new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime()
         )[0];
         
-        // Atualizar situação do cliente para refletir o status do contrato mais recente
-        // A menos que esteja 'bloqueado-manualmente'
         let situacaoAtualizada = cliente.situacao;
         if (cliente.situacao !== 'bloqueado-manualmente') {
           if (contratoMaisRecente.status === 'cancelado') {
@@ -238,7 +223,7 @@ const ClientesPage = () => {
         options: {
           data: {
             name: formData.responsavel,
-            is_main_user: true // Add flag to identify main user
+            is_main_user: true
           }
         }
       });
@@ -258,7 +243,7 @@ const ClientesPage = () => {
           nome: formData.responsavel,
           email: formData.email,
           tipo: 'client',
-          is_main_user: true // Add flag to identify main user
+          is_main_user: true
         });
 
       if (profileError) {
@@ -274,7 +259,7 @@ const ClientesPage = () => {
           email: formData.email,
           telefone: formData.telefone,
           responsavel: formData.responsavel,
-          situacao: formData.situacao
+          situacao: 'sem-contrato' as ClienteStatus
         });
 
       if (clienteError) {
@@ -390,11 +375,9 @@ const ClientesPage = () => {
 
   const handleLoginAsClient = async (cliente: ClienteSistema) => {
     try {
-      // Armazenar ID do cliente no sessionStorage
       sessionStorage.setItem('impersonatedClientId', cliente.id);
       sessionStorage.setItem('impersonatedClientName', cliente.razaoSocial);
       
-      // Redirecionar para a tela inicial do cliente
       toast.success(`Acessando como cliente: ${cliente.razaoSocial}`);
       navigate('/');
     } catch (error) {
@@ -402,7 +385,6 @@ const ClientesPage = () => {
     }
   };
 
-  // Helper para renderizar o badge de status baseado no contrato
   const renderStatusBadge = (cliente: ClienteComContrato) => {
     switch (cliente.situacao) {
       case 'ativo':
