@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const login = async (email: string, password: string) => {
   try {
@@ -28,14 +29,25 @@ export const login = async (email: string, password: string) => {
 
 export const logout = async () => {
   try {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) throw error;
+    
+    // Limpar todos os dados de sessão e impersonamento
     localStorage.removeItem("sintonia:userType");
     localStorage.removeItem("sintonia:currentCliente");
     sessionStorage.removeItem('impersonatedClientId');
     sessionStorage.removeItem('impersonatedClientName');
+    
+    toast.success("Logout realizado com sucesso");
+    
+    // Forçar redirecionamento para a página de login após o logout
+    window.location.href = "/login";
+    
     return { error: null };
   } catch (error) {
     console.error("Logout error:", error);
+    toast.error("Erro ao fazer logout");
     return { error };
   }
 };

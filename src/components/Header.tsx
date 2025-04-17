@@ -1,6 +1,6 @@
 
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
   title?: string;
@@ -19,14 +20,12 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { logout, currentUser } = useAuth();
   const currentClientData = localStorage.getItem("sintonia:currentCliente");
   const currentClient = currentClientData ? JSON.parse(currentClientData) : null;
   
   const handleLogout = () => {
-    localStorage.removeItem("sintonia:userType");
-    localStorage.removeItem("sintonia:currentCliente");
-    navigate("/login");
+    logout();
   };
 
   return (
@@ -42,9 +41,9 @@ const Header: React.FC<HeaderProps> = () => {
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center text-sm text-gray-600 mr-4">
-              <span className="font-medium">{currentClient?.razaoSocial || 'eSocial Brasil'}</span>
+              <span className="font-medium">{currentClient?.razao_social || currentClient?.razaoSocial || 'eSocial Brasil'}</span>
               <span className="mx-2">•</span>
-              <span>{currentClient?.responsavel || 'Admin'}</span>
+              <span>{currentClient?.responsavel || currentUser?.nome || 'Admin'}</span>
             </div>
 
             <DropdownMenu>
