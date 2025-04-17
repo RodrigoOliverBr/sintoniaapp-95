@@ -1,5 +1,5 @@
 // Existing imports and types
-export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente';
+export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
 
 // Add missing type definitions
 export type TipoPessoa = 'juridica' | 'fisica';
@@ -27,11 +27,16 @@ export interface Contrato {
   clienteId: string;
   clienteSistemaId?: string;
   planoId: string;
-  dataInicio: string;
-  dataFim?: string;
+  dataInicio: string | number;
+  dataFim?: string | number;
+  dataPrimeiroVencimento?: number;
   status: StatusContrato;
   valorMensal: number;
   taxaImplantacao: number;
+  observacoes?: string;
+  cicloFaturamento?: string;
+  proximaRenovacao?: number;
+  ciclosGerados?: number;
 }
 
 export interface Plano {
@@ -44,6 +49,9 @@ export interface Plano {
   empresasIlimitadas?: boolean;
   limiteEmpregados?: number;
   empregadosIlimitados?: boolean;
+  descricao?: string;
+  semVencimento?: boolean;
+  dataValidade?: string | number;
 }
 
 export interface BatchSelection {
@@ -51,14 +59,16 @@ export interface BatchSelection {
 }
 
 export interface ClienteComContrato extends ClienteSistema {
-  statusContrato?: StatusContrato;
+  statusContrato?: StatusContrato | 'vencimento-proximo';
+  diasParaVencimento?: number;
   contrato?: Contrato;
 }
 
-// Keep the existing ClienteSistema interface, but update it to match the actual database schema
+// Update ClienteSistema interface to support both razao_social and razaoSocial
 export interface ClienteSistema {
   id: string;
   razao_social: string;
+  razaoSocial?: string;  // Alias para compatibilidade
   nome: string;
   tipo: TipoPessoa;
   numeroEmpregados: number;

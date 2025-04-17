@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ClienteSistema } from "@/types/admin";
+import { ClienteSistema, ClienteStatus } from "@/types/admin";
 import { getClienteIdAtivo } from "@/utils/clientContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -54,12 +54,12 @@ const Header: React.FC<HeaderProps> = () => {
           // Transform to match ClienteSistema interface
           const transformedData: ClienteSistema = {
             id: data.id,
-            razaoSocial: data.razao_social,
+            razao_social: data.razao_social,
             nome: data.razao_social, // For backward compatibility
-            tipo: "juridica", // Default value
+            tipo: "juridica" as TipoPessoa, // Default value
             numeroEmpregados: 0, // Default value
             dataInclusao: new Date(data.created_at).getTime(),
-            situacao: data.situacao,
+            situacao: (data.situacao || "liberado") as ClienteStatus,
             cnpj: data.cnpj,
             cpfCnpj: data.cnpj, // For backward compatibility
             email: data.email || "",
@@ -91,6 +91,12 @@ const Header: React.FC<HeaderProps> = () => {
     navigate("/login");
   };
 
+  // Helper function to access client name safely
+  const getClientName = () => {
+    if (!currentClient) return 'eSocial Brasil';
+    return currentClient.razao_social || currentClient.razaoSocial || currentClient.nome || 'eSocial Brasil';
+  }
+
   return (
     <header className="bg-white shadow print:hidden relative">
       <div className="mx-auto md:ml-64 px-4 sm:px-6 lg:px-8">
@@ -104,7 +110,7 @@ const Header: React.FC<HeaderProps> = () => {
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center text-sm text-gray-600 mr-4">
-              <span className="font-medium">{currentClient?.razaoSocial || 'eSocial Brasil'}</span>
+              <span className="font-medium">{getClientName()}</span>
               <span className="mx-2">•</span>
               <span>{currentClient?.responsavel || 'Admin'}</span>
             </div>
