@@ -23,7 +23,8 @@ export interface AuthContextType {
 
 export interface ClienteSistema {
   id: string;
-  razaoSocial: string;
+  razao_social: string; // Match the actual database column name
+  razaoSocial?: string; // Alias for frontend compatibility
   nome?: string; // Alias for backward compatibility
   tipo?: string;
   numeroEmpregados?: number;
@@ -39,7 +40,11 @@ export interface ClienteSistema {
   cep?: string;
   responsavel: string;
   contato?: string; // Alias for backward compatibility
-  planoId?: string;
-  contratoId?: string;
+  plano_id?: string; // Match the actual database column name
+  planoId?: string; // Alias for frontend compatibility
+  contrato_id?: string; // Match the actual database column name
+  contratoId?: string; // Alias for frontend compatibility
   clienteId?: string; // For backward compatibility
+  created_at?: string; // Database timestamp fields
+  updated_at?: string; // Database timestamp fields
 }

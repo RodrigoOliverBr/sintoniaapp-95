@@ -21,7 +21,14 @@ import UserAccountPage from "./pages/UserAccountPage";
 import UsersAdminPage from "./pages/admin/UsersAdminPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const ProtectedRoute = ({ 
   allowedUserTypes, 
@@ -73,6 +80,9 @@ const AppRoutes = () => (
       <Route path="/admin/faturamento" element={<FaturamentoPage />} />
       <Route path="/admin/usuarios" element={<UsersAdminPage />} />
     </Route>
+    
+    {/* Rota default - redireciona para login */}
+    <Route path="/" element={<Navigate to="/login" replace />} />
     
     {/* Rota de fallback */}
     <Route path="*" element={<NotFound />} />

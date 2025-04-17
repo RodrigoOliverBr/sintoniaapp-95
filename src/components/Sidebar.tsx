@@ -29,13 +29,13 @@ const Sidebar = () => {
         />
       </div>
       
-      {isImpersonating && (
+      {isImpersonating && impersonatedClient && (
         <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-sm">
           <div className="font-medium text-yellow-800">
             Acessando como cliente
           </div>
           <div className="text-yellow-700">
-            {impersonatedClient?.razaoSocial}
+            {impersonatedClient.razao_social || impersonatedClient.razaoSocial || impersonatedClient.nome || "Cliente"}
           </div>
           <Button 
             variant="ghost" 

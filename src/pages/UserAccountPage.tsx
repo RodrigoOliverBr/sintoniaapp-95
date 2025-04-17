@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,7 @@ const UserAccountPage: React.FC = () => {
         if (data) {
           setNome(data.nome || '');
           setEmail(data.email || '');
+          // Check if telefone exists before accessing it
           setTelefone(data.telefone || '');
         }
       } catch (error) {
@@ -126,8 +128,6 @@ const UserAccountPage: React.FC = () => {
             </form>
           </CardContent>
         </Card>
-        
-        {/* Poderíamos adicionar uma seção para alteração de senha aqui no futuro */}
       </div>
     </Layout>
   );
