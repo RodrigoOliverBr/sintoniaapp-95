@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -16,6 +17,8 @@ import ClientesPage from "./pages/admin/ClientesPage";
 import PlanosPage from "./pages/admin/PlanosPage";
 import ContratosPage from "./pages/admin/ContratosPage";
 import FaturamentoPage from "./pages/admin/FaturamentoPage";
+import UserAccountPage from "./pages/UserAccountPage";
+import UsersAdminPage from "./pages/admin/UsersAdminPage";
 import { useEffect, useState } from "react";
 import { TestClientInsertion } from './components/admin/TestClientInsertion';
 
@@ -87,6 +90,14 @@ function App() {
             } 
           />
           <Route 
+            path="/minha-conta" 
+            element={
+              <ProtectedRoute userType="all">
+                <UserAccountPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/cadastros/empresas" 
             element={
               <ProtectedRoute userType="all">
@@ -149,6 +160,14 @@ function App() {
             element={
               <ProtectedRoute userType="admin">
                 <FaturamentoPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/usuarios" 
+            element={
+              <ProtectedRoute userType="admin">
+                <UsersAdminPage />
               </ProtectedRoute>
             } 
           />

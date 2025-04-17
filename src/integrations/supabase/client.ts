@@ -23,8 +23,14 @@ export const handleSupabaseError = (error: any): string => {
   
   if (error?.code === '42501') {
     return 'Erro de permissão: você não tem autorização para realizar esta ação.';
+  } else if (error?.code === 'auth/email-already-in-use' || error?.message?.includes('already registered')) {
+    return 'Este e-mail já está registrado. Por favor, use outro e-mail.';
   } else if (error?.message?.includes('violates row-level security policy')) {
     return 'Erro de permissão: você não tem autorização para realizar esta ação devido às políticas de segurança.';
+  } else if (error?.message?.includes('duplicate key')) {
+    return 'Um registro com estas informações já existe.';
+  } else if (error?.message?.includes('password')) {
+    return 'Erro relacionado à senha. Verifique se ela atende aos critérios de segurança.';
   } else {
     return `Erro ao processar solicitação: ${error?.message || 'Desconhecido'}`;
   }
