@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PasswordChangeForm } from '@/components/auth/PasswordChangeForm';
+import PasswordChangeForm from '@/components/auth/PasswordChangeForm';
 
 // Schema simplificado para evitar problemas de tipagem
 const profileFormSchema = z.object({
