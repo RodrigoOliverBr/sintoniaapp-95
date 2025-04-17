@@ -2,7 +2,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import FormularioPage from "./pages/FormularioPage";
 import ComoPreencher from "./pages/ComoPreencher";
 import ComoAvaliar from "./pages/ComoAvaliar";
@@ -19,172 +19,75 @@ import ContratosPage from "./pages/admin/ContratosPage";
 import FaturamentoPage from "./pages/admin/FaturamentoPage";
 import UserAccountPage from "./pages/UserAccountPage";
 import UsersAdminPage from "./pages/admin/UsersAdminPage";
-import { useEffect, useState } from "react";
-import { TestClientInsertion } from './components/admin/TestClientInsertion';
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, userType: 'admin' | 'cliente' | 'all' }) => {
-  const currentUserType = localStorage.getItem("sintonia:userType") || "";
+const ProtectedRoute = ({ 
+  allowedUserTypes, 
+  redirectPath = "/login" 
+}: { 
+  allowedUserTypes: ('admin' | 'client' | 'all')[], 
+  redirectPath?: string 
+}) => {
+  const { currentUser, isAdmin, isClient } = useAuth();
   
-  if (!currentUserType) {
-    return <Navigate to="/login" replace />;
+  if (!currentUser) {
+    return <Navigate to={redirectPath} replace />;
   }
   
-  if (userType !== 'all' && currentUserType !== userType) {
-    return <Navigate to="/" replace />;
+  const hasAccess = allowedUserTypes.includes('all') || 
+    (isAdmin && allowedUserTypes.includes('admin')) || 
+    (isClient && allowedUserTypes.includes('client'));
+  
+  if (!hasAccess) {
+    return <Navigate to={isAdmin ? "/admin/dashboard" : "/"} replace />;
   }
   
-  return children;
+  return <Outlet />;
 };
 
+const AppRoutes = () => (
+  <Routes>
+    {/* Rota de Login (pública) */}
+    <Route path="/login" element={<LoginPage />} />
+
+    {/* Rotas para clientes */}
+    <Route element={<ProtectedRoute allowedUserTypes={['client', 'admin']} />}>
+      <Route path="/" element={<FormularioPage />} />
+      <Route path="/como-preencher" element={<ComoPreencher />} />
+      <Route path="/como-avaliar" element={<ComoAvaliar />} />
+      <Route path="/mitigacoes" element={<Mitigacoes />} />
+      <Route path="/minha-conta" element={<UserAccountPage />} />
+      <Route path="/cadastros/empresas" element={<CompaniesPage />} />
+      <Route path="/cadastros/funcionarios" element={<EmployeesPage />} />
+      <Route path="/relatorios" element={<RelatoriosPage />} />
+    </Route>
+
+    {/* Rotas do sistema administrativo */}
+    <Route element={<ProtectedRoute allowedUserTypes={['admin']} />}>
+      <Route path="/admin/dashboard" element={<DashboardPage />} />
+      <Route path="/admin/clientes" element={<ClientesPage />} />
+      <Route path="/admin/planos" element={<PlanosPage />} />
+      <Route path="/admin/contratos" element={<ContratosPage />} />
+      <Route path="/admin/faturamento" element={<FaturamentoPage />} />
+      <Route path="/admin/usuarios" element={<UsersAdminPage />} />
+    </Route>
+    
+    {/* Rota de fallback */}
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  useEffect(() => {
-    // Verificar autenticação no carregamento inicial
-    const userType = localStorage.getItem("sintonia:userType");
-    setIsAuthenticated(!!userType);
-  }, []);
-  
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          {/* Rota de Login (pública) */}
-          <Route path="/login" element={<LoginPage />} />
-          
-          {/* Rotas do sistema cliente */}
-          <Route 
-            path="/" 
-            element={
-              <ProtectedRoute userType="all">
-                <FormularioPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/como-preencher" 
-            element={
-              <ProtectedRoute userType="all">
-                <ComoPreencher />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/como-avaliar" 
-            element={
-              <ProtectedRoute userType="all">
-                <ComoAvaliar />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/mitigacoes" 
-            element={
-              <ProtectedRoute userType="all">
-                <Mitigacoes />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/minha-conta" 
-            element={
-              <ProtectedRoute userType="all">
-                <UserAccountPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/cadastros/empresas" 
-            element={
-              <ProtectedRoute userType="all">
-                <CompaniesPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/cadastros/funcionarios" 
-            element={
-              <ProtectedRoute userType="all">
-                <EmployeesPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/relatorios" 
-            element={
-              <ProtectedRoute userType="all">
-                <RelatoriosPage />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Rotas do sistema administrativo */}
-          <Route 
-            path="/admin/dashboard" 
-            element={
-              <ProtectedRoute userType="admin">
-                <DashboardPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin/clientes" 
-            element={
-              <ProtectedRoute userType="admin">
-                <ClientesPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin/planos" 
-            element={
-              <ProtectedRoute userType="admin">
-                <PlanosPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin/contratos" 
-            element={
-              <ProtectedRoute userType="admin">
-                <ContratosPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin/faturamento" 
-            element={
-              <ProtectedRoute userType="admin">
-                <FaturamentoPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin/usuarios" 
-            element={
-              <ProtectedRoute userType="admin">
-                <UsersAdminPage />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Rota inicial redireciona para o login se não autenticado */}
-          <Route 
-            path="/" 
-            element={
-              isAuthenticated ? 
-              <FormularioPage /> : 
-              <Navigate to="/login" replace />
-            } 
-          />
-          
-          {/* Rota de fallback */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );
