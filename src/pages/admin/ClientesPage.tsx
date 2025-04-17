@@ -1,25 +1,17 @@
-
-// This is a partial update of the file to fix the error
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2, Plus, LogIn, Ban, AlertCircle } from "lucide-react";
-import { ClienteSistema, TipoPessoa, ClienteStatus, StatusContrato } from "@/types/admin";
+import { Plus } from "lucide-react";
+import { ClienteSistema, ClienteComContrato, ClienteStatus } from "@/types/admin";
 import { toast } from "sonner";
 import { ClienteForm } from "@/components/admin/ClienteForm";
-import { getContratosByClienteSistemaId } from "@/services/adminService";
-
-interface ClienteComContrato extends ClienteSistema {
-  statusContrato?: StatusContrato | 'vencimento-proximo' | 'sem-contrato';
-  diasParaVencimento?: number;
-}
+import { ClientesTable } from "@/components/admin/clientes/ClientesTable";
+import { ClienteDialogs } from "@/components/admin/clientes/ClienteDialogs";
 
 const ClientesPage = () => {
   const [clientes, setClientes] = useState<ClienteComContrato[]>([]);
@@ -190,11 +182,6 @@ const ClientesPage = () => {
     }
   };
 
-  useEffect(() => {
-    fetchClientes();
-    checkIsAdmin().then(admin => setIsAdmin(admin));
-  }, []);
-
   const handleError = (error: any, defaultMessage: string) => {
     console.error(`${defaultMessage}:`, error);
     
@@ -222,7 +209,6 @@ const ClientesPage = () => {
     try {
       setIsLoading(true);
       
-      // Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.senha,
@@ -241,7 +227,6 @@ const ClientesPage = () => {
         throw new Error('Falha ao criar usuário');
       }
       
-      // Create profile in perfis table
       const { error: profileError } = await supabase
         .from('perfis')
         .insert({
@@ -252,7 +237,6 @@ const ClientesPage = () => {
         });
 
       if (profileError) {
-        // If profile creation fails, attempt to clean up by deleting the auth user
         try {
           await supabase.auth.admin.deleteUser(authData.user.id);
         } catch (cleanupError) {
@@ -261,7 +245,6 @@ const ClientesPage = () => {
         throw new Error(handleError(profileError, 'Erro ao criar perfil'));
       }
 
-      // Create client in clientes_sistema table
       const { error: clienteError } = await supabase
         .from('clientes_sistema')
         .insert({
@@ -274,7 +257,6 @@ const ClientesPage = () => {
         });
 
       if (clienteError) {
-        // If client creation fails, attempt to clean up
         try {
           await supabase.from('perfis').delete().eq('id', authData.user.id);
           await supabase.auth.admin.deleteUser(authData.user.id);
@@ -400,27 +382,10 @@ const ClientesPage = () => {
     }
   };
 
-  const renderStatusBadge = (cliente: ClienteComContrato) => {
-    switch (cliente.situacao) {
-      case 'ativo':
-        return <Badge variant="default">Ativo</Badge>;
-      case 'em-analise':
-        return <Badge variant="secondary">Em análise</Badge>;
-      case 'bloqueado-manualmente':
-        return <Badge variant="destructive">Bloqueado Manualmente</Badge>;
-      case 'sem-contrato':
-        return <Badge variant="outline">Sem contrato</Badge>;
-      default:
-        if (cliente.statusContrato === 'vencimento-proximo') {
-          return <Badge variant="warning" className="bg-yellow-500 hover:bg-yellow-600">
-            Vencimento em {cliente.diasParaVencimento} dias
-          </Badge>;
-        }
-        return <Badge variant={cliente.situacao === "liberado" ? "default" : "destructive"}>
-          {cliente.situacao === "liberado" ? "Liberado" : "Bloqueado"}
-        </Badge>;
-    }
-  };
+  useEffect(() => {
+    fetchClientes();
+    checkIsAdmin().then(admin => setIsAdmin(admin));
+  }, []);
 
   const filteredClientes = clientes.filter(cliente => 
     cliente.razaoSocial?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -469,176 +434,31 @@ const ClientesPage = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Razão Social</TableHead>
-                <TableHead>CNPJ</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Responsável</TableHead>
-                <TableHead>Situação</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                    Carregando clientes...
-                  </TableCell>
-                </TableRow>
-              ) : filteredClientes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                    Nenhum cliente encontrado.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredClientes.map((cliente) => (
-                  <TableRow key={cliente.id}>
-                    <TableCell className="font-medium">{cliente.razaoSocial}</TableCell>
-                    <TableCell>{cliente.cnpj}</TableCell>
-                    <TableCell>{cliente.email}</TableCell>
-                    <TableCell>{cliente.telefone}</TableCell>
-                    <TableCell>{cliente.responsavel}</TableCell>
-                    <TableCell>
-                      {renderStatusBadge(cliente)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {isAdmin && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="flex items-center gap-1"
-                            onClick={() => handleLoginAsClient(cliente)}
-                          >
-                            <LogIn size={14} />
-                            Acessar
-                          </Button>
-                        )}
-                        
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="flex items-center gap-1 text-red-500 hover:text-red-700"
-                          onClick={() => handleOpenBlockModal(cliente)}
-                          disabled={cliente.situacao === 'bloqueado-manualmente'}
-                        >
-                          <Ban size={14} />
-                          Bloquear
-                        </Button>
-                        
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleOpenEditModal(cliente)}
-                        >
-                          <Pencil size={16} />
-                        </Button>
-                        
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleOpenDeleteModal(cliente)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <ClientesTable 
+            clientes={filteredClientes}
+            isLoading={isLoading}
+            isAdmin={isAdmin}
+            onLoginAsClient={handleLoginAsClient}
+            onOpenBlockModal={handleOpenBlockModal}
+            onOpenEditModal={handleOpenEditModal}
+            onOpenDeleteModal={handleOpenDeleteModal}
+          />
         </CardContent>
       </Card>
       
-      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Editar Cliente</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do cliente.
-            </DialogDescription>
-          </DialogHeader>
-          <ClienteForm 
-            onSubmit={handleUpdateCliente}
-            defaultValues={{
-              razao_social: currentCliente?.razaoSocial || '',
-              cnpj: currentCliente?.cnpj || '',
-              email: currentCliente?.email || '',
-              telefone: currentCliente?.telefone || '',
-              responsavel: currentCliente?.responsavel || '',
-              situacao: currentCliente?.situacao || 'liberado'
-            }}
-            isLoading={isLoading}
-            isEditing={true}
-          />
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={openDeleteModal} onOpenChange={setOpenDeleteModal}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirmar exclusão</DialogTitle>
-            <DialogDescription>
-              Você está prestes a excluir o cliente "{currentCliente?.razaoSocial}". Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setOpenDeleteModal(false)}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteCliente}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Excluindo...' : 'Excluir'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={openBlockModal} onOpenChange={setOpenBlockModal}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirmar bloqueio</DialogTitle>
-            <DialogDescription>
-              Você está prestes a bloquear manualmente o acesso do cliente "{currentCliente?.razaoSocial}". 
-              O cliente não poderá acessar o sistema após esta ação.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 mt-4">
-            <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-              <AlertCircle size={20} className="text-yellow-600" />
-              <p className="text-sm text-yellow-700">
-                Este bloqueio é manual e não será alterado automaticamente pela situação do contrato.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setOpenBlockModal(false)}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleBlockCliente}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Bloqueando...' : 'Bloquear Cliente'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ClienteDialogs 
+        openEditModal={openEditModal}
+        setOpenEditModal={setOpenEditModal}
+        openDeleteModal={openDeleteModal}
+        setOpenDeleteModal={setOpenDeleteModal}
+        openBlockModal={openBlockModal}
+        setOpenBlockModal={setOpenBlockModal}
+        currentCliente={currentCliente}
+        isLoading={isLoading}
+        onUpdateCliente={handleUpdateCliente}
+        onDeleteCliente={handleDeleteCliente}
+        onBlockCliente={handleBlockCliente}
+      />
     </AdminLayout>
   );
 };
