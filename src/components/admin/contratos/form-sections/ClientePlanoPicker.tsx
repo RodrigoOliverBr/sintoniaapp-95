@@ -38,7 +38,7 @@ const ClientePlanoPicker: React.FC<ClientePlanoPickerProps> = ({
           <SelectContent className="bg-white">
             {clientes.map(cliente => (
               <SelectItem key={cliente.id} value={cliente.id}>
-                {cliente.razao_social}{cliente.email ? ` (${cliente.email})` : ''}
+                {cliente.razao_social}
               </SelectItem>
             ))}
           </SelectContent>
