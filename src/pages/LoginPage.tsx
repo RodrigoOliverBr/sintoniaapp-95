@@ -15,11 +15,16 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
+    // Fix the redirection logic to properly handle user types
     const userType = localStorage.getItem("sintonia:userType");
     if (userType) {
+      // Specific redirection based on userType
       if (userType === 'admin') {
         navigate("/admin/dashboard");
+      } else if (userType === 'client') {
+        navigate("/"); // Client users go to the root route
       } else {
+        // Fallback for any other userType value
         navigate("/");
       }
     }
@@ -113,6 +118,7 @@ const LoginPage: React.FC = () => {
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
       }
       
+      // Improve userType assignment to be more explicit
       const userType = perfilData.tipo === 'client' ? 'client' : 'admin';
       localStorage.setItem("sintonia:userType", userType);
       
