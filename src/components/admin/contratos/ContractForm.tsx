@@ -1,5 +1,4 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,8 +10,8 @@ import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ContractFormProps {
   formClienteId: string;
@@ -145,21 +144,6 @@ const ContractForm: React.FC<ContractFormProps> = ({
     } catch (error: any) {
       console.error("Erro ao criar contrato:", error);
       toast.error(error.message || "Erro ao criar contrato");
-    }
-  };
-
-  const fetchClientes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clientes_sistema')
-        .select('id, razao_social')
-        .order('razao_social', { ascending: true });
-
-      if (error) throw error;
-      setClientes(data || []);
-    } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
-      toast.error("Não foi possível carregar a lista de clientes");
     }
   };
 
