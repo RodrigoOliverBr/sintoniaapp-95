@@ -26,6 +26,16 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, userType: 'admin' | 'cliente' | 'all' }) => {
   const currentUserType = localStorage.getItem("sintonia:userType") || "";
   
+  // Force remove dark class to ensure light mode
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+    document.documentElement.style.backgroundColor = "white";
+    document.body.style.backgroundColor = "white";
+    document.documentElement.style.color = "black";
+    document.body.style.color = "black";
+  }, []);
+  
   if (!currentUserType) {
     return <Navigate to="/login" replace />;
   }
@@ -44,11 +54,19 @@ function App() {
     // Verificar autenticação no carregamento inicial
     const userType = localStorage.getItem("sintonia:userType");
     setIsAuthenticated(!!userType);
+    
+    // Force remove dark class to ensure light mode
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+    document.documentElement.style.backgroundColor = "white";
+    document.body.style.backgroundColor = "white";
+    document.documentElement.style.color = "black";
+    document.body.style.color = "black";
   }, []);
   
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">
         <Toaster />
         <BrowserRouter>
           <Routes>

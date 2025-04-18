@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, X, LogOut, User } from "lucide-react";
@@ -24,6 +24,16 @@ interface AdminLayoutProps {
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const navigate = useNavigate();
+  
+  // Force remove dark class to ensure light mode
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+    document.documentElement.style.backgroundColor = "white";
+    document.body.style.backgroundColor = "white";
+    document.documentElement.style.color = "black";
+    document.body.style.color = "black";
+  }, []);
   
   const handleLogout = () => {
     localStorage.removeItem("sintonia:userType");

@@ -1,20 +1,14 @@
 
 "use client";
 
-import { useTheme } from "next-themes";
 import { Toaster as Sonner } from "sonner";
 import { ThemeProvider } from "next-themes";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  // Use a fallback theme to avoid the error if ThemeProvider is not available
-  const fallbackTheme = "light"; // Default to light theme
-  const { theme = fallbackTheme } = useTheme();
-
-  // Wrap with ThemeProvider to ensure theme context is available
   return (
-    <ThemeProvider defaultTheme="light">
+    <ThemeProvider defaultTheme="light" forcedTheme="light">
       <Sonner
         theme="light"
         className="toaster group"

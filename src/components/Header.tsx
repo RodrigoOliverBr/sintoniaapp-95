@@ -30,6 +30,16 @@ const Header: React.FC<HeaderProps> = () => {
   const location = useLocation();
   const [currentClient, setCurrentClient] = useState<ClienteSistema | null>(null);
   
+  // Force remove dark class to ensure light mode
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+    document.documentElement.style.backgroundColor = "white";
+    document.body.style.backgroundColor = "white";
+    document.documentElement.style.color = "black";
+    document.body.style.color = "black";
+  }, []);
+  
   useEffect(() => {
     const loadCurrentClient = async () => {
       const clienteId = getClienteIdAtivo();

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import { ThemeProvider } from "next-themes";
@@ -10,6 +10,16 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, title }) => {
+  // Force remove dark class to ensure light mode
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+    document.documentElement.style.backgroundColor = "white";
+    document.body.style.backgroundColor = "white";
+    document.documentElement.style.color = "black";
+    document.body.style.color = "black";
+  }, []);
+  
   return (
     <ThemeProvider defaultTheme="light" forcedTheme="light">
       <div className="flex h-full min-h-screen bg-white">
