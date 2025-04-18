@@ -48,8 +48,29 @@ export const useClienteContext = () => {
       if (error) throw error;
       
       if (data) {
-        setClienteData(data as ClienteSistema);
-        localStorage.setItem("sintonia:currentCliente", JSON.stringify(data));
+        // Normalize data for ClienteSistema
+        const normalizedData: ClienteSistema = {
+          id: data.id,
+          razao_social: data.razao_social,
+          razaoSocial: data.razao_social, // Alias para compatibilidade
+          nome: data.razao_social, // Usando razão social como nome para compatibilidade
+          tipo: data.tipo || 'juridica',
+          numeroEmpregados: data.numero_empregados || 0,
+          dataInclusao: data.data_inclusao ? new Date(data.data_inclusao).getTime() : Date.now(),
+          situacao: data.situacao,
+          cnpj: data.cnpj,
+          cpfCnpj: data.cnpj, // Alias para compatibilidade
+          email: data.email,
+          telefone: data.telefone,
+          responsavel: data.responsavel,
+          contato: data.contato,
+          planoId: data.plano_id,
+          contratoId: data.contrato_id,
+          clienteId: data.cliente_id
+        };
+        
+        setClienteData(normalizedData);
+        localStorage.setItem("sintonia:currentCliente", JSON.stringify(normalizedData));
       }
     } catch (err) {
       console.error("Error loading cliente data:", err);

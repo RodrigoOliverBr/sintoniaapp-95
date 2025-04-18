@@ -21,10 +21,12 @@ const LoginPage: React.FC = () => {
       
       if (data.session) {
         const userType = localStorage.getItem("sintonia:userType");
+        console.log("Usuário já autenticado. Tipo:", userType);
+        
         if (userType === 'admin') {
           navigate("/admin/dashboard");
         } else if (userType === 'client') {
-          navigate("/"); // Cliente vai para a tela principal
+          navigate("/");
         }
       }
     };
@@ -76,13 +78,19 @@ const LoginPage: React.FC = () => {
         throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
+      // Normalizar o tipo de usuário para evitar problemas de case
+      const userType = perfilData.tipo?.toLowerCase() === 'client' ? 'client' : 'admin';
+      console.log("Tipo de usuário normalizado:", userType);
+      
       // Se for cliente, verificar status
-      if (perfilData.tipo === 'client') {
+      if (userType === 'client') {
         const { data: clienteData, error: clienteError } = await supabase
           .from('clientes_sistema')
           .select('*')
           .eq('email', email)
           .maybeSingle();
+        
+        console.log("Dados do cliente:", clienteData);
         
         if (clienteError) {
           console.error("Erro ao buscar dados do cliente:", clienteError);
@@ -92,19 +100,18 @@ const LoginPage: React.FC = () => {
         
         if (!clienteData) {
           await supabase.auth.signOut();
-          throw new Error("Dados do cliente não encontrados");
+          throw new Error("Dados do cliente não encontrados. Verifique se o email está correto.");
         }
         
-        if (clienteData.situacao === 'bloqueado') {
+        if (clienteData.situacao !== 'liberado') {
           await supabase.auth.signOut();
-          throw new Error("Seu acesso está bloqueado. Entre em contato com o administrador.");
+          throw new Error(`Seu acesso está ${clienteData.situacao}. Entre em contato com o administrador.`);
         }
         
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
       }
       
       // Definir tipo de usuário e redirecionar
-      const userType = perfilData.tipo === 'client' ? 'client' : 'admin';
       localStorage.setItem("sintonia:userType", userType);
       
       toast.success(`Login realizado com sucesso como ${userType === 'admin' ? 'Administrador' : 'Cliente'}`);
