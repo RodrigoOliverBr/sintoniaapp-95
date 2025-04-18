@@ -1,9 +1,9 @@
+
 import React from "react";
-import { DialogContent } from "@/components/ui/dialog";
-import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
+import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import ContractForm from "./ContractForm";
-import ContractDialogHeader from "./dialog-sections/ContractDialogHeader";
-import ContractDialogFooter from "./dialog-sections/ContractDialogFooter";
+import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 
 interface NewContractModalProps {
   formClienteId: string;
@@ -58,12 +58,17 @@ const NewContractModal: React.FC<NewContractModalProps> = ({
   planos,
   isLoading,
   onClose,
-  onSave,
+  onSave
 }) => {
   return (
     <DialogContent className="sm:max-w-[600px]">
-      <ContractDialogHeader />
-      <ContractForm 
+      <DialogHeader>
+        <DialogTitle>Adicionar Novo Contrato</DialogTitle>
+        <DialogDescription>
+          Preencha as informações do novo contrato.
+        </DialogDescription>
+      </DialogHeader>
+      <ContractForm
         formClienteId={formClienteId}
         setFormClienteId={setFormClienteId}
         formPlanoId={formPlanoId}
@@ -88,11 +93,14 @@ const NewContractModal: React.FC<NewContractModalProps> = ({
         planos={planos}
         isLoading={isLoading}
       />
-      <ContractDialogFooter
-        onClose={onClose}
-        onSave={onSave}
-        isLoading={isLoading}
-      />
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          Cancelar
+        </Button>
+        <Button onClick={onSave} disabled={isLoading}>
+          {isLoading ? "Salvando..." : "Salvar"}
+        </Button>
+      </DialogFooter>
     </DialogContent>
   );
 };
