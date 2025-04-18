@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -65,7 +66,7 @@ const ContratosPage: React.FC = () => {
   }, [formPlanoId, planos]);
   
   const filteredContratos = contratos.filter(contrato => {
-    const clienteNome = clientes.find(c => c.id === contrato.clienteSistemaId)?.razaoSocial || "";
+    const clienteNome = clientes.find(c => c.id === contrato.clienteSistemaId)?.razao_social || "";
     return clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
            contrato.numero.toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -92,7 +93,7 @@ const ContratosPage: React.FC = () => {
   const handleOpenEditModal = (contrato: typeof currentContrato) => {
     if (!contrato) return;
     setCurrentContrato(contrato);
-    setFormClienteId(contrato.clienteSistemaId);
+    setFormClienteId(contrato.clienteSistemaId || contrato.clienteId);
     setFormPlanoId(contrato.planoId);
     setFormDataInicio(new Date(contrato.dataInicio));
     setFormDataFim(new Date(contrato.dataFim));
@@ -100,7 +101,7 @@ const ContratosPage: React.FC = () => {
     setFormValorMensal(contrato.valorMensal);
     setFormStatus(contrato.status);
     setFormTaxaImplantacao(contrato.taxaImplantacao);
-    setFormObservacoes(contrato.observacoes);
+    setFormObservacoes(contrato.observacoes || '');
     setFormNumeroContrato(contrato.numero);
     setOpenEditModal(true);
   };
