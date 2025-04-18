@@ -48,30 +48,8 @@ export const useClienteContext = () => {
       if (error) throw error;
       
       if (data) {
-        // Transform to match ClienteSistema interface
-        const transformedData: ClienteSistema = {
-          id: data.id,
-          razaoSocial: data.razao_social,
-          nome: data.razao_social, // For backward compatibility
-          tipo: "juridica", // Default value
-          numeroEmpregados: 0, // Default value
-          dataInclusao: new Date(data.created_at).getTime(),
-          situacao: data.situacao,
-          cnpj: data.cnpj,
-          cpfCnpj: data.cnpj, // For backward compatibility
-          email: data.email || "",
-          telefone: data.telefone || "",
-          responsavel: data.responsavel || "",
-          contato: data.responsavel, // For backward compatibility
-          planoId: data.plano_id || undefined,
-          contratoId: data.contrato_id || undefined,
-          clienteId: data.id, // For backward compatibility
-        };
-        
-        setClienteData(transformedData);
-        
-        // Store in localStorage for persistence
-        localStorage.setItem("sintonia:currentCliente", JSON.stringify(transformedData));
+        setClienteData(data as ClienteSistema);
+        localStorage.setItem("sintonia:currentCliente", JSON.stringify(data));
       }
     } catch (err) {
       console.error("Error loading cliente data:", err);

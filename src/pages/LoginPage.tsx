@@ -15,19 +15,21 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
-    // Fix the redirection logic to properly handle user types
-    const userType = localStorage.getItem("sintonia:userType");
-    if (userType) {
-      // Specific redirection based on userType
-      if (userType === 'admin') {
-        navigate("/admin/dashboard");
-      } else if (userType === 'client') {
-        navigate("/"); // Client users go to the root route
-      } else {
-        // Fallback for any other userType value
-        navigate("/");
+    // Verificar se o usuário já está logado e redirecionar de acordo com o tipo
+    const checkAuthStatus = async () => {
+      const { data } = await supabase.auth.getSession();
+      
+      if (data.session) {
+        const userType = localStorage.getItem("sintonia:userType");
+        if (userType === 'admin') {
+          navigate("/admin/dashboard");
+        } else if (userType === 'client') {
+          navigate("/"); // Cliente vai para a tela principal
+        }
       }
-    }
+    };
+    
+    checkAuthStatus();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -37,31 +39,12 @@ const LoginPage: React.FC = () => {
     try {
       console.log("Tentando login com:", email);
       
-      // Tenta fazer login com as credenciais fornecidas
-      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      // Fazer login com as credenciais fornecidas
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
       });
       
-      // Se houver erro de email não confirmado, ignora e continua o processo de login
-      if (authError && authError.message === "Email not confirmed") {
-        console.log("Email não confirmado, mas continuando com o login...");
-        
-        // Conseguir uma sessão de qualquer maneira
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        if (sessionData.session) {
-          // Se conseguimos uma sessão, usamos ela
-          authData = {
-            user: sessionData.session.user,
-            session: sessionData.session
-          };
-          // Limpa o erro para continuar o fluxo
-          authError = null;
-        }
-      }
-
-      // Verifica se ainda há erro após o tratamento especial para "Email not confirmed"
       if (authError) {
         console.error("Erro de autenticação Supabase:", authError);
         throw new Error(authError.message);
@@ -73,6 +56,7 @@ const LoginPage: React.FC = () => {
       
       console.log("Usuário autenticado com sucesso:", authData.user);
       
+      // Buscar o perfil do usuário
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
@@ -92,6 +76,7 @@ const LoginPage: React.FC = () => {
         throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
       }
       
+      // Se for cliente, verificar status
       if (perfilData.tipo === 'client') {
         const { data: clienteData, error: clienteError } = await supabase
           .from('clientes_sistema')
@@ -118,10 +103,13 @@ const LoginPage: React.FC = () => {
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
       }
       
-      // Improve userType assignment to be more explicit
+      // Definir tipo de usuário e redirecionar
       const userType = perfilData.tipo === 'client' ? 'client' : 'admin';
       localStorage.setItem("sintonia:userType", userType);
       
+      toast.success(`Login realizado com sucesso como ${userType === 'admin' ? 'Administrador' : 'Cliente'}`);
+      
+      // Redirecionar com pequeno delay para garantir que o toast seja exibido
       setTimeout(() => {
         if (userType === 'admin') {
           navigate("/admin/dashboard");
@@ -131,7 +119,6 @@ const LoginPage: React.FC = () => {
         setIsLoading(false);
       }, 1000);
       
-      toast.success(`Login realizado com sucesso como ${userType === 'admin' ? 'Administrador' : 'Cliente'}`);
     } catch (error: any) {
       console.error("Erro no processo de login:", error);
       toast.error(error.message || "Credenciais inválidas. Verifique seu e-mail e senha.");
