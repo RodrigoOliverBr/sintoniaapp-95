@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,6 +148,8 @@ const ContractForm: React.FC<ContractFormProps> = ({
     }
   };
 
+  console.log("Clientes disponíveis:", clientes);
+
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
       <div className="space-y-2">
@@ -164,7 +165,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
           <SelectContent className="bg-white">
             {clientes.map(cliente => (
               <SelectItem key={cliente.id} value={cliente.id}>
-                {cliente.razao_social}
+                {cliente.razao_social} {cliente.email ? `(${cliente.email})` : ''}
               </SelectItem>
             ))}
           </SelectContent>
