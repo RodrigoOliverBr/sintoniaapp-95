@@ -148,6 +148,21 @@ const ContractForm: React.FC<ContractFormProps> = ({
     }
   };
 
+  const fetchClientes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clientes_sistema')
+        .select('id, razao_social')
+        .order('razao_social', { ascending: true });
+
+      if (error) throw error;
+      setClientes(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar clientes:', error);
+      toast.error("Não foi possível carregar a lista de clientes");
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
       <div className="space-y-2">
@@ -162,7 +177,9 @@ const ContractForm: React.FC<ContractFormProps> = ({
           </SelectTrigger>
           <SelectContent className="bg-white">
             {clientes.map(cliente => (
-              <SelectItem key={cliente.id} value={cliente.id}>{cliente.razaoSocial}</SelectItem>
+              <SelectItem key={cliente.id} value={cliente.id}>
+                {cliente.razao_social}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
