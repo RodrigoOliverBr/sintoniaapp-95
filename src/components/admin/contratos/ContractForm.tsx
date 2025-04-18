@@ -1,18 +1,12 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
 import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import ClientePlanoPicker from "./form-sections/ClientePlanoPicker";
+import ContractDates from "./form-sections/ContractDates";
+import ContractValues from "./form-sections/ContractValues";
 
 interface ContractFormProps {
   formClienteId: string;
@@ -148,195 +142,39 @@ const ContractForm: React.FC<ContractFormProps> = ({
     }
   };
 
-  console.log("Clientes disponíveis:", clientes);
-
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-      <div className="space-y-2">
-        <Label htmlFor="cliente">Cliente</Label>
-        <Select 
-          value={formClienteId} 
-          onValueChange={(value) => setFormClienteId(value)}
-          disabled={isLoading}
-        >
-          <SelectTrigger id="cliente">
-            <SelectValue placeholder="Selecione o cliente" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {clientes.map(cliente => (
-              <SelectItem key={cliente.id} value={cliente.id}>
-                {cliente.razao_social}{cliente.email ? ` (${cliente.email})` : ''}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="plano">Plano</Label>
-        <Select 
-          value={formPlanoId} 
-          onValueChange={(value) => setFormPlanoId(value)}
-          disabled={isLoading}
-        >
-          <SelectTrigger id="plano">
-            <SelectValue placeholder="Selecione o plano" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {planos.map(plano => (
-              <SelectItem key={plano.id} value={plano.id}>{plano.nome}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="numeroContrato">Número do Contrato</Label>
-        <Input
-          id="numeroContrato"
-          value={formNumeroContrato}
-          onChange={(e) => setFormNumeroContrato(e.target.value)}
-          disabled={isLoading}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="dataInicio">Data de Início</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              disabled={isLoading}
-              variant={"outline"}
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !formDataInicio && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formDataInicio ? (
-                format(formDataInicio, "dd/MM/yyyy", { locale: ptBR })
-              ) : (
-                <span>Selecione uma data</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-            <Calendar
-              mode="single"
-              selected={formDataInicio}
-              onSelect={(date) => date && setFormDataInicio(date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="dataFim">Data de Fim</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              disabled={isLoading}
-              variant={"outline"}
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !formDataFim && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formDataFim ? (
-                format(formDataFim, "dd/MM/yyyy", { locale: ptBR })
-              ) : (
-                <span>Selecione uma data</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-            <Calendar
-              mode="single"
-              selected={formDataFim}
-              onSelect={(date) => date && setFormDataFim(date)}
-              disabled={(date) => date < formDataInicio}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="dataPrimeiroVencimento">Data do Primeiro Vencimento</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              disabled={isLoading}
-              variant={"outline"}
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !formDataPrimeiroVencimento && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formDataPrimeiroVencimento ? (
-                format(formDataPrimeiroVencimento, "dd/MM/yyyy", { locale: ptBR })
-              ) : (
-                <span>Selecione uma data</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-            <Calendar
-              mode="single"
-              selected={formDataPrimeiroVencimento}
-              onSelect={(date) => date && setFormDataPrimeiroVencimento(date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="valorMensal">Valor Mensal</Label>
-        <Input 
-          id="valorMensal" 
-          type="number" 
-          value={formValorMensal} 
-          onChange={(e) => setFormValorMensal(Number(e.target.value))} 
-          disabled={isLoading}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="status">Status</Label>
-        <Select 
-          value={formStatus} 
-          onValueChange={(value: StatusContrato) => setFormStatus(value)}
-          disabled={isLoading}
-        >
-          <SelectTrigger id="status">
-            <SelectValue placeholder="Selecione o status" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            <SelectItem value="ativo">Ativo</SelectItem>
-            <SelectItem value="em-analise">Em Análise</SelectItem>
-            <SelectItem value="cancelado">Cancelado</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="taxaImplantacao">Taxa de Implantação</Label>
-        <Input 
-          id="taxaImplantacao" 
-          type="number" 
-          value={formTaxaImplantacao} 
-          onChange={(e) => setFormTaxaImplantacao(Number(e.target.value))} 
-          disabled={isLoading}
-        />
-      </div>
-      <div className="space-y-2 md:col-span-2">
-        <Label htmlFor="observacoes">Observações</Label>
-        <Input 
-          id="observacoes" 
-          value={formObservacoes} 
-          onChange={(e) => setFormObservacoes(e.target.value)} 
-          disabled={isLoading}
-        />
-      </div>
+      <ClientePlanoPicker
+        formClienteId={formClienteId}
+        setFormClienteId={setFormClienteId}
+        formPlanoId={formPlanoId}
+        setFormPlanoId={setFormPlanoId}
+        clientes={clientes}
+        planos={planos}
+        isLoading={isLoading}
+      />
+      <ContractDates
+        formDataInicio={formDataInicio}
+        setFormDataInicio={setFormDataInicio}
+        formDataFim={formDataFim}
+        setFormDataFim={setFormDataFim}
+        formDataPrimeiroVencimento={formDataPrimeiroVencimento}
+        setFormDataPrimeiroVencimento={setFormDataPrimeiroVencimento}
+        isLoading={isLoading}
+      />
+      <ContractValues
+        formValorMensal={formValorMensal}
+        setFormValorMensal={setFormValorMensal}
+        formStatus={formStatus}
+        setFormStatus={setFormStatus}
+        formTaxaImplantacao={formTaxaImplantacao}
+        setFormTaxaImplantacao={setFormTaxaImplantacao}
+        formObservacoes={formObservacoes}
+        setFormObservacoes={setFormObservacoes}
+        formNumeroContrato={formNumeroContrato}
+        setFormNumeroContrato={setFormNumeroContrato}
+        isLoading={isLoading}
+      />
       <div className="md:col-span-2 flex justify-end">
         <Button type="submit" disabled={isLoading}>
           {isLoading ? "Salvando..." : "Salvar"}
