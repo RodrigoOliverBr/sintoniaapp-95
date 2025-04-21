@@ -100,6 +100,9 @@ const ContractForm: React.FC<ContractFormProps> = ({
     return true;
   };
 
+  // Verificar se temos dados de clientes para debug
+  console.log("Clientes disponíveis:", clientes);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
       <div className="space-y-2">
@@ -109,15 +112,25 @@ const ContractForm: React.FC<ContractFormProps> = ({
           onValueChange={(value) => setFormClienteId(value)}
           disabled={isLoading}
         >
-          <SelectTrigger id="cliente">
+          <SelectTrigger id="cliente" className="bg-white">
             <SelectValue placeholder="Selecione o cliente" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
-            {clientes.map(cliente => (
-              <SelectItem key={cliente.id} value={cliente.id}>
-                {cliente.razao_social}
+          <SelectContent className="bg-white max-h-[300px] overflow-y-auto">
+            {clientes && clientes.length > 0 ? (
+              clientes.map(cliente => (
+                <SelectItem 
+                  key={cliente.id} 
+                  value={cliente.id}
+                  className="py-2 px-4 hover:bg-gray-100"
+                >
+                  {cliente.razao_social || cliente.nome}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="no-clients" disabled>
+                Nenhum cliente disponível
               </SelectItem>
-            ))}
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -128,12 +141,14 @@ const ContractForm: React.FC<ContractFormProps> = ({
           onValueChange={(value) => setFormPlanoId(value)}
           disabled={isLoading}
         >
-          <SelectTrigger id="plano">
+          <SelectTrigger id="plano" className="bg-white">
             <SelectValue placeholder="Selecione o plano" />
           </SelectTrigger>
           <SelectContent className="bg-white">
             {planos.map(plano => (
-              <SelectItem key={plano.id} value={plano.id}>{plano.nome}</SelectItem>
+              <SelectItem key={plano.id} value={plano.id}>
+                {plano.nome}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -155,7 +170,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
               disabled={isLoading}
               variant={"outline"}
               className={cn(
-                "w-full justify-start text-left font-normal",
+                "w-full justify-start text-left font-normal bg-white",
                 !formDataInicio && "text-muted-foreground"
               )}
             >
@@ -186,7 +201,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
               disabled={isLoading}
               variant={"outline"}
               className={cn(
-                "w-full justify-start text-left font-normal",
+                "w-full justify-start text-left font-normal bg-white",
                 !formDataFim && "text-muted-foreground"
               )}
             >
@@ -218,7 +233,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
               disabled={isLoading}
               variant={"outline"}
               className={cn(
-                "w-full justify-start text-left font-normal",
+                "w-full justify-start text-left font-normal bg-white",
                 !formDataPrimeiroVencimento && "text-muted-foreground"
               )}
             >
@@ -249,6 +264,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
           value={formValorMensal} 
           onChange={(e) => setFormValorMensal(Number(e.target.value))} 
           disabled={isLoading}
+          className="bg-white"
         />
       </div>
       <div className="space-y-2">
@@ -258,7 +274,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
           onValueChange={(value: StatusContrato) => setFormStatus(value)}
           disabled={isLoading}
         >
-          <SelectTrigger id="status">
+          <SelectTrigger id="status" className="bg-white">
             <SelectValue placeholder="Selecione o status" />
           </SelectTrigger>
           <SelectContent className="bg-white">
@@ -276,6 +292,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
           value={formTaxaImplantacao} 
           onChange={(e) => setFormTaxaImplantacao(Number(e.target.value))} 
           disabled={isLoading}
+          className="bg-white"
         />
       </div>
       <div className="space-y-2 md:col-span-2">
@@ -285,6 +302,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
           value={formObservacoes} 
           onChange={(e) => setFormObservacoes(e.target.value)} 
           disabled={isLoading}
+          className="bg-white"
         />
       </div>
     </div>
