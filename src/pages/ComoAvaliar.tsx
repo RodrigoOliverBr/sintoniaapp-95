@@ -32,7 +32,7 @@ import {
 
 const ComoAvaliar: React.FC = () => {
   return (
-    <Layout>
+    <Layout title="Como Avaliar">
       <div className="max-w-3xl mx-auto">
         <Tabs defaultValue="avaliacao" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4">
@@ -59,6 +59,8 @@ const ComoAvaliar: React.FC = () => {
                     efetivas de mitigação.
                   </p>
                 </div>
+
+                
 
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Análise por Severidade</h3>
@@ -125,6 +127,7 @@ const ComoAvaliar: React.FC = () => {
                   </div>
                 </div>
 
+                
                 <div>
                   <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                     <Activity className="h-5 w-5 text-esocial-blue" />
@@ -169,6 +172,7 @@ const ComoAvaliar: React.FC = () => {
                   </div>
                 </div>
 
+                
                 <div>
                   <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                     <Lightbulb className="h-5 w-5 text-esocial-blue" />
@@ -206,6 +210,7 @@ const ComoAvaliar: React.FC = () => {
                   </ol>
                 </div>
 
+                
                 <div>
                   <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                     <Target className="h-5 w-5 text-esocial-blue" />
@@ -252,6 +257,7 @@ const ComoAvaliar: React.FC = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                
                 <div>
                   <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                     <FileText className="h-5 w-5 text-esocial-blue" />
@@ -322,6 +328,7 @@ const ComoAvaliar: React.FC = () => {
                   </ul>
                 </div>
 
+                
                 <div>
                   <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                     <FileLineChart className="h-5 w-5 text-esocial-blue" />
@@ -383,6 +390,7 @@ const ComoAvaliar: React.FC = () => {
                   </div>
                 </div>
 
+                
                 <div>
                   <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                     <Scale className="h-5 w-5 text-esocial-blue" />
@@ -416,6 +424,7 @@ const ComoAvaliar: React.FC = () => {
                   </div>
                 </div>
 
+                
                 <div>
                   <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-esocial-blue" />
@@ -726,8 +735,3 @@ const ComoAvaliar: React.FC = () => {
                             <li>Estabelecer comitê independente para investigação de casos</li>
                             <li>Realizar campanhas educativas e treinamentos obrigatórios</li>
                             <li>Garantir medidas protetivas imediatas para a vítima durante investigação</li>
-                            <li>Oferecer apoio jurídico e psicológico especializado</li>
-                          </ul>
-                        </div>
-
-                        <div>
