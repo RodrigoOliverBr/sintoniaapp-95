@@ -1,7 +1,7 @@
 
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { Building2, ClipboardList, FileText, Users, BarChart2, BookOpen, Settings } from "lucide-react";
+import { FileText, BookOpen, BarChart2, Settings, Building2, Users } from "lucide-react";
 
 const SidebarLinks: React.FC = () => {
   const activeClassName = 
