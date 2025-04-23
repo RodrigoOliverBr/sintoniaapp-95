@@ -1,8 +1,11 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import FormularioPage from "./pages/FormularioPage";
-import ComoUsar from "./pages/ComoUsar";
+import ComoPreencher from "./pages/ComoPreencher";
+import ComoAvaliar from "./pages/ComoAvaliar";
+import Mitigacoes from "./pages/Mitigacoes";
 import CompaniesPage from "./pages/CompaniesPage";
 import EmployeesPage from "./pages/EmployeesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
@@ -23,6 +26,7 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, userType: 'admin' | 'cliente' | 'all' }) => {
   const currentUserType = localStorage.getItem("sintonia:userType") || "";
   
+  // Force remove dark class to ensure light mode
   useEffect(() => {
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark');
@@ -47,9 +51,11 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   useEffect(() => {
+    // Verificar autenticação no carregamento inicial
     const userType = localStorage.getItem("sintonia:userType");
     setIsAuthenticated(!!userType);
     
+    // Force remove dark class to ensure light mode
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark');
     document.documentElement.style.backgroundColor = "white";
@@ -64,8 +70,10 @@ function App() {
         <Toaster />
         <BrowserRouter>
           <Routes>
+            {/* Rota de Login (pública) */}
             <Route path="/login" element={<LoginPage />} />
             
+            {/* Rotas do sistema cliente */}
             <Route 
               path="/" 
               element={
@@ -74,16 +82,30 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            
             <Route 
-              path="/como-usar" 
+              path="/como-preencher" 
               element={
                 <ProtectedRoute userType="all">
-                  <ComoUsar />
+                  <ComoPreencher />
                 </ProtectedRoute>
               } 
             />
-            
+            <Route 
+              path="/como-avaliar" 
+              element={
+                <ProtectedRoute userType="all">
+                  <ComoAvaliar />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/mitigacoes" 
+              element={
+                <ProtectedRoute userType="all">
+                  <Mitigacoes />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/minha-conta" 
               element={
@@ -92,7 +114,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            
             <Route 
               path="/cadastros/empresas" 
               element={
@@ -101,7 +122,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            
             <Route 
               path="/cadastros/funcionarios" 
               element={
@@ -110,7 +130,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            
             <Route 
               path="/relatorios" 
               element={
@@ -120,6 +139,7 @@ function App() {
               } 
             />
             
+            {/* Rotas do sistema administrativo */}
             <Route 
               path="/admin/dashboard" 
               element={
@@ -128,7 +148,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            
             <Route 
               path="/admin/clientes" 
               element={
@@ -137,7 +156,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            
             <Route 
               path="/admin/planos" 
               element={
@@ -146,7 +164,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            
             <Route 
               path="/admin/contratos" 
               element={
@@ -155,7 +172,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            
             <Route 
               path="/admin/faturamento" 
               element={
@@ -164,7 +180,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            
             <Route 
               path="/admin/usuarios" 
               element={
@@ -174,6 +189,7 @@ function App() {
               } 
             />
             
+            {/* Rota inicial redireciona para o login se não autenticado */}
             <Route 
               path="/" 
               element={
@@ -183,6 +199,7 @@ function App() {
               } 
             />
             
+            {/* Rota de fallback */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

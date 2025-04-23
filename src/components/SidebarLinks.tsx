@@ -1,7 +1,7 @@
 
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { FileText, BookOpen, BarChart2, Settings, Building2, Users } from "lucide-react";
+import { Building2, ClipboardList, FileQuestion, FileSearch, FileText, Users, BarChart2, BookOpen, Settings } from "lucide-react";
 
 const SidebarLinks: React.FC = () => {
   const activeClassName = 
@@ -21,11 +21,27 @@ const SidebarLinks: React.FC = () => {
       </NavLink>
       
       <NavLink 
-        to="/como-usar" 
+        to="/como-preencher" 
         className={({ isActive }) => isActive ? activeClassName : inactiveClassName}
       >
         <BookOpen size={20} />
-        <span>Como Usar Esta Ferramenta</span>
+        <span>Como Preencher</span>
+      </NavLink>
+      
+      <NavLink 
+        to="/como-avaliar" 
+        className={({ isActive }) => isActive ? activeClassName : inactiveClassName}
+      >
+        <FileSearch size={20} />
+        <span>Como Avaliar</span>
+      </NavLink>
+      
+      <NavLink 
+        to="/mitigacoes" 
+        className={({ isActive }) => isActive ? activeClassName : inactiveClassName}
+      >
+        <ClipboardList size={20} />
+        <span>Mitigações</span>
       </NavLink>
       
       <NavLink 
