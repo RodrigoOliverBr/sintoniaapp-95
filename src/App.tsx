@@ -1,11 +1,9 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import FormularioPage from "./pages/FormularioPage";
 import ComoPreencher from "./pages/ComoPreencher";
 import ComoAvaliar from "./pages/ComoAvaliar";
-import Mitigacoes from "./pages/Mitigacoes";
 import CompaniesPage from "./pages/CompaniesPage";
 import EmployeesPage from "./pages/EmployeesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
@@ -95,14 +93,6 @@ function App() {
               element={
                 <ProtectedRoute userType="all">
                   <ComoAvaliar />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/mitigacoes" 
-              element={
-                <ProtectedRoute userType="all">
-                  <Mitigacoes />
                 </ProtectedRoute>
               } 
             />

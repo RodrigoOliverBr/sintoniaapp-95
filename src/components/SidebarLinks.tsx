@@ -37,14 +37,6 @@ const SidebarLinks: React.FC = () => {
       </NavLink>
       
       <NavLink 
-        to="/mitigacoes" 
-        className={({ isActive }) => isActive ? activeClassName : inactiveClassName}
-      >
-        <ClipboardList size={20} />
-        <span>Mitigações</span>
-      </NavLink>
-      
-      <NavLink 
         to="/relatorios" 
         className={({ isActive }) => isActive ? activeClassName : inactiveClassName}
       >
