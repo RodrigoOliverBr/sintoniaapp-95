@@ -47,6 +47,8 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
     setIsSubmitting(true);
 
     try {
+      console.log("Enviando dados do setor:", { name, companyId });
+      
       // Using the correct parameter structure from our service
       await addDepartmentToCompany({
         name: name.trim(),
@@ -60,7 +62,13 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
       
       setName("");
       onOpenChange(false);
-      if (onDepartmentAdded) onDepartmentAdded();
+      // Garantindo que a função de callback seja chamada após sucesso
+      if (onDepartmentAdded) {
+        console.log("Chamando callback onDepartmentAdded");
+        setTimeout(() => {
+          onDepartmentAdded();
+        }, 300);
+      }
     } catch (error) {
       console.error("Erro ao adicionar setor:", error);
       const errorMessage = error instanceof Error 

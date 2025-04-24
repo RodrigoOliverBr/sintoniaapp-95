@@ -3,13 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { Department } from '@/types/cadastro';
 
 export const getDepartmentsByCompany = async (companyId: string): Promise<Department[]> => {
+  console.log("Buscando setores para a empresa:", companyId);
   const { data, error } = await supabase
     .from('setores')
     .select('*')
     .eq('empresa_id', companyId);
 
-  if (error) throw error;
+  if (error) {
+    console.error("Erro ao buscar setores:", error);
+    throw error;
+  }
   
+  console.log("Setores encontrados:", data);
   return (data || []).map(dept => ({
     id: dept.id,
     name: dept.nome,
@@ -41,6 +46,8 @@ export const addDepartmentToCompany = async (departmentData: Partial<Department>
     empresa_id: departmentData.companyId
   };
 
+  console.log("Adicionando setor com dados:", dbData);
+
   const { data, error } = await supabase
     .from('setores')
     .insert(dbData)
@@ -49,6 +56,7 @@ export const addDepartmentToCompany = async (departmentData: Partial<Department>
 
   if (error) throw error;
   
+  console.log("Setor adicionado com sucesso:", data);
   return {
     id: data.id,
     name: data.nome,

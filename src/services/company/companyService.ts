@@ -4,11 +4,15 @@ import { Company } from '@/types/cadastro';
 import { getDepartmentsByCompany } from '../department/departmentService';
 
 export const getCompanies = async (): Promise<Company[]> => {
+  console.log("Buscando todas as empresas");
   const { data, error } = await supabase
     .from('empresas')
     .select('*');
 
-  if (error) throw error;
+  if (error) {
+    console.error("Erro ao buscar empresas:", error);
+    throw error;
+  }
   
   // Create base companies
   const companies = (data || []).map(company => ({
@@ -19,10 +23,18 @@ export const getCompanies = async (): Promise<Company[]> => {
     clienteId: company.cliente_id || null // Handle possible null values
   }));
 
+  console.log("Empresas encontradas:", companies.length);
+
   // Load departments for each company
   for (const company of companies) {
-    const departments = await getDepartmentsByCompany(company.id);
-    company.departments = departments;
+    try {
+      const departments = await getDepartmentsByCompany(company.id);
+      company.departments = departments;
+      console.log(`Setores para empresa ${company.name}:`, departments);
+    } catch (error) {
+      console.error(`Erro ao buscar setores para empresa ${company.id}:`, error);
+      company.departments = [];
+    }
   }
   
   return companies;
