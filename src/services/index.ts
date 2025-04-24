@@ -4,4 +4,11 @@ export * from './company/companyService';
 export * from './department/departmentService';
 export * from './employee/employeeService';
 export * from './jobRole/jobRoleService';
-export * from './form/formService';
+export { 
+  getFormQuestions,
+  getFormResultByEmployeeId, 
+  saveFormResult,
+  getMitigationsByRiskId,
+  getFormStatusByEmployeeId,
+  getFormResults
+} from './form/formService';

@@ -26,8 +26,8 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
     texto: q.texto,
     risco_id: q.risco_id,
     secao: q.secao,
-    ordem: q.ordem,
-    formulario_id: q.formulario_id,
+    ordem: q.ordem || 0,
+    formulario_id: q.formulario_id || formId,
     opcoes: q.opcoes ? Array.isArray(q.opcoes) ? q.opcoes : [] : [],
     observacao_obrigatoria: q.observacao_obrigatoria,
     risco: q.risco
