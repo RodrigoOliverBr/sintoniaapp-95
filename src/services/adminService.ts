@@ -758,4 +758,10 @@ export const checkClienteCredentials = (email: string, password: string): Client
     
     // Verificação simplificada: aceita 'client123' como senha padrão
     if (password === "client123") {
-      console.log("Senha padrão
+      console.log("Senha padrão aceita");
+      return cliente;
+    }
+  }
+  
+  return null;
+};
