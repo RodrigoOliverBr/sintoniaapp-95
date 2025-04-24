@@ -1,6 +1,45 @@
 
 import { FormData, SeverityLevel } from '../types/form';
 
+// Export formSections directly for use in components
+export const formSections = [
+  {
+    title: "Demandas Psicológicas",
+    description: "Avalie os últimos 14 dias (últimas duas semanas)",
+    questions: ["1", "2", "3", "4"]
+  },
+  {
+    title: "Organização e Gestão do Trabalho",
+    description: "Avalie os últimos 14 dias (últimas duas semanas)",
+    questions: ["5", "6", "7"]
+  },
+  {
+    title: "Trabalho Ativo e Desenvolvimento de Competências",
+    description: "Avalie os últimos 14 dias (últimas duas semanas)",
+    questions: ["8", "9", "10"]
+  },
+  {
+    title: "Apoio Social e Qualidade da Liderança",
+    description: "Avalie os últimos 14 dias (últimas duas semanas)",
+    questions: ["11", "12", "13", "14"]
+  },
+  {
+    title: "Compensação e Reconhecimento",
+    description: "Avalie os últimos 28 dias (últimas quatro semanas)",
+    questions: ["15", "16", "17"]
+  },
+  {
+    title: "Dupla Presença: Conflito Trabalho-Casa",
+    description: "Avalie os últimos 14 dias (últimas duas semanas)",
+    questions: ["18"]
+  },
+  {
+    title: "Assédio Moral e Sexual",
+    description: "Avalie os últimos 14 dias (últimas duas semanas)",
+    questions: ["19", "20"]
+  }
+];
+
 export const formData: FormData = {
   sections: [
     {
