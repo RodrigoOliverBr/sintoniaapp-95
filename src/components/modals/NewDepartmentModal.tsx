@@ -47,7 +47,11 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const newDepartment = await addDepartmentToCompany(companyId, { name });
+      // Corrigindo a ordem dos parâmetros - passando o objeto com as propriedades corretas
+      const newDepartment = await addDepartmentToCompany({
+        name: name.trim(),
+        companyId: companyId
+      });
       
       toast({
         title: "Sucesso",

@@ -41,7 +41,8 @@ const CompaniesPage = () => {
   const loadCompanies = async () => {
     try {
       const clienteId = getClienteIdAtivo();
-      const loadedCompanies = await getCompanies(clienteId);
+      // Corrigindo a chamada para não passar parâmetro clienteId que não é esperado
+      const loadedCompanies = await getCompanies();
       setCompanies(loadedCompanies || []);
     } catch (error) {
       console.error("Erro ao carregar empresas:", error);
@@ -81,7 +82,8 @@ const CompaniesPage = () => {
   const handleDeleteDepartment = async (companyId: string, departmentId: string) => {
     if (window.confirm("Tem certeza que deseja excluir este setor?")) {
       try {
-        await deleteDepartment(companyId, departmentId);
+        // Corrigindo para passar apenas o ID do departamento
+        await deleteDepartment(departmentId);
         await loadCompanies();
         toast({
           title: "Sucesso",
