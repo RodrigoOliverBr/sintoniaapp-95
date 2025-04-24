@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { Company, Department, JobRole, Employee, FormResult, FormStatus } from '@/types/cadastro';
@@ -36,7 +35,19 @@ export const getCompanies = async (clienteId?: string) => {
       `);
 
     if (error) throw error;
-    return data as Company[];
+    
+    const companies = data.map(company => ({
+      id: company.id,
+      name: company.nome,
+      departments: company.setores?.map(dept => ({
+        id: dept.id,
+        name: dept.nome,
+        companyId: company.id
+      })) || [],
+      clienteId
+    }));
+    
+    return companies as Company[];
   } catch (error) {
     console.error('Erro ao buscar empresas:', error);
     return [];
@@ -88,7 +99,12 @@ export const addDepartmentToCompany = async (companyId: string, departmentData: 
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      id: data.id,
+      name: data.nome,
+      companyId: data.empresa_id
+    } as Department;
   } catch (error) {
     console.error('Erro ao adicionar setor:', error);
     throw error;
@@ -103,7 +119,14 @@ export const getDepartmentsByCompany = async (companyId: string) => {
       .eq('empresa_id', companyId);
 
     if (error) throw error;
-    return data as Department[];
+    
+    const departments = data.map(dept => ({
+      id: dept.id,
+      name: dept.nome,
+      companyId: dept.empresa_id
+    }));
+    
+    return departments as Department[];
   } catch (error) {
     console.error('Erro ao buscar setores:', error);
     return [];
@@ -119,7 +142,12 @@ export const getDepartmentById = async (departmentId: string) => {
       .single();
 
     if (error) throw error;
-    return data as Department;
+    
+    return {
+      id: data.id,
+      name: data.nome,
+      companyId: data.empresa_id
+    } as Department;
   } catch (error) {
     console.error('Erro ao buscar setor:', error);
     return null;
@@ -156,7 +184,12 @@ export const addJobRole = async (companyId: string, roleData: Partial<JobRole>) 
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      id: data.id,
+      name: data.nome,
+      companyId: data.empresa_id
+    } as JobRole;
   } catch (error) {
     console.error('Erro ao adicionar cargo:', error);
     throw error;
@@ -171,7 +204,14 @@ export const getJobRolesByCompany = async (companyId: string) => {
       .eq('empresa_id', companyId);
 
     if (error) throw error;
-    return data as JobRole[];
+    
+    const roles = data.map(role => ({
+      id: role.id,
+      name: role.nome,
+      companyId: role.empresa_id
+    }));
+    
+    return roles as JobRole[];
   } catch (error) {
     console.error('Erro ao buscar cargos:', error);
     return [];
@@ -185,7 +225,14 @@ export const getJobRoles = async () => {
       .select('*');
 
     if (error) throw error;
-    return data as JobRole[];
+    
+    const roles = data.map(role => ({
+      id: role.id,
+      name: role.nome,
+      companyId: role.empresa_id
+    }));
+    
+    return roles as JobRole[];
   } catch (error) {
     console.error('Erro ao buscar cargos:', error);
     return [];
@@ -201,7 +248,12 @@ export const getJobRoleById = async (roleId: string) => {
       .single();
 
     if (error) throw error;
-    return data as JobRole;
+    
+    return {
+      id: data.id,
+      name: data.nome,
+      companyId: data.empresa_id
+    } as JobRole;
   } catch (error) {
     console.error('Erro ao buscar cargo:', error);
     return null;
@@ -245,7 +297,6 @@ export const deleteJobRole = async (roleId: string) => {
 // Employees
 export const addEmployee = async (employeeData: Partial<Employee>) => {
   try {
-    // First, insert the employee
     const { data: employeeResult, error: employeeError } = await supabase
       .from('funcionarios')
       .insert({
@@ -261,7 +312,6 @@ export const addEmployee = async (employeeData: Partial<Employee>) => {
 
     if (employeeError) throw employeeError;
 
-    // Then, insert department associations
     const departmentIds = employeeData.departmentIds || [];
     if (departmentIds.length > 0) {
       const departmentAssociations = departmentIds.map(departmentId => ({
@@ -275,17 +325,109 @@ export const addEmployee = async (employeeData: Partial<Employee>) => {
 
       if (departmentError) throw departmentError;
     }
-
-    return employeeResult;
+    
+    return {
+      id: employeeResult.id,
+      name: employeeResult.nome,
+      cpf: employeeResult.cpf,
+      roleId: employeeResult.cargo_id,
+      companyId: employeeResult.empresa_id,
+      departmentIds: departmentIds
+    } as Employee;
   } catch (error) {
     console.error('Erro ao adicionar funcionário:', error);
     throw error;
   }
 };
 
+export const getEmployees = async () => {
+  try {
+    const { data: employeesData, error } = await supabase
+      .from('funcionarios')
+      .select(`
+        *,
+        employee_departments(department_id)
+      `);
+
+    if (error) throw error;
+    
+    if (!employeesData) return [];
+    
+    const employeeIds = employeesData.map(e => e.id);
+    const { data: allDepartments } = await supabase
+      .from('employee_departments')
+      .select('*')
+      .in('employee_id', employeeIds);
+    
+    const employees = employeesData.map(emp => {
+      const departmentIds = allDepartments
+        ?.filter(d => d.employee_id === emp.id)
+        .map(d => d.department_id) || [];
+      
+      return {
+        id: emp.id,
+        name: emp.nome,
+        cpf: emp.cpf,
+        roleId: emp.cargo_id,
+        companyId: emp.empresa_id,
+        departmentIds
+      };
+    });
+    
+    return employees as Employee[];
+  } catch (error) {
+    console.error('Erro ao buscar funcionários:', error);
+    return [];
+  }
+};
+
+export const getEmployeesByCompany = async (companyId: string) => {
+  try {
+    const { data: employeesData, error } = await supabase
+      .from('funcionarios')
+      .select('*')
+      .eq('empresa_id', companyId);
+
+    if (error) throw error;
+    
+    if (!employeesData) return [];
+    
+    const employeeIds = employeesData.map(e => e.id);
+    
+    let departmentAssociations: any[] = [];
+    if (employeeIds.length > 0) {
+      const { data } = await supabase
+        .from('employee_departments')
+        .select('*')
+        .in('employee_id', employeeIds);
+        
+      departmentAssociations = data || [];
+    }
+    
+    const employees = employeesData.map(emp => {
+      const departmentIds = departmentAssociations
+        .filter(d => d.employee_id === emp.id)
+        .map(d => d.department_id);
+        
+      return {
+        id: emp.id,
+        name: emp.nome,
+        cpf: emp.cpf,
+        roleId: emp.cargo_id,
+        companyId: emp.empresa_id,
+        departmentIds
+      };
+    });
+    
+    return employees as Employee[];
+  } catch (error) {
+    console.error('Erro ao buscar funcionários:', error);
+    return [];
+  }
+};
+
 export const updateEmployee = async (employeeId: string, employeeData: Partial<Employee>) => {
   try {
-    // Update employee details
     const { data: employeeResult, error: employeeError } = await supabase
       .from('funcionarios')
       .update({
@@ -301,10 +443,8 @@ export const updateEmployee = async (employeeId: string, employeeData: Partial<E
 
     if (employeeError) throw employeeError;
 
-    // Update department associations
     const departmentIds = employeeData.departmentIds || [];
     
-    // First, remove existing department associations
     const { error: deleteError } = await supabase
       .from('employee_departments')
       .delete()
@@ -312,7 +452,6 @@ export const updateEmployee = async (employeeId: string, employeeData: Partial<E
 
     if (deleteError) throw deleteError;
 
-    // Then, insert new department associations if any
     if (departmentIds.length > 0) {
       const departmentAssociations = departmentIds.map(departmentId => ({
         employee_id: employeeId,
@@ -333,47 +472,13 @@ export const updateEmployee = async (employeeId: string, employeeData: Partial<E
   }
 };
 
-export const getEmployees = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('funcionarios')
-      .select(`
-        *,
-        employee_departments(department_id)
-      `);
-
-    if (error) throw error;
-    return data as Employee[];
-  } catch (error) {
-    console.error('Erro ao buscar funcionários:', error);
-    return [];
-  }
-};
-
-export const getEmployeesByCompany = async (companyId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('funcionarios')
-      .select('*')
-      .eq('empresa_id', companyId);
-
-    if (error) throw error;
-    return data as Employee[];
-  } catch (error) {
-    console.error('Erro ao buscar funcionários:', error);
-    return [];
-  }
-};
-
 export const deleteEmployee = async (employeeId: string) => {
   try {
-    // First, delete department associations
     await supabase
       .from('employee_departments')
       .delete()
       .eq('employee_id', employeeId);
 
-    // Then delete the employee
     const { error } = await supabase
       .from('funcionarios')
       .delete()

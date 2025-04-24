@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { getJobRoles, getCompanies, getEmployeesByCompany, getEmployees, getFormResultByEmployeeId, saveFormResult } from "@/services/storageService";
@@ -27,6 +26,7 @@ const FormularioPage: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isNewEmployeeModalOpen, setIsNewEmployeeModalOpen] = useState(false);
   const [isEditingExistingResponses, setIsEditingExistingResponses] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
@@ -52,82 +52,115 @@ const FormularioPage: React.FC = () => {
 
   // Load companies and job roles on component mount
   useEffect(() => {
-    const loadedCompanies = getCompanies();
-    setCompanies(loadedCompanies);
-    setJobRoles(getJobRoles());
-
-    // Load employee from URL param if present
-    if (employeeIdFromUrl) {
-      const allEmployees = getEmployees();
-      const employee = allEmployees.find(e => e.id === employeeIdFromUrl);
-      
-      if (employee) {
-        setSelectedCompanyId(employee.companyId);
-        setSelectedEmployeeId(employeeIdFromUrl);
-        setSelectedEmployee(employee);
-        setIsEditingExistingResponses(true);
+    const loadData = async () => {
+      try {
+        setLoading(true);
         
-        // Load existing form responses
-        const existingResult = getFormResultByEmployeeId(employeeIdFromUrl);
-        if (existingResult) {
-          setFormAnswers(existingResult.answers);
-          setFormResult({
-            answers: existingResult.answers,
-            totalYes: existingResult.totalYes,
-            totalNo: existingResult.totalNo,
-            severityCounts: existingResult.severityCounts,
-            yesPerSeverity: existingResult.yesPerSeverity,
-            analyistNotes: existingResult.analyistNotes
-          });
-          setShowForm(true);
-          // If form is complete, show results directly
-          if (existingResult.isComplete) {
-            setShowResults(true);
+        // Fetch companies and job roles
+        const loadedCompanies = await getCompanies();
+        setCompanies(loadedCompanies || []);
+        
+        const loadedJobRoles = await getJobRoles();
+        setJobRoles(loadedJobRoles || []);
+
+        // Load employee from URL param if present
+        if (employeeIdFromUrl) {
+          const allEmployees = await getEmployees();
+          const employee = allEmployees?.find(e => e.id === employeeIdFromUrl);
+          
+          if (employee) {
+            setSelectedCompanyId(employee.companyId);
+            setSelectedEmployeeId(employeeIdFromUrl);
+            setSelectedEmployee(employee);
+            setIsEditingExistingResponses(true);
+            
+            // Load existing form responses
+            const existingResult = getFormResultByEmployeeId(employeeIdFromUrl);
+            if (existingResult) {
+              setFormAnswers(existingResult.answers);
+              setFormResult({
+                answers: existingResult.answers,
+                totalYes: existingResult.totalYes,
+                totalNo: existingResult.totalNo,
+                severityCounts: existingResult.severityCounts,
+                yesPerSeverity: existingResult.yesPerSeverity,
+                analyistNotes: existingResult.analyistNotes
+              });
+              setShowForm(true);
+              // If form is complete, show results directly
+              if (existingResult.isComplete) {
+                setShowResults(true);
+              }
+            }
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Funcionário não encontrado",
+              description: "O funcionário especificado não foi encontrado."
+            });
           }
         }
-      } else {
+      } catch (error) {
+        console.error("Error loading initial data:", error);
         toast({
           variant: "destructive",
-          title: "Funcionário não encontrado",
-          description: "O funcionário especificado não foi encontrado."
+          title: "Erro ao carregar dados",
+          description: "Ocorreu um erro ao carregar os dados iniciais."
         });
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    loadData();
   }, [employeeIdFromUrl, toast]);
 
   // Load employees when selected company changes
   useEffect(() => {
-    if (selectedCompanyId) {
-      const employeesForCompany = getEmployeesByCompany(selectedCompanyId);
-      setEmployees(employeesForCompany);
-      // Only reset selected employee when company changes and we're not in edit mode
-      if (!isEditingExistingResponses) {
-        setSelectedEmployeeId("");
-        setSelectedEmployee(null);
-        setShowForm(false);
+    const loadEmployees = async () => {
+      if (selectedCompanyId) {
+        try {
+          const employeesForCompany = await getEmployeesByCompany(selectedCompanyId);
+          setEmployees(employeesForCompany || []);
+          
+          // Only reset selected employee when company changes and we're not in edit mode
+          if (!isEditingExistingResponses) {
+            setSelectedEmployeeId("");
+            setSelectedEmployee(null);
+            setShowForm(false);
+          }
+        } catch (error) {
+          console.error("Error loading employees:", error);
+        }
       }
-    }
+    };
+    
+    loadEmployees();
   }, [selectedCompanyId, isEditingExistingResponses]);
 
   // Update selected employee object when ID changes
   useEffect(() => {
-    if (selectedEmployeeId) {
-      const employee = employees.find(e => e.id === selectedEmployeeId);
-      setSelectedEmployee(employee || null);
-      setShowForm(!!employee);
-      
-      // Only reset form state when employee changes and we're not in edit mode
-      if (!isEditingExistingResponses) {
-        setFormAnswers({});
-        setCurrentStep(1);
-        setShowResults(false);
+    const updateSelectedEmployee = async () => {
+      if (selectedEmployeeId && employees.length > 0) {
+        const employee = employees.find(e => e.id === selectedEmployeeId);
+        setSelectedEmployee(employee || null);
+        setShowForm(!!employee);
+        
+        // Only reset form state when employee changes and we're not in edit mode
+        if (!isEditingExistingResponses) {
+          setFormAnswers({});
+          setCurrentStep(1);
+          setShowResults(false);
+        }
+        
+        // When editing existing, only load data if it's the initial load
+        if (isEditingExistingResponses) {
+          setIsEditingExistingResponses(false);
+        }
       }
-      
-      // When editing existing, only load data if it's the initial load
-      if (isEditingExistingResponses) {
-        setIsEditingExistingResponses(false);
-      }
-    }
+    };
+    
+    updateSelectedEmployee();
   }, [selectedEmployeeId, employees, isEditingExistingResponses]);
 
   // Calculate results whenever answers change
@@ -136,10 +169,7 @@ const FormularioPage: React.FC = () => {
     
     // Save form progress as answers change
     if (selectedEmployeeId && Object.keys(formAnswers).length > 0) {
-      saveFormResult(selectedEmployeeId, {
-        ...formResult,
-        answers: formAnswers
-      });
+      saveFormResult();
     }
   }, [formAnswers, selectedEmployeeId]);
 
@@ -187,11 +217,11 @@ const FormularioPage: React.FC = () => {
     }
   };
 
-  const handleEmployeeAdded = () => {
+  const handleEmployeeAdded = async () => {
     // Reload employees for the selected company
     if (selectedCompanyId) {
-      const employeesForCompany = getEmployeesByCompany(selectedCompanyId);
-      setEmployees(employeesForCompany);
+      const employeesForCompany = await getEmployeesByCompany(selectedCompanyId);
+      setEmployees(employeesForCompany || []);
     }
   };
 
@@ -339,6 +369,16 @@ const FormularioPage: React.FC = () => {
   // Progress indicator
   const progress = Math.round((currentStep / formData.sections.length) * 100);
 
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container mx-auto p-4 text-center">
+          <p className="text-lg">Carregando dados...</p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="container mx-auto p-4 pb-16">
@@ -370,7 +410,7 @@ const FormularioPage: React.FC = () => {
                     <SelectValue placeholder="Escolha uma empresa" />
                   </SelectTrigger>
                   <SelectContent>
-                    {companies.map((company) => (
+                    {companies?.map((company) => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
                       </SelectItem>
@@ -397,7 +437,7 @@ const FormularioPage: React.FC = () => {
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.map((employee) => (
+                        {employees?.map((employee) => (
                           <SelectItem key={employee.id} value={employee.id}>
                             {employee.name}
                           </SelectItem>
