@@ -29,30 +29,32 @@ const CompanySelect = ({
   const safeCompanies = Array.isArray(companies) ? companies : [];
 
   return (
-    <div className="flex items-center gap-2">
-      <Select
-        value={selectedCompanyId || undefined}
-        onValueChange={onCompanyChange}
-      >
-        <SelectTrigger className="w-[300px]">
-          <SelectValue placeholder="Selecione uma empresa" />
-        </SelectTrigger>
-        <SelectContent>
-          <ScrollArea className="h-[200px]">
-            {safeCompanies.length > 0 ? (
-              safeCompanies.map((company) => (
-                <SelectItem key={company.id} value={company.id}>
-                  {company.name}
+    <div className="flex items-center gap-2 w-full justify-between">
+      <div className="flex items-center gap-2 flex-1">
+        <Select
+          value={selectedCompanyId || undefined}
+          onValueChange={onCompanyChange}
+        >
+          <SelectTrigger className="w-full max-w-[300px]">
+            <SelectValue placeholder="Selecione uma empresa" />
+          </SelectTrigger>
+          <SelectContent>
+            <ScrollArea className="h-[200px]">
+              {safeCompanies.length > 0 ? (
+                safeCompanies.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="empty" disabled>
+                  Nenhuma empresa disponível
                 </SelectItem>
-              ))
-            ) : (
-              <SelectItem value="empty" disabled>
-                Nenhuma empresa disponível
-              </SelectItem>
-            )}
-          </ScrollArea>
-        </SelectContent>
-      </Select>
+              )}
+            </ScrollArea>
+          </SelectContent>
+        </Select>
+      </div>
       
       <Button 
         onClick={onNewEmployee} 
