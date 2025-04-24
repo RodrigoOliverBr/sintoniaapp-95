@@ -399,7 +399,6 @@ export type Database = {
           empresa_id: string
           id: string
           nome: string
-          setor_id: string | null
           updated_at: string
         }
         Insert: {
@@ -409,7 +408,6 @@ export type Database = {
           empresa_id: string
           id?: string
           nome: string
-          setor_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -419,7 +417,6 @@ export type Database = {
           empresa_id?: string
           id?: string
           nome?: string
-          setor_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -435,13 +432,6 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "funcionarios_setor_id_fkey"
-            columns: ["setor_id"]
-            isOneToOne: false
-            referencedRelation: "setores"
             referencedColumns: ["id"]
           },
         ]
@@ -795,7 +785,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      company_type: "fisica" | "juridica"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -910,6 +900,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      company_type: ["fisica", "juridica"],
+    },
   },
 } as const
