@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addDepartmentToCompany } from "@/services/storageService";
+import { addDepartmentToCompany } from "@/services";
 import { useToast } from "@/hooks/use-toast";
 import { handleSupabaseError } from "@/integrations/supabase/client";
 
@@ -47,8 +47,8 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Corrigindo a ordem dos parâmetros - passando o objeto com as propriedades corretas
-      const newDepartment = await addDepartmentToCompany({
+      // Using the correct parameter structure from our service
+      await addDepartmentToCompany({
         name: name.trim(),
         companyId: companyId
       });

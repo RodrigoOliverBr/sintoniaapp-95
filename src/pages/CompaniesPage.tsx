@@ -16,9 +16,8 @@ import { Company, Department } from "@/types/cadastro";
 import { 
   deleteCompany, 
   getCompanies, 
-  addDepartmentToCompany,
   deleteDepartment 
-} from "@/services/storageService";
+} from "@/services";
 import NewCompanyModal from "@/components/modals/NewCompanyModal";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -40,9 +39,9 @@ const CompaniesPage = () => {
 
   const loadCompanies = async () => {
     try {
-      const clienteId = getClienteIdAtivo();
-      // Corrigindo a chamada para não passar parâmetro clienteId que não é esperado
+      // Load companies with their departments
       const loadedCompanies = await getCompanies();
+      console.log("Loaded companies:", loadedCompanies);
       setCompanies(loadedCompanies || []);
     } catch (error) {
       console.error("Erro ao carregar empresas:", error);
@@ -82,7 +81,7 @@ const CompaniesPage = () => {
   const handleDeleteDepartment = async (companyId: string, departmentId: string) => {
     if (window.confirm("Tem certeza que deseja excluir este setor?")) {
       try {
-        // Corrigindo para passar apenas o ID do departamento
+        // Passing just the department ID
         await deleteDepartment(departmentId);
         await loadCompanies();
         toast({
