@@ -38,35 +38,63 @@ const CompaniesPage = () => {
   const [isNewDepartmentModalOpen, setIsNewDepartmentModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const loadCompanies = () => {
-    const clienteId = getClienteIdAtivo();
-    const loadedCompanies = getCompanies(clienteId);
-    setCompanies(loadedCompanies || []);
+  const loadCompanies = async () => {
+    try {
+      const clienteId = getClienteIdAtivo();
+      const loadedCompanies = await getCompanies(clienteId);
+      setCompanies(loadedCompanies || []);
+    } catch (error) {
+      console.error("Erro ao carregar empresas:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as empresas",
+        variant: "destructive"
+      });
+      setCompanies([]);
+    }
   };
 
   useEffect(() => {
     loadCompanies();
   }, []);
 
-  const handleDeleteCompany = (id: string) => {
+  const handleDeleteCompany = async (id: string) => {
     if (window.confirm("Tem certeza que deseja excluir essa empresa? Todos os funcionários associados também serão excluídos.")) {
-      deleteCompany(id);
-      loadCompanies();
-      toast({
-        title: "Sucesso",
-        description: "Empresa excluída com sucesso!",
-      });
+      try {
+        await deleteCompany(id);
+        await loadCompanies();
+        toast({
+          title: "Sucesso",
+          description: "Empresa excluída com sucesso!",
+        });
+      } catch (error) {
+        console.error("Erro ao excluir empresa:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível excluir a empresa",
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const handleDeleteDepartment = (companyId: string, departmentId: string) => {
+  const handleDeleteDepartment = async (companyId: string, departmentId: string) => {
     if (window.confirm("Tem certeza que deseja excluir este setor?")) {
-      deleteDepartment(companyId, departmentId);
-      loadCompanies();
-      toast({
-        title: "Sucesso",
-        description: "Setor excluído com sucesso!",
-      });
+      try {
+        await deleteDepartment(companyId, departmentId);
+        await loadCompanies();
+        toast({
+          title: "Sucesso",
+          description: "Setor excluído com sucesso!",
+        });
+      } catch (error) {
+        console.error("Erro ao excluir setor:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível excluir o setor",
+          variant: "destructive"
+        });
+      }
     }
   };
 

@@ -27,9 +27,10 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
   onCompanyAdded,
 }) => {
   const [name, setName] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim()) {
@@ -52,16 +53,29 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       return;
     }
 
-    addCompany({ name }, clienteId);
+    setIsSubmitting(true);
     
-    toast({
-      title: "Sucesso",
-      description: "Empresa cadastrada com sucesso!",
-    });
-    
-    setName("");
-    onOpenChange(false);
-    if (onCompanyAdded) onCompanyAdded();
+    try {
+      await addCompany({ name }, clienteId);
+      
+      toast({
+        title: "Sucesso",
+        description: "Empresa cadastrada com sucesso!",
+      });
+      
+      setName("");
+      onOpenChange(false);
+      if (onCompanyAdded) onCompanyAdded();
+    } catch (error) {
+      console.error("Erro ao cadastrar empresa:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível cadastrar a empresa",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -85,11 +99,14 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 className="col-span-3"
                 autoFocus
+                disabled={isSubmitting}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Cadastrar</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Cadastrando..." : "Cadastrar"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
