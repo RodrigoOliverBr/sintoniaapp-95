@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,11 @@ import NewEmployeeModal from "@/components/modals/NewEmployeeModal";
 import EditEmployeeModal from "@/components/modals/EditEmployeeModal";
 import { Trash2, PenLine, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 
+// Interface for role name mapping
+interface JobRoleMap {
+  [key: string]: string;
+}
+
 const EmployeesPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -31,6 +37,7 @@ const EmployeesPage: React.FC = () => {
   const [openEditModal, setOpenEditModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [roleNames, setRoleNames] = useState<JobRoleMap>({});
   const { toast } = useToast();
 
   const loadCompanies = async () => {
@@ -55,6 +62,34 @@ const EmployeesPage: React.FC = () => {
     try {
       const employeesData = await getEmployeesByCompany(companyId);
       setEmployees(employeesData);
+      
+      // Load role names for all employees
+      const roleIds = employeesData
+        .filter(emp => emp.roleId)
+        .map(emp => emp.roleId as string);
+      
+      // Create a unique set of role IDs to avoid duplicate requests
+      const uniqueRoleIds = [...new Set(roleIds)];
+      
+      // Create a map to store role names
+      const newRoleNames: JobRoleMap = {};
+      
+      // Fetch all role names
+      await Promise.all(
+        uniqueRoleIds.map(async (roleId) => {
+          try {
+            const jobRole = await getJobRoleById(roleId);
+            if (jobRole) {
+              newRoleNames[roleId] = jobRole.name;
+            }
+          } catch (error) {
+            console.error(`Error fetching role name for ${roleId}:`, error);
+          }
+        })
+      );
+      
+      // Update the role names state
+      setRoleNames(newRoleNames);
     } catch (error) {
       console.error("Erro ao carregar funcionários:", error);
       toast({
@@ -116,14 +151,9 @@ const EmployeesPage: React.FC = () => {
     }
   };
 
-  const getJobRoleName = async (roleId: string): Promise<string> => {
-    try {
-      const jobRole: JobRole | null = await getJobRoleById(roleId);
-      return jobRole ? jobRole.name : 'N/A';
-    } catch (error) {
-      console.error("Erro ao buscar cargo:", error);
-      return 'N/A';
-    }
+  const getRoleName = (roleId: string | undefined): string => {
+    if (!roleId) return 'N/A';
+    return roleNames[roleId] || 'Carregando...';
   };
 
   const handleEmployeeUpdated = () => {
@@ -179,12 +209,7 @@ const EmployeesPage: React.FC = () => {
                     <TableCell>{employee.name}</TableCell>
                     <TableCell>{employee.cpf}</TableCell>
                     <TableCell>
-                      {/* Renderizando o nome do cargo */}
-                      {employee.roleId ? (
-                        <span>{getJobRoleName(employee.roleId)}</span>
-                      ) : (
-                        'N/A'
-                      )}
+                      {getRoleName(employee.roleId)}
                     </TableCell>
                     <TableCell>
                       {getStatusComponent(employee.id)}
@@ -221,7 +246,7 @@ const EmployeesPage: React.FC = () => {
       <NewEmployeeModal
         open={openNewModal}
         onOpenChange={setOpenNewModal}
-        companyId={selectedCompanyId || ""}
+        preselectedCompanyId={selectedCompanyId || ""}
         onEmployeeAdded={() => loadEmployees(selectedCompanyId!)}
       />
 

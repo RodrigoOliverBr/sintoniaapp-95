@@ -17,8 +17,21 @@ export default function RelatoriosPage() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
-
-  const companies = getCompanies();
+  const [companies, setCompanies] = useState<Company[]>([]);
+  
+  // Fetch companies on component mount
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const companiesData = await getCompanies();
+        setCompanies(companiesData);
+      } catch (error) {
+        console.error("Error fetching companies:", error);
+      }
+    };
+    
+    fetchCompanies();
+  }, []);
   
   const handleCompanyChange = (companyId: string) => {
     setSelectedCompanyId(companyId);

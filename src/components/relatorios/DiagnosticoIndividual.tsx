@@ -9,6 +9,12 @@ import { BarChart } from "@/components/ui/BarChart";
 import { getEmployeesByCompany, getFormResultByEmployeeId } from "@/services";
 import { Employee } from "@/types/cadastro";
 
+// Add ID to formSections if it doesn't exist
+const enhancedFormSections = formSections.map((section, index) => ({
+  ...section,
+  id: section.id || `section-${index + 1}` // Use existing ID or generate one
+}));
+
 interface DiagnosticoIndividualProps {
   companyId: string;
 }
@@ -57,7 +63,7 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ companyId
     loadFormResult();
   }, [selectedEmployee]);
 
-  const chartData = formSections.map(section => {
+  const chartData = enhancedFormSections.map(section => {
     const sectionResult = formResult?.respostas.find((resp: any) => resp.section === section.id);
     const severity = sectionResult ? sectionResult.severity : 0;
     return {
@@ -100,7 +106,7 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ companyId
             ) : formResult ? (
               <>
                 <div className="mb-4">
-                  {formSections.map(section => {
+                  {enhancedFormSections.map(section => {
                     const sectionResult = formResult.respostas.find((resp: any) => resp.section === section.id);
                     const severity = sectionResult ? sectionResult.severity : 0;
 
