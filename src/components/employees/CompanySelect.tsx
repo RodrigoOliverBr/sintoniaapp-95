@@ -25,7 +25,6 @@ const CompanySelect = ({
   onCompanyChange,
   onNewEmployee,
 }: CompanySelectProps) => {
-  // Ensure we always have a valid array of companies
   const safeCompanies = Array.isArray(companies) ? companies : [];
 
   return (

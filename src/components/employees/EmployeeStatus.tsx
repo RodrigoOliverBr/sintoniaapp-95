@@ -1,8 +1,9 @@
 
 import React from "react";
 import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { getFormStatusByEmployeeId } from "@/services";
 
-export const getEmployeeStatusComponent = (employeeId: string) => {
+const getEmployeeStatusComponent = (employeeId: string) => {
   if (!employeeId) return null;
   
   const status = getFormStatusByEmployeeId(employeeId);
@@ -19,5 +20,4 @@ export const getEmployeeStatusComponent = (employeeId: string) => {
   }
 };
 
-import { getFormStatusByEmployeeId } from "@/services";
 export { getEmployeeStatusComponent };
