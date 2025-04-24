@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -302,21 +303,22 @@ const FormularioPage: React.FC = () => {
                       </TabsContent>
                     );
                   })}
-                </div>
-              )}
-            </CardContent>
-
-            {selectedEmployeeId && (
-              <div className="flex justify-end p-6 bg-muted/40 border-t">
-                <Button 
-                  onClick={handleSaveForm} 
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto"
-                >
-                  {isSubmitting ? "Salvando..." : "Salvar Formulário"}
-                </Button>
+                </Tabs>
               </div>
             )}
+          </CardContent>
+
+          {selectedEmployeeId && (
+            <div className="flex justify-end p-6 bg-muted/40 border-t">
+              <Button 
+                onClick={handleSaveForm} 
+                disabled={isSubmitting}
+                className="w-full sm:w-auto"
+              >
+                {isSubmitting ? "Salvando..." : "Salvar Formulário"}
+              </Button>
+            </div>
+          )}
         </Card>
       </div>
     </Layout>
