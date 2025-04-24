@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart } from "@/components/ui/BarChart";
-import { getFormResults } from "@/services";
+import { getFormResults } from "@/services/form/formService";
 import { formSections } from "@/data/formData";
 
 interface RankingAreasCriticasProps {

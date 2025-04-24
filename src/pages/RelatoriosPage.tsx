@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,7 +8,7 @@ import DiagnosticoIndividual from "@/components/relatorios/DiagnosticoIndividual
 import RankingAreasCriticas from "@/components/relatorios/RankingAreasCriticas";
 import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import FilterSection from "@/components/relatorios/FilterSection";
-import { getCompanies, getFormResults } from "@/services";
+import { getCompanies, getFormResults } from "@/services/form/formService";
 import { Company } from "@/types/cadastro";
 import { Download, FileText, RefreshCcw } from "lucide-react";
 
@@ -19,7 +18,6 @@ export default function RelatoriosPage() {
   const [reportGenerated, setReportGenerated] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   
-  // Fetch companies on component mount
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
@@ -43,7 +41,6 @@ export default function RelatoriosPage() {
     
     setIsGeneratingReport(true);
     
-    // Simular um delay para mostrar o loading
     setTimeout(() => {
       setIsGeneratingReport(false);
       setReportGenerated(true);
@@ -51,7 +48,6 @@ export default function RelatoriosPage() {
   };
 
   const handleExportPDF = () => {
-    // Lógica para exportar para PDF seria implementada aqui
     console.log("Exportando relatório para PDF");
   };
 
@@ -113,7 +109,6 @@ export default function RelatoriosPage() {
               </TabsContent>
               
               <TabsContent value="pgr">
-                {/* Match what RelatorioPGR expects as props */}
                 <RelatorioPGR />
               </TabsContent>
             </Tabs>

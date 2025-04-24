@@ -17,6 +17,18 @@ interface FormResultsProps {
 const FormResults: React.FC<FormResultsProps> = ({ result, onNotesChange }) => {
   const { toast } = useToast();
   
+  // Map database fields to component expected fields
+  result.totalYes = result.total_sim;
+  result.totalNo = result.total_nao;
+  result.analyistNotes = result.notas_analista;
+  
+  // Initialize yesPerSeverity if not defined
+  result.yesPerSeverity = result.yesPerSeverity || {
+    "LEVEMENTE PREJUDICIAL": 0,
+    "PREJUDICIAL": 0,
+    "EXTREMAMENTE PREJUDICIAL": 0
+  };
+  
   // Dados para o gráfico
   const chartData = [
     {

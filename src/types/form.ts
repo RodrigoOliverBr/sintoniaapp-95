@@ -18,6 +18,11 @@ export interface FormResult {
   last_updated: string;
   created_at: string;
   updated_at: string;
+  // For backwards compatibility with FormResults component
+  totalYes?: number;
+  totalNo?: number;
+  yesPerSeverity?: Record<string, number>;
+  analyistNotes?: string;
 }
 
 export interface Question {
@@ -58,4 +63,23 @@ export interface Mitigation {
   id: string;
   risco_id: string;
   texto: string;
+}
+
+// Add SeverityLevel type for backward compatibility
+export type SeverityLevel = 'LEVEMENTE PREJUDICIAL' | 'PREJUDICIAL' | 'EXTREMAMENTE PREJUDICIAL';
+
+// Add FormData interface for backward compatibility with formData.ts
+export interface FormData {
+  sections: {
+    title: string;
+    description: string;
+    id?: string;
+    questions: {
+      id: number;
+      text: string;
+      severity: SeverityLevel;
+      options?: { label: string; value: string; }[];
+      requireObservation?: boolean;
+    }[];
+  }[];
 }

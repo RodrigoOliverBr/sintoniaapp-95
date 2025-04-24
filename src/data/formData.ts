@@ -1,5 +1,4 @@
-
-import { FormData, SeverityLevel } from '../types/form';
+import { FormData, SeverityLevel } from "@/types/form";
 
 // Export formSections directly for use in components
 export const formSections = [
