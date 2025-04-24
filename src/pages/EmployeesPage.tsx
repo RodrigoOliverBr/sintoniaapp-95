@@ -60,11 +60,11 @@ const EmployeesPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load companies - await the Promise
+      // Load companies
       const loadedCompanies = await getCompanies();
       setCompanies(loadedCompanies || []);
       
-      // Load employees - await the Promise
+      // Load employees
       const allEmployees = await getEmployees();
       
       // Filter employees if needed
@@ -205,7 +205,7 @@ const EmployeesPage: React.FC = () => {
               <p>{config.tooltipText}</p>
               {formResult?.lastUpdated && (
                 <p className="text-xs text-muted-foreground">
-                  Última atualização: {format(new Date(formResult.lastUpdated), 'dd/MM/yyyy HH:mm')}
+                  Última atualização: {formResult.lastUpdated ? format(new Date(formResult.lastUpdated), 'dd/MM/yyyy HH:mm') : ''}
                 </p>
               )}
             </TooltipContent>
@@ -214,6 +214,39 @@ const EmployeesPage: React.FC = () => {
       </div>
     );
   };
+
+  // Funções auxiliares para renderização síncrona na tabela
+  const [departmentNames, setDepartmentNames] = useState<Record<string, string>>({});
+  const [roleNames, setRoleNames] = useState<Record<string, string>>({});
+
+  // Carregar nomes de departamentos e funções quando os employees mudam
+  useEffect(() => {
+    const loadNames = async () => {
+      const deptNames: Record<string, string> = {};
+      const jobRoleNames: Record<string, string> = {};
+      
+      for (const employee of employees) {
+        // Carregar nome do departamento
+        if (employee.departmentIds && employee.departmentIds.length > 0) {
+          const deptName = await getDepartmentName(employee);
+          deptNames[employee.id] = deptName;
+        }
+        
+        // Carregar nome da função
+        if (employee.roleId) {
+          const roleName = await getJobRoleName(employee.roleId);
+          jobRoleNames[employee.id] = roleName;
+        }
+      }
+      
+      setDepartmentNames(deptNames);
+      setRoleNames(jobRoleNames);
+    };
+    
+    if (employees.length > 0) {
+      loadNames();
+    }
+  }, [employees]);
 
   return (
     <Layout>
@@ -285,9 +318,9 @@ const EmployeesPage: React.FC = () => {
                     <TableRow key={employee.id}>
                       <TableCell>{employee.name}</TableCell>
                       <TableCell>{employee.cpf}</TableCell>
-                      <TableCell>{getJobRoleName(employee.roleId)}</TableCell>
+                      <TableCell>{roleNames[employee.id] || "Carregando..."}</TableCell>
                       <TableCell>{company ? company.name : "N/A"}</TableCell>
-                      <TableCell>{getDepartmentName(employee)}</TableCell>
+                      <TableCell>{departmentNames[employee.id] || "Carregando..."}</TableCell>
                       <TableCell>{getFormStatusDisplay(employee.id)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { Company, Department, JobRole, Employee, FormResult, FormStatus } from '@/types/cadastro';
@@ -521,7 +520,15 @@ export const getFormStatusByEmployeeId = (employeeId: string): FormStatus => {
 
 export const getFormResultByEmployeeId = (employeeId: string): FormResult | null => {
   // TODO: Implement actual form result retrieval from Supabase
-  return null;
+  return {
+    answers: {},
+    totalYes: 0,
+    totalNo: 0,
+    severityCounts: {},
+    yesPerSeverity: {},
+    lastUpdated: new Date().toISOString(),
+    isComplete: false
+  };
 };
 
 export const saveFormResult = async (employeeId?: string, result?: FormResult) => {

@@ -29,7 +29,7 @@ export interface Employee {
   departmentId?: string;   // Kept for backwards compatibility
 }
 
-export type FormStatus = 'not-started' | 'in-progress' | 'complete';
+export type FormStatus = 'not-started' | 'in-progress' | 'completed';
 
 export interface FormResult {
   answers: Record<number, any>;
@@ -39,4 +39,5 @@ export interface FormResult {
   yesPerSeverity: Record<string, number>;
   analyistNotes?: string;
   isComplete?: boolean;
+  lastUpdated?: string; // Added to track when the form was last updated
 }
