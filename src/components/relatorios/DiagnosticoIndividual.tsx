@@ -1,10 +1,11 @@
+
 import React, { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formSections } from "@/data/formData";
 import SeverityBadge from "@/components/SeverityBadge";
-import BarChart from "@/components/ui/BarChart";
+import { BarChart } from "@/components/ui/BarChart";
 import { getEmployeesByCompany, getFormResultByEmployeeId } from "@/services";
 import { Employee } from "@/types/cadastro";
 
@@ -116,7 +117,13 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ companyId
                 </div>
 
                 <div className="h-[400px]">
-                  <BarChart data={chartData} indexBy="name" valueKey="value" />
+                  <BarChart 
+                    data={chartData} 
+                    index="name"
+                    categories={["value"]}
+                    colors={["#1E40AF"]}
+                    className="w-full h-full" 
+                  />
                 </div>
               </>
             ) : (
