@@ -25,7 +25,7 @@ export const addCompany = async (companyData: Partial<Company>, clienteId?: stri
   }
 };
 
-export const getCompanies = async (clienteId?: string) => {
+export const getCompanies = async (clienteId?: string): Promise<Company[]> => {
   try {
     const { data, error } = await supabase
       .from('empresas')
@@ -55,7 +55,7 @@ export const getCompanies = async (clienteId?: string) => {
   }
 };
 
-export const deleteCompany = async (companyId: string) => {
+export const deleteCompany = async (companyId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('empresas')
@@ -70,7 +70,7 @@ export const deleteCompany = async (companyId: string) => {
   }
 };
 
-export const getCompanyById = async (companyId: string) => {
+export const getCompanyById = async (companyId: string): Promise<Company | null> => {
   try {
     const { data, error } = await supabase
       .from('empresas')
@@ -92,7 +92,7 @@ export const getCompanyById = async (companyId: string) => {
 };
 
 // Departments
-export const addDepartmentToCompany = async (companyId: string, departmentData: Partial<Department>) => {
+export const addDepartmentToCompany = async (companyId: string, departmentData: Partial<Department>): Promise<Department> => {
   try {
     if (!companyId) {
       throw new Error("ID da empresa é obrigatório");
@@ -130,7 +130,7 @@ export const addDepartmentToCompany = async (companyId: string, departmentData: 
   }
 };
 
-export const getDepartmentsByCompany = async (companyId: string) => {
+export const getDepartmentsByCompany = async (companyId: string): Promise<Department[]> => {
   try {
     const { data, error } = await supabase
       .from('setores')
@@ -152,7 +152,7 @@ export const getDepartmentsByCompany = async (companyId: string) => {
   }
 };
 
-export const getDepartmentById = async (departmentId: string) => {
+export const getDepartmentById = async (departmentId: string): Promise<Department | null> => {
   try {
     const { data, error } = await supabase
       .from('setores')
@@ -173,7 +173,7 @@ export const getDepartmentById = async (departmentId: string) => {
   }
 };
 
-export const deleteDepartment = async (companyId: string, departmentId: string) => {
+export const deleteDepartment = async (companyId: string, departmentId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('setores')
@@ -190,7 +190,7 @@ export const deleteDepartment = async (companyId: string, departmentId: string) 
 };
 
 // Job Roles
-export const addJobRole = async (companyId: string, roleData: Partial<JobRole>) => {
+export const addJobRole = async (companyId: string, roleData: Partial<JobRole>): Promise<JobRole> => {
   try {
     const { data, error } = await supabase
       .from('cargos')
@@ -216,7 +216,7 @@ export const addJobRole = async (companyId: string, roleData: Partial<JobRole>) 
   }
 };
 
-export const getJobRolesByCompany = async (companyId: string) => {
+export const getJobRolesByCompany = async (companyId: string): Promise<JobRole[]> => {
   try {
     const { data, error } = await supabase
       .from('cargos')
@@ -238,7 +238,7 @@ export const getJobRolesByCompany = async (companyId: string) => {
   }
 };
 
-export const getJobRoles = async () => {
+export const getJobRoles = async (): Promise<JobRole[]> => {
   try {
     const { data, error } = await supabase
       .from('cargos')
@@ -259,7 +259,7 @@ export const getJobRoles = async () => {
   }
 };
 
-export const getJobRoleById = async (roleId: string) => {
+export const getJobRoleById = async (roleId: string): Promise<JobRole | null> => {
   try {
     const { data, error } = await supabase
       .from('cargos')
@@ -280,7 +280,7 @@ export const getJobRoleById = async (roleId: string) => {
   }
 };
 
-export const updateJobRole = async (roleId: string, roleData: Partial<JobRole>) => {
+export const updateJobRole = async (roleId: string, roleData: Partial<JobRole>): Promise<any> => {
   try {
     const { data, error } = await supabase
       .from('cargos')
@@ -300,7 +300,7 @@ export const updateJobRole = async (roleId: string, roleData: Partial<JobRole>) 
   }
 };
 
-export const deleteJobRole = async (roleId: string) => {
+export const deleteJobRole = async (roleId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('cargos')
@@ -316,7 +316,7 @@ export const deleteJobRole = async (roleId: string) => {
 };
 
 // Employees
-export const addEmployee = async (employeeData: Partial<Employee>) => {
+export const addEmployee = async (employeeData: Partial<Employee>): Promise<Employee> => {
   try {
     const { data: employeeResult, error: employeeError } = await supabase
       .from('funcionarios')
@@ -361,7 +361,7 @@ export const addEmployee = async (employeeData: Partial<Employee>) => {
   }
 };
 
-export const getEmployees = async () => {
+export const getEmployees = async (): Promise<Employee[]> => {
   try {
     const { data: employeesData, error } = await supabase
       .from('funcionarios')
@@ -402,7 +402,7 @@ export const getEmployees = async () => {
   }
 };
 
-export const getEmployeesByCompany = async (companyId: string) => {
+export const getEmployeesByCompany = async (companyId: string): Promise<Employee[]> => {
   try {
     const { data: employeesData, error } = await supabase
       .from('funcionarios')
@@ -493,7 +493,7 @@ export const updateEmployee = async (employeeId: string, employeeData: Partial<E
   }
 };
 
-export const deleteEmployee = async (employeeId: string) => {
+export const deleteEmployee = async (employeeId: string): Promise<boolean> => {
   try {
     await supabase
       .from('employee_departments')

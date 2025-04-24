@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
-import { Company, Employee, JobRole } from "@/types/cadastro";
+import { Company, Employee, JobRole, FormStatus } from "@/types/cadastro";
 import { 
   getCompanies, 
   getEmployees, 
@@ -36,7 +36,6 @@ import EditEmployeeModal from "@/components/modals/EditEmployeeModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { FormStatus } from "@/types/form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 
@@ -51,25 +50,40 @@ const EmployeesPage: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     loadData();
   }, [selectedCompanyId]);
 
-  const loadData = () => {
-    // Ensure we're setting companies to an empty array if null is returned
-    const loadedCompanies = getCompanies();
-    setCompanies(loadedCompanies || []);
-    
-    // Ensure we're setting employees to an empty array if null is returned
-    const allEmployees = getEmployees();
-    const loadedEmployees = allEmployees || [];
-    
-    if (selectedCompanyId && selectedCompanyId !== "all") {
-      setEmployees(loadedEmployees.filter(e => e.companyId === selectedCompanyId));
-    } else {
-      setEmployees(loadedEmployees);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Load companies - await the Promise
+      const loadedCompanies = await getCompanies();
+      setCompanies(loadedCompanies || []);
+      
+      // Load employees - await the Promise
+      const allEmployees = await getEmployees();
+      
+      // Filter employees if needed
+      if (selectedCompanyId && selectedCompanyId !== "all") {
+        setEmployees(allEmployees.filter(e => e.companyId === selectedCompanyId) || []);
+      } else {
+        setEmployees(allEmployees || []);
+      }
+    } catch (error) {
+      console.error("Error loading data:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar dados. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+      setEmployees([]);
+      setCompanies([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -101,31 +115,48 @@ const EmployeesPage: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (employeeToDelete) {
-      deleteEmployee(employeeToDelete.id);
-      loadData();
-      setIsDeleteDialogOpen(false);
-      toast({
-        title: "Funcionário excluído",
-        description: `${employeeToDelete.name} foi removido com sucesso.`,
-      });
+      try {
+        await deleteEmployee(employeeToDelete.id);
+        loadData();
+        setIsDeleteDialogOpen(false);
+        toast({
+          title: "Funcionário excluído",
+          description: `${employeeToDelete.name} foi removido com sucesso.`,
+        });
+      } catch (error) {
+        console.error("Error deleting employee:", error);
+        toast({
+          title: "Erro",
+          description: "Falha ao excluir funcionário. Tente novamente mais tarde.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
-  const getDepartmentName = (employee: Employee) => {
-    if (!employee || !employee.companyId) return "N/A";
+  const getDepartmentName = async (employee: Employee) => {
+    if (!employee || !employee.departmentIds || employee.departmentIds.length === 0) return "N/A";
     
-    const company = companies.find(c => c.id === employee.companyId);
-    if (!company || !company.departments) return "N/A";
-    
-    const department = company.departments.find(d => d.id === employee.departmentId);
-    return department ? department.name : "N/A";
+    try {
+      // Get the first department for display
+      const department = await getDepartmentById(employee.departmentIds[0]);
+      return department ? department.name : "N/A";
+    } catch (error) {
+      console.error("Error getting department:", error);
+      return "N/A";
+    }
   };
 
-  const getJobRoleName = (roleId: string) => {
-    const role = getJobRoleById(roleId);
-    return role ? role.name : "N/A";
+  const getJobRoleName = async (roleId: string) => {
+    try {
+      const role = await getJobRoleById(roleId);
+      return role?.name || "N/A";
+    } catch (error) {
+      console.error("Error getting job role:", error);
+      return "N/A";
+    }
   };
 
   const handleViewFormResponses = (employeeId: string) => {
@@ -239,7 +270,13 @@ const EmployeesPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEmployees.length > 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-4">
+                    Carregando...
+                  </TableCell>
+                </TableRow>
+              ) : filteredEmployees.length > 0 ? (
                 filteredEmployees.map((employee) => {
                   const company = companies.find(c => c.id === employee.companyId);
                   const formStatus = getFormStatusByEmployeeId(employee.id);
