@@ -15,10 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { getCompanies, getJobRoles, updateEmployee } from "@/services/storageService";
 import { Company, Department, Employee, JobRole } from "@/types/cadastro";
 import { z } from "zod";
-import { Plus, FolderX } from "lucide-react";
+import { Plus } from "lucide-react";
 import JobRolesModal from "./JobRolesModal";
-import { useEmployeeDepartments } from "@/hooks/useEmployeeDepartments";
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface EditEmployeeModalProps {
   open: boolean;
@@ -46,8 +44,6 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   const [roleId, setRoleId] = useState(employee.roleId);
   const [companyId, setCompanyId] = useState(employee.companyId);
   const [departmentId, setDepartmentId] = useState(employee.departmentId);
-  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>([]);
-  
   const [companies, setCompanies] = useState<Company[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
@@ -55,7 +51,6 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   const [isJobRolesModalOpen, setIsJobRolesModalOpen] = useState(false);
   
   const { toast } = useToast();
-  const { getDepartmentsByEmployeeId, updateEmployeeDepartments } = useEmployeeDepartments();
 
   useEffect(() => {
     // Ensure we're getting valid arrays or defaulting to empty arrays
@@ -63,16 +58,9 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
     setCompanies(loadedCompanies);
     
     loadJobRoles();
+    
     loadDepartments(companyId);
-    
-    // Load existing departments for this employee
-    const loadEmployeeDepartments = async () => {
-      const departmentIds = await getDepartmentsByEmployeeId(employee.id);
-      setSelectedDepartmentIds(departmentIds);
-    };
-    
-    loadEmployeeDepartments();
-  }, [companyId, employee.id]);
+  }, [companyId]);
 
   const loadJobRoles = () => {
     const loadedJobRoles = getJobRoles() || [];
@@ -96,22 +84,6 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   const handleCompanyChange = (value: string) => {
     setCompanyId(value);
     setDepartmentId("");
-    setSelectedDepartmentIds([]);
-  };
-
-  const toggleDepartment = (departmentId: string) => {
-    setSelectedDepartmentIds(current => {
-      if (current.includes(departmentId)) {
-        return current.filter(id => id !== departmentId);
-      } else {
-        return [...current, departmentId];
-      }
-    });
-    
-    // If this is the first department being selected, also update the main departmentId
-    if (selectedDepartmentIds.length === 0) {
-      setDepartmentId(departmentId);
-    }
   };
 
   const validateForm = () => {
@@ -121,7 +93,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
         cpf,
         roleId,
         companyId,
-        departmentId: selectedDepartmentIds.length > 0 ? selectedDepartmentIds[0] : ""
+        departmentId
       });
       setErrors({});
       return true;
@@ -139,17 +111,8 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (selectedDepartmentIds.length === 0) {
-      toast({
-        title: "Erro",
-        description: "Selecione pelo menos um setor",
-        variant: "destructive",
-      });
-      return;
-    }
     
     if (!validateForm()) {
       return;
@@ -161,13 +124,10 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
       cpf,
       roleId,
       companyId,
-      departmentId: selectedDepartmentIds[0] // Use first department as primary
+      departmentId
     };
     
     updateEmployee(updatedEmployee);
-    
-    // Update employee-department relationships
-    await updateEmployeeDepartments(employee.id, selectedDepartmentIds);
     
     toast({
       title: "Funcionário atualizado",
@@ -182,8 +142,6 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   if (!open) {
     return null;
   }
-
-  const hasDepartments = departments.length > 0;
 
   return (
     <>
@@ -233,35 +191,23 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="departments">Setores</Label>
-              <div>
-                {!companyId ? (
-                  <div className="text-sm text-muted-foreground">Selecione uma empresa primeiro</div>
-                ) : !hasDepartments ? (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <FolderX className="mr-2 h-4 w-4" />
-                    Nenhum setor cadastrado ainda
-                  </div>
-                ) : (
-                  <div className="space-y-2 border rounded-md p-2">
-                    {departments.map((department) => (
-                      <div key={department.id} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`dept-edit-${department.id}`}
-                          checked={selectedDepartmentIds.includes(department.id)}
-                          onCheckedChange={() => toggleDepartment(department.id)}
-                        />
-                        <label 
-                          htmlFor={`dept-edit-${department.id}`} 
-                          className="text-sm cursor-pointer"
-                        >
-                          {department.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Label htmlFor="department">Departamento</Label>
+              <Select 
+                value={departmentId} 
+                onValueChange={setDepartmentId}
+                disabled={!companyId || departments.length === 0}
+              >
+                <SelectTrigger id="department">
+                  <SelectValue placeholder="Selecione um departamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((department) => (
+                    <SelectItem key={department.id} value={department.id}>
+                      {department.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.departmentId && <p className="text-sm text-destructive">{errors.departmentId}</p>}
             </div>
             

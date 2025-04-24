@@ -26,13 +26,3 @@ export interface Employee {
   departmentId: string;
   companyId: string;
 }
-
-// For form data types
-export type FormStatus = 'not-started' | 'in-progress' | 'completed';
-
-export interface FormResult {
-  employeeId: string;
-  data: any;
-  lastUpdated: number;
-  isComplete?: boolean;
-}

@@ -14,14 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, ArrowLeft } from "lucide-react";
 import NewEmployeeModal from "@/components/modals/NewEmployeeModal";
 import { useToast } from "@/hooks/use-toast";
-import { useEmployeeDepartments } from "@/hooks/useEmployeeDepartments";
 
 const FormularioPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const employeeIdFromUrl = searchParams.get('employeeId');
   
   const { toast } = useToast();
-  const { getDepartmentsByEmployeeId } = useEmployeeDepartments();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
@@ -29,7 +27,6 @@ const FormularioPage: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isNewEmployeeModalOpen, setIsNewEmployeeModalOpen] = useState(false);
   const [isEditingExistingResponses, setIsEditingExistingResponses] = useState(false);
-  const [employeeDepartments, setEmployeeDepartments] = useState<Record<string, string[]>>({});
   
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
@@ -88,15 +85,6 @@ const FormularioPage: React.FC = () => {
             setShowResults(true);
           }
         }
-        
-        // Load departments for the employee
-        const loadEmployeeDepartments = async () => {
-          const departmentIds = await getDepartmentsByEmployeeId(employeeIdFromUrl);
-          const departments = { [employeeIdFromUrl]: departmentIds };
-          setEmployeeDepartments(departments);
-        };
-        
-        loadEmployeeDepartments();
       } else {
         toast({
           variant: "destructive",
@@ -111,37 +99,13 @@ const FormularioPage: React.FC = () => {
   useEffect(() => {
     if (selectedCompanyId) {
       const employeesForCompany = getEmployeesByCompany(selectedCompanyId);
-      
-      // Remove duplicates by using employee ID
-      const uniqueEmployees = Array.from(
-        new Map(employeesForCompany.map(employee => [employee.id, employee]))
-      ).map(([_, employee]) => employee);
-      
-      setEmployees(uniqueEmployees);
-      
+      setEmployees(employeesForCompany);
       // Only reset selected employee when company changes and we're not in edit mode
       if (!isEditingExistingResponses) {
         setSelectedEmployeeId("");
         setSelectedEmployee(null);
         setShowForm(false);
       }
-      
-      // Load departments for all employees in this company
-      const loadAllEmployeeDepartments = async () => {
-        const departmentsMap: Record<string, string[]> = {};
-        for (const employee of uniqueEmployees) {
-          try {
-            const departments = await getDepartmentsByEmployeeId(employee.id);
-            departmentsMap[employee.id] = departments;
-          } catch (error) {
-            console.error(`Error loading departments for ${employee.id}:`, error);
-            departmentsMap[employee.id] = [];
-          }
-        }
-        setEmployeeDepartments(departmentsMap);
-      };
-      
-      loadAllEmployeeDepartments();
     }
   }, [selectedCompanyId, isEditingExistingResponses]);
 
@@ -227,13 +191,7 @@ const FormularioPage: React.FC = () => {
     // Reload employees for the selected company
     if (selectedCompanyId) {
       const employeesForCompany = getEmployeesByCompany(selectedCompanyId);
-      
-      // Remove duplicates by using employee ID
-      const uniqueEmployees = Array.from(
-        new Map(employeesForCompany.map(employee => [employee.id, employee]))
-      ).map(([_, employee]) => employee);
-      
-      setEmployees(uniqueEmployees);
+      setEmployees(employeesForCompany);
     }
   };
 
@@ -367,24 +325,6 @@ const FormularioPage: React.FC = () => {
     return jobRoles.find(role => role.id === roleId);
   };
 
-  const getDepartmentNames = (employeeId: string) => {
-    const departmentIds = employeeDepartments[employeeId] || [];
-    if (departmentIds.length === 0) return "N/A";
-    
-    const employee = employees.find(e => e.id === employeeId);
-    if (!employee) return "N/A";
-    
-    return departmentIds
-      .map(id => {
-        const company = companies.find(c => c.id === employee.companyId);
-        if (!company) return null;
-        const department = company.departments.find(d => d.id === id);
-        return department ? department.name : null;
-      })
-      .filter(Boolean)
-      .join(", ");
-  };
-
   // Check if current section has all required fields filled
   const isSectionComplete = () => {
     const currentSection = formData.sections[currentStep - 1];
@@ -459,7 +399,7 @@ const FormularioPage: React.FC = () => {
                       <SelectContent>
                         {employees.map((employee) => (
                           <SelectItem key={employee.id} value={employee.id}>
-                            {employee.name} - {getDepartmentNames(employee.id)}
+                            {employee.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -484,14 +424,9 @@ const FormularioPage: React.FC = () => {
           <>
             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <h2 className="text-xl font-semibold mb-4">Avaliação para: {selectedEmployee?.name}</h2>
-              <div className="space-y-2">
-                <p className="text-gray-600">
-                  <span className="font-medium">Função:</span> {getJobRoleById(selectedEmployee?.roleId || "")?.name || "N/A"}
-                </p>
-                <p className="text-gray-600">
-                  <span className="font-medium">Setores:</span> {selectedEmployee ? getDepartmentNames(selectedEmployee.id) : "N/A"}
-                </p>
-              </div>
+              <p className="text-gray-600">
+                Função: {getJobRoleById(selectedEmployee?.roleId || "")?.name || "N/A"}
+              </p>
             </div>
 
             <div className="mb-6">
@@ -543,14 +478,9 @@ const FormularioPage: React.FC = () => {
           <>
             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <h2 className="text-xl font-semibold mb-4">Resultados da Avaliação para: {selectedEmployee?.name}</h2>
-              <div className="space-y-2">
-                <p className="text-gray-600">
-                  <span className="font-medium">Função:</span> {getJobRoleById(selectedEmployee?.roleId || "")?.name || "N/A"}
-                </p>
-                <p className="text-gray-600">
-                  <span className="font-medium">Setores:</span> {selectedEmployee ? getDepartmentNames(selectedEmployee.id) : "N/A"}
-                </p>
-              </div>
+              <p className="text-gray-600">
+                Função: {getJobRoleById(selectedEmployee?.roleId || "")?.name || "N/A"}
+              </p>
             </div>
 
             <FormResults 

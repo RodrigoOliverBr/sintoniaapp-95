@@ -36,9 +36,9 @@ import EditEmployeeModal from "@/components/modals/EditEmployeeModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { FormStatus } from "@/types/form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-import { useEmployeeDepartments } from "@/hooks/useEmployeeDepartments";
 
 const EmployeesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -52,38 +52,25 @@ const EmployeesPage: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const { toast } = useToast();
-  const { getDepartmentsByEmployeeId } = useEmployeeDepartments();
-  const [employeeDepartments, setEmployeeDepartments] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     loadData();
   }, [selectedCompanyId]);
 
-  const loadData = async () => {
+  const loadData = () => {
+    // Ensure we're setting companies to an empty array if null is returned
     const loadedCompanies = getCompanies();
     setCompanies(loadedCompanies || []);
     
+    // Ensure we're setting employees to an empty array if null is returned
     const allEmployees = getEmployees();
-    let loadedEmployees = allEmployees || [];
+    const loadedEmployees = allEmployees || [];
     
     if (selectedCompanyId && selectedCompanyId !== "all") {
-      loadedEmployees = loadedEmployees.filter(e => e.companyId === selectedCompanyId);
+      setEmployees(loadedEmployees.filter(e => e.companyId === selectedCompanyId));
+    } else {
+      setEmployees(loadedEmployees);
     }
-    
-    setEmployees(loadedEmployees);
-
-    // Load departments for each employee
-    const departmentsMap: Record<string, string[]> = {};
-    for (const employee of loadedEmployees) {
-      try {
-        const departments = await getDepartmentsByEmployeeId(employee.id);
-        departmentsMap[employee.id] = departments;
-      } catch (error) {
-        console.error(`Error loading departments for ${employee.id}:`, error);
-        departmentsMap[employee.id] = [];
-      }
-    }
-    setEmployeeDepartments(departmentsMap);
   };
 
   const handleCompanyChange = (value: string) => {
@@ -126,19 +113,14 @@ const EmployeesPage: React.FC = () => {
     }
   };
 
-  const getDepartmentNames = (employee: Employee) => {
-    const departmentIds = employeeDepartments[employee.id] || [];
-    if (departmentIds.length === 0) return "N/A";
+  const getDepartmentName = (employee: Employee) => {
+    if (!employee || !employee.companyId) return "N/A";
     
-    return departmentIds
-      .map(id => {
-        const company = companies.find(c => c.id === employee.companyId);
-        if (!company) return null;
-        const department = company.departments.find(d => d.id === id);
-        return department ? department.name : null;
-      })
-      .filter(Boolean)
-      .join(", ");
+    const company = companies.find(c => c.id === employee.companyId);
+    if (!company || !company.departments) return "N/A";
+    
+    const department = company.departments.find(d => d.id === employee.departmentId);
+    return department ? department.name : "N/A";
   };
 
   const getJobRoleName = (roleId: string) => {
@@ -154,6 +136,7 @@ const EmployeesPage: React.FC = () => {
     const status = getFormStatusByEmployeeId(employeeId);
     const formResult = getFormResultByEmployeeId(employeeId);
     
+    // Status icon and color mapping
     const statusConfig = {
       'not-started': {
         icon: Clock,
@@ -175,7 +158,7 @@ const EmployeesPage: React.FC = () => {
       }
     };
 
-    const config = statusConfig[status] || statusConfig['not-started'];
+    const config = statusConfig[status];
 
     return (
       <div className="flex flex-col">
@@ -267,7 +250,7 @@ const EmployeesPage: React.FC = () => {
                       <TableCell>{employee.cpf}</TableCell>
                       <TableCell>{getJobRoleName(employee.roleId)}</TableCell>
                       <TableCell>{company ? company.name : "N/A"}</TableCell>
-                      <TableCell>{getDepartmentNames(employee)}</TableCell>
+                      <TableCell>{getDepartmentName(employee)}</TableCell>
                       <TableCell>{getFormStatusDisplay(employee.id)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
