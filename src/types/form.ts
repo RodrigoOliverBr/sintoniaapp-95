@@ -1,4 +1,3 @@
-
 export interface FormAnswer {
   questionId: string;
   answer: boolean;
@@ -72,8 +71,7 @@ export type SeverityLevel = 'LEVEMENTE PREJUDICIAL' | 'PREJUDICIAL' | 'EXTREMAME
 export interface FormData {
   sections: {
     title: string;
-    description: string;
-    id?: string;
+    description?: string;
     questions: {
       id: number;
       text: string;

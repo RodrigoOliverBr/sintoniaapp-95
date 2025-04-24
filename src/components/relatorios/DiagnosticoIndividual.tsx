@@ -1,75 +1,64 @@
-
-import React, { useEffect, useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formSections } from "@/data/formData";
-import SeverityBadge from "@/components/SeverityBadge";
-import { BarChart } from "@/components/ui/BarChart";
-import { getEmployeesByCompany, getFormResultByEmployeeId } from "@/services";
-import { Employee } from "@/types/cadastro";
-
-// Add ID to formSections if it doesn't exist
-const enhancedFormSections = formSections.map((section, index) => ({
-  ...section,
-  id: section.id || `section-${index + 1}` // Use existing ID or generate one
-}));
+import { Question, FormAnswer } from '@/types/form';
+import { getFormResultByEmployeeId } from '@/services';
+import SeverityBadge from '../SeverityBadge';
+import { Skeleton } from '../ui/skeleton';
 
 interface DiagnosticoIndividualProps {
-  companyId: string;
+  questions: Question[];
+  employeeId?: string;
 }
 
-const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ companyId }) => {
-  const [selectedEmployee, setSelectedEmployee] = useState<string | undefined>(undefined);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [formResult, setFormResult] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
+const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
+  questions,
+  employeeId
+}) => {
+  const [answers, setAnswers] = useState<Record<string, FormAnswer>>({});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const loadEmployees = async () => {
-      setIsLoading(true);
+    const loadEmployeeAnswers = async () => {
+      if (!employeeId) return;
+      
+      setLoading(true);
       try {
-        const employeesData = await getEmployeesByCompany(companyId);
-        setEmployees(employeesData);
-      } catch (error) {
-        console.error("Erro ao carregar funcionários:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (companyId) {
-      loadEmployees();
-    }
-  }, [companyId]);
-
-  useEffect(() => {
-    const loadFormResult = async () => {
-      if (selectedEmployee) {
-        setIsLoading(true);
-        try {
-          const result = await getFormResultByEmployeeId(selectedEmployee);
-          setFormResult(result);
-        } catch (error) {
-          console.error("Erro ao carregar resultado do formulário:", error);
-        } finally {
-          setIsLoading(false);
+        const result = await getFormResultByEmployeeId(employeeId);
+        if (result && result.answers) {
+          setAnswers(result.answers);
+        } else {
+          setAnswers({});
         }
-      } else {
-        setFormResult(null);
+      } catch (error) {
+        console.error("Erro ao carregar respostas:", error);
+        setAnswers({});
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadFormResult();
-  }, [selectedEmployee]);
+    loadEmployeeAnswers();
+  }, [employeeId]);
 
-  const chartData = enhancedFormSections.map(section => {
-    const sectionResult = formResult?.respostas?.find((resp: any) => resp.section === section.id);
-    const severity = sectionResult ? sectionResult.severity : 0;
-    return {
-      name: section.title,
-      value: severity
-    };
-  });
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Diagnóstico Individual</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -77,64 +66,63 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ companyId
         <CardTitle>Diagnóstico Individual</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-4">
-          <Select onValueChange={setSelectedEmployee}>
-            <SelectTrigger className="w-[300px]">
-              <SelectValue placeholder="Selecione um funcionário" />
-            </SelectTrigger>
-            <SelectContent>
-              {isLoading ? (
-                <SelectItem value="loading" disabled>Carregando...</SelectItem>
-              ) : employees.length === 0 ? (
-                <SelectItem value="no-employees" disabled>Nenhum funcionário cadastrado</SelectItem>
-              ) : (
-                employees.map(employee => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {selectedEmployee && (
-          <>
-            {isLoading ? (
-              <p>Carregando resultados...</p>
-            ) : formResult ? (
-              <>
-                <div className="mb-4">
-                  {enhancedFormSections.map(section => {
-                    const sectionResult = formResult.respostas?.find((resp: any) => resp.section === section.id);
-                    const severity = sectionResult ? sectionResult.severity : 0;
-
-                    return (
-                      <div key={section.id} className="mb-2">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold">{section.title}</h3>
-                          <SeverityBadge severity={severity} />
+        {questions.length === 0 ? (
+          <p className="text-muted-foreground">Nenhuma pergunta disponível para diagnóstico.</p>
+        ) : (
+          <div className="space-y-6">
+            {questions.map((question) => {
+              const answer = answers[question.id];
+              const hasAnswer = !!answer;
+              
+              return (
+                <div key={question.id} className="border-b pb-4 last:border-b-0">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <h3 className="font-medium">{question.texto}</h3>
+                      {question.risco?.severidade && (
+                        <div className="mt-1">
+                          <SeverityBadge severity={question.risco.severidade} />
                         </div>
-                        <p className="text-sm text-gray-500">{section.description}</p>
-                      </div>
-                    );
-                  })}
+                      )}
+                    </div>
+                    
+                    <div className="min-w-[80px] text-right">
+                      {hasAnswer ? (
+                        <span className={`font-medium ${answer.answer ? 'text-red-500' : 'text-green-500'}`}>
+                          {answer.answer ? 'Sim' : 'Não'}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Não respondido</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {hasAnswer && answer.answer && (
+                    <div className="mt-3 pl-4 border-l-2 border-muted">
+                      {answer.selectedOptions && answer.selectedOptions.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-sm font-medium mb-1">Situações selecionadas:</p>
+                          <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                            {answer.selectedOptions.map((option, idx) => {
+                              const optionLabel = question.opcoes?.find(o => o.value === option)?.label || option;
+                              return <li key={idx}>{optionLabel}</li>;
+                            })}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {answer.observation && (
+                        <div className="mt-2">
+                          <p className="text-sm font-medium mb-1">Observação:</p>
+                          <p className="text-sm text-muted-foreground">{answer.observation}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-
-                <div className="h-[400px]">
-                  <BarChart 
-                    data={chartData} 
-                    index="name"
-                    categories={["value"]}
-                    colors={["#1E40AF"]}
-                    className="w-full h-full" 
-                  />
-                </div>
-              </>
-            ) : (
-              <p>Nenhum resultado encontrado para este funcionário.</p>
-            )}
-          </>
+              );
+            })}
+          </div>
         )}
       </CardContent>
     </Card>
