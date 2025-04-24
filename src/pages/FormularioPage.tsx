@@ -1,9 +1,11 @@
+
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCompanies, getEmployeesByCompany, getFormResultByEmployeeId, saveFormResult } from "@/services"; // Updated import path
+import { getCompanies, getEmployeesByCompany, getFormResultByEmployeeId, saveFormResult } from "@/services"; 
 import { Company, Employee } from "@/types/cadastro";
-import { formSections, formQuestions } from "@/data/formData";
+import { formSections, formData } from "@/data/formData";
+import { FormAnswer } from "@/types/form";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +19,7 @@ const FormularioPage: React.FC = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | undefined>("");
   const [formResult, setFormResult] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [answers, setAnswers] = useState<Record<number, FormAnswer>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,6 +68,13 @@ const FormularioPage: React.FC = () => {
         try {
           const formResultData = await getFormResultByEmployeeId(selectedEmployeeId);
           setFormResult(formResultData);
+          
+          // Initialize answers from loaded form result if available
+          if (formResultData && formResultData.answers) {
+            setAnswers(formResultData.answers);
+          } else {
+            setAnswers({});
+          }
         } catch (error) {
           console.error("Erro ao carregar resultado do formulário:", error);
           toast({
@@ -75,6 +85,7 @@ const FormularioPage: React.FC = () => {
         }
       } else {
         setFormResult(null);
+        setAnswers({});
       }
     };
 
@@ -90,27 +101,94 @@ const FormularioPage: React.FC = () => {
     setSelectedEmployeeId(value);
   };
 
+  const handleAnswerChange = (questionId: number, answer: boolean | null) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: {
+        ...prev[questionId] || {},
+        questionId,
+        answer
+      }
+    }));
+  };
+
+  const handleObservationChange = (questionId: number, observation: string) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: {
+        ...prev[questionId] || {},
+        questionId,
+        observation
+      }
+    }));
+  };
+
+  const handleOptionsChange = (questionId: number, selectedOptions: string[]) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: {
+        ...prev[questionId] || {},
+        questionId,
+        selectedOptions
+      }
+    }));
+  };
+
   const handleSaveForm = async () => {
     setIsSubmitting(true);
     try {
-      // Aqui você precisaria coletar os dados do formulário dos componentes FormSection
-      // e preparar o objeto formResult para ser salvo.
-      // Exemplo:
-      // const formData = {
-      //   section1: { question1: answer1, question2: answer2 },
-      //   section2: { question3: answer3, question4: answer4 },
-      // };
-      // const formResult = {
-      //   employeeId: selectedEmployeeId,
-      //   data: formData,
-      // };
-      // await saveFormResult(formResult);
+      // Calculate summary statistics
+      let totalYes = 0;
+      let totalNo = 0;
+      let severityCounts = {
+        "LEVEMENTE PREJUDICIAL": 0,
+        "PREJUDICIAL": 0,
+        "EXTREMAMENTE PREJUDICIAL": 0
+      };
       
-      // Como não temos a implementação real do formulário, vamos apenas exibir uma mensagem de sucesso.
+      let yesPerSeverity = {
+        "LEVEMENTE PREJUDICIAL": 0,
+        "PREJUDICIAL": 0,
+        "EXTREMAMENTE PREJUDICIAL": 0
+      };
+      
+      // Count answers by severity
+      formData.sections.forEach(section => {
+        section.questions.forEach(question => {
+          const answer = answers[question.id];
+          if (answer) {
+            if (answer.answer === true) {
+              totalYes++;
+              yesPerSeverity[question.severity]++;
+            } else if (answer.answer === false) {
+              totalNo++;
+            }
+          }
+        });
+      });
+      
+      // Prepare form result object
+      const formResultData = {
+        employeeId: selectedEmployeeId,
+        answers,
+        totalYes,
+        totalNo,
+        severityCounts,
+        yesPerSeverity,
+        isComplete: true,
+        lastUpdated: Date.now(),
+        analyistNotes: ""
+      };
+      
+      await saveFormResult(formResultData);
+      
       toast({
         title: "Sucesso",
         description: "Formulário salvo com sucesso!",
       });
+      
+      // Refresh form result data
+      setFormResult(formResultData);
     } catch (error) {
       console.error("Erro ao salvar o formulário:", error);
       toast({
@@ -147,7 +225,7 @@ const FormularioPage: React.FC = () => {
               </Select>
             </div>
             <div>
-              <Select onValueChange={handleEmployeeChange}>
+              <Select onValueChange={handleEmployeeChange} value={selectedEmployeeId}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione o funcionário" />
                 </SelectTrigger>
@@ -163,19 +241,31 @@ const FormularioPage: React.FC = () => {
           </div>
 
           {selectedEmployeeId && (
-            <Tabs defaultValue="secao1" className="space-y-4">
-              <TabsList>
-                {formSections.map((section) => (
-                  <TabsTrigger key={section.id} value={section.id}>
+            <Tabs defaultValue={formSections.length > 0 ? `section-${formSections[0].title}` : undefined} className="space-y-4">
+              <TabsList className="flex flex-wrap">
+                {formSections.map((section, index) => (
+                  <TabsTrigger key={index} value={`section-${section.title}`}>
                     {section.title}
                   </TabsTrigger>
                 ))}
               </TabsList>
-              {formSections.map((section) => (
-                <TabsContent key={section.id} value={section.id}>
-                  <FormSection section={section} questions={formQuestions[section.id]} />
-                </TabsContent>
-              ))}
+              {formSections.map((section, index) => {
+                // Find the corresponding section in formData to get the questions
+                const dataSection = formData.sections.find(s => s.title === section.title);
+                return (
+                  <TabsContent key={index} value={`section-${section.title}`}>
+                    {dataSection && (
+                      <FormSection
+                        section={dataSection}
+                        answers={answers}
+                        onAnswerChange={handleAnswerChange}
+                        onObservationChange={handleObservationChange}
+                        onOptionsChange={handleOptionsChange}
+                      />
+                    )}
+                  </TabsContent>
+                );
+              })}
             </Tabs>
           )}
         </CardContent>

@@ -40,6 +40,14 @@ export const formSections = [
   }
 ];
 
+// Create a formQuestions map for easier access from FormularioPage
+export const formQuestions = formSections.reduce((acc, section) => {
+  section.questions.forEach(questionId => {
+    acc[questionId] = true;
+  });
+  return acc;
+}, {} as Record<string, boolean>);
+
 export const formData: FormData = {
   sections: [
     {
