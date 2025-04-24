@@ -94,6 +94,15 @@ export const getCompanyById = async (companyId: string) => {
 // Departments
 export const addDepartmentToCompany = async (companyId: string, departmentData: Partial<Department>) => {
   try {
+    if (!companyId) {
+      throw new Error("ID da empresa é obrigatório");
+    }
+
+    console.log("Adicionando setor:", {
+      companyId,
+      departmentData,
+    });
+
     const { data, error } = await supabase
       .from('setores')
       .insert({
@@ -105,7 +114,10 @@ export const addDepartmentToCompany = async (companyId: string, departmentData: 
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erro do Supabase ao adicionar setor:", error);
+      throw error;
+    }
     
     return {
       id: data.id,

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addDepartmentToCompany } from "@/services/storageService";
 import { useToast } from "@/hooks/use-toast";
+import { handleSupabaseError } from "@/integrations/supabase/client";
 
 interface NewDepartmentModalProps {
   open: boolean;
@@ -28,9 +29,10 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
   companyId,
 }) => {
   const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim()) {
@@ -42,9 +44,10 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
-      // Fix: Pass an object instead of a string
-      addDepartmentToCompany(companyId, { name: name });
+      await addDepartmentToCompany(companyId, { name });
       
       toast({
         title: "Sucesso",
@@ -56,11 +59,17 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
       if (onDepartmentAdded) onDepartmentAdded();
     } catch (error) {
       console.error("Erro ao adicionar setor:", error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : handleSupabaseError(error);
+      
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao adicionar setor",
+        description: errorMessage || "Não foi possível adicionar o setor",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -85,11 +94,14 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 className="col-span-3"
                 autoFocus
+                disabled={isSubmitting}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Cadastrar</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Cadastrando..." : "Cadastrar"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
