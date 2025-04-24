@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { Company, Department, JobRole, Employee, FormResult, FormStatus } from '@/types/cadastro';
@@ -514,12 +515,12 @@ export const deleteEmployee = async (employeeId: string): Promise<boolean> => {
 
 // Form Status and Result
 export const getFormStatusByEmployeeId = (employeeId: string): FormStatus => {
-  // TODO: Implement actual status retrieval from Supabase
+  // Mock implementation that returns a predictable value
   return 'not-started';
 };
 
 export const getFormResultByEmployeeId = (employeeId: string): FormResult | null => {
-  // TODO: Implement actual form result retrieval from Supabase
+  // Mock implementation that returns a predictable object
   return {
     answers: {},
     totalYes: 0,
@@ -532,7 +533,18 @@ export const getFormResultByEmployeeId = (employeeId: string): FormResult | null
 };
 
 export const saveFormResult = async (employeeId?: string, result?: FormResult) => {
-  // TODO: Implement form result save
+  // Mock implementation
   console.log('Saving form result for employee:', employeeId, result);
   return null;
+};
+
+// Funções auxiliares para evitar operações assíncronas na renderização
+export const getJobRoleNameSync = (roles: JobRole[], roleId: string): string => {
+  const role = roles.find(r => r.id === roleId);
+  return role?.name || "N/A";
+};
+
+export const getDepartmentNameSync = (departments: Department[], departmentId: string): string => {
+  const department = departments.find(d => d.id === departmentId);
+  return department?.name || "N/A";
 };

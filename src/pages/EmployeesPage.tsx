@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
-import { Company, Employee, JobRole, FormStatus } from "@/types/cadastro";
+import { Company, Employee, JobRole, Department, FormStatus } from "@/types/cadastro";
 import { 
   getCompanies, 
   getEmployees, 
@@ -11,7 +11,9 @@ import {
   getCompanyById, 
   deleteEmployee,
   getFormStatusByEmployeeId,
-  getFormResultByEmployeeId
+  getFormResultByEmployeeId,
+  getJobRoles,
+  getDepartmentsByCompany
 } from "@/services/storageService";
 import {
   Table,
@@ -41,8 +43,15 @@ import { format } from "date-fns";
 
 const EmployeesPage: React.FC = () => {
   const navigate = useNavigate();
+  
+  // Estado para os dados
   const [companies, setCompanies] = useState<Company[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [allJobRoles, setAllJobRoles] = useState<JobRole[]>([]);
+  const [allDepartments, setAllDepartments] = useState<Department[]>([]);
+  const [departmentsByCompany, setDepartmentsByCompany] = useState<Record<string, Department[]>>({});
+  
+  // Estado para a interface
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isNewEmployeeModalOpen, setIsNewEmployeeModalOpen] = useState(false);
@@ -51,25 +60,77 @@ const EmployeesPage: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Mapeamento das informações para renderização rápida
+  const [roleNames, setRoleNames] = useState<Record<string, string>>({});
+  const [departmentNames, setDepartmentNames] = useState<Record<string, string>>({});
+  
   const { toast } = useToast();
 
+  // Carrega dados iniciais
   useEffect(() => {
     loadData();
   }, [selectedCompanyId]);
 
+  // Carrega os nomes de departamentos e funções para todos os funcionários
+  useEffect(() => {
+    if (employees.length > 0 && allJobRoles.length > 0) {
+      const roleMap: Record<string, string> = {};
+      const deptMap: Record<string, string> = {};
+      
+      // Mapeia o nome de cada função pelo ID
+      employees.forEach(employee => {
+        const role = allJobRoles.find(r => r.id === employee.roleId);
+        roleMap[employee.id] = role?.name || "N/A";
+        
+        // Obtém o primeiro departamento para exibição
+        if (employee.departmentIds && employee.departmentIds.length > 0) {
+          const deptId = employee.departmentIds[0];
+          
+          // Procura em todos os departamentos carregados
+          const dept = allDepartments.find(d => d.id === deptId);
+          deptMap[employee.id] = dept?.name || "N/A";
+        } else {
+          deptMap[employee.id] = "N/A";
+        }
+      });
+      
+      setRoleNames(roleMap);
+      setDepartmentNames(deptMap);
+    }
+  }, [employees, allJobRoles, allDepartments]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load companies
+      // Carrega os cargos primeiro - isso resolve um dos erros principais
+      const jobRoles = await getJobRoles();
+      setAllJobRoles(jobRoles || []);
+      
+      // Carrega as empresas
       const loadedCompanies = await getCompanies();
       setCompanies(loadedCompanies || []);
       
-      // Load employees
+      // Carrega todos os departamentos para referência
+      const companyDepts: Record<string, Department[]> = {};
+      const allDepts: Department[] = [];
+      
+      // Para cada empresa, carregamos os departamentos
+      for (const company of loadedCompanies) {
+        const depts = await getDepartmentsByCompany(company.id);
+        companyDepts[company.id] = depts;
+        allDepts.push(...depts);
+      }
+      
+      setDepartmentsByCompany(companyDepts);
+      setAllDepartments(allDepts);
+      
+      // Carrega os funcionários
       const allEmployees = await getEmployees();
       
-      // Filter employees if needed
+      // Filtra funcionários se necessário
       if (selectedCompanyId && selectedCompanyId !== "all") {
-        setEmployees(allEmployees.filter(e => e.companyId === selectedCompanyId) || []);
+        setEmployees((allEmployees || []).filter(e => e.companyId === selectedCompanyId));
       } else {
         setEmployees(allEmployees || []);
       }
@@ -136,29 +197,6 @@ const EmployeesPage: React.FC = () => {
     }
   };
 
-  const getDepartmentName = async (employee: Employee) => {
-    if (!employee || !employee.departmentIds || employee.departmentIds.length === 0) return "N/A";
-    
-    try {
-      // Get the first department for display
-      const department = await getDepartmentById(employee.departmentIds[0]);
-      return department ? department.name : "N/A";
-    } catch (error) {
-      console.error("Error getting department:", error);
-      return "N/A";
-    }
-  };
-
-  const getJobRoleName = async (roleId: string) => {
-    try {
-      const role = await getJobRoleById(roleId);
-      return role?.name || "N/A";
-    } catch (error) {
-      console.error("Error getting job role:", error);
-      return "N/A";
-    }
-  };
-
   const handleViewFormResponses = (employeeId: string) => {
     navigate(`/?employeeId=${employeeId}`);
   };
@@ -214,39 +252,6 @@ const EmployeesPage: React.FC = () => {
       </div>
     );
   };
-
-  // Funções auxiliares para renderização síncrona na tabela
-  const [departmentNames, setDepartmentNames] = useState<Record<string, string>>({});
-  const [roleNames, setRoleNames] = useState<Record<string, string>>({});
-
-  // Carregar nomes de departamentos e funções quando os employees mudam
-  useEffect(() => {
-    const loadNames = async () => {
-      const deptNames: Record<string, string> = {};
-      const jobRoleNames: Record<string, string> = {};
-      
-      for (const employee of employees) {
-        // Carregar nome do departamento
-        if (employee.departmentIds && employee.departmentIds.length > 0) {
-          const deptName = await getDepartmentName(employee);
-          deptNames[employee.id] = deptName;
-        }
-        
-        // Carregar nome da função
-        if (employee.roleId) {
-          const roleName = await getJobRoleName(employee.roleId);
-          jobRoleNames[employee.id] = roleName;
-        }
-      }
-      
-      setDepartmentNames(deptNames);
-      setRoleNames(jobRoleNames);
-    };
-    
-    if (employees.length > 0) {
-      loadNames();
-    }
-  }, [employees]);
 
   return (
     <Layout>
