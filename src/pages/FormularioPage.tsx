@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getCompanies, getEmployeesByCompany, getFormResultByEmployeeId, saveFormResult } from "@/services"; 
 import { Company, Employee } from "@/types/cadastro";
 import { formSections, formData } from "@/data/formData";
@@ -11,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FormSection from "@/components/FormSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const FormularioPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -221,80 +221,104 @@ const FormularioPage: React.FC = () => {
 
   return (
     <Layout title="Formulário">
-      <Card>
-        <CardHeader>
-          <CardTitle>Preenchimento do Formulário</CardTitle>
-          <CardDescription>Selecione a empresa e o funcionário para preencher o formulário.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Select onValueChange={handleCompanyChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione a empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Select onValueChange={handleEmployeeChange} value={selectedEmployeeId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione o funcionário" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <div className="container mx-auto py-6 space-y-8">
+        <Card className="shadow-lg">
+          <CardHeader className="border-b bg-muted/40">
+            <CardTitle className="text-2xl text-primary">Preenchimento do Formulário</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Selecione a empresa e o funcionário para preencher o formulário.
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Empresa</label>
+                <Select onValueChange={handleCompanyChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione a empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="max-h-[200px]">
+                      {companies.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {selectedEmployeeId && (
-            <Tabs defaultValue={formSections.length > 0 ? `section-${formSections[0].title}` : undefined} className="space-y-4">
-              <TabsList className="flex flex-wrap">
-                {formSections.map((section, index) => (
-                  <TabsTrigger key={index} value={`section-${section.title}`}>
-                    {section.title}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {formSections.map((section, index) => {
-                // Find the corresponding section in formData to get the questions
-                const dataSection = formData.sections.find(s => s.title === section.title);
-                return (
-                  <TabsContent key={index} value={`section-${section.title}`}>
-                    {dataSection && (
-                      <FormSection
-                        section={dataSection}
-                        answers={answers}
-                        onAnswerChange={handleAnswerChange}
-                        onObservationChange={handleObservationChange}
-                        onOptionsChange={handleOptionsChange}
-                      />
-                    )}
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
-          )}
-        </CardContent>
-        {selectedEmployeeId && (
-          <CardFooter>
-            <Button onClick={handleSaveForm} disabled={isSubmitting}>
-              {isSubmitting ? "Salvando..." : "Salvar Formulário"}
-            </Button>
-          </CardFooter>
-        )}
-      </Card>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Funcionário</label>
+                <Select onValueChange={handleEmployeeChange} value={selectedEmployeeId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o funcionário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="max-h-[200px]">
+                      {employees.map((employee) => (
+                        <SelectItem key={employee.id} value={employee.id}>
+                          {employee.name}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {selectedEmployeeId && (
+              <div className="mt-6">
+                <Tabs defaultValue={formSections[0]?.title} className="w-full">
+                  <ScrollArea className="w-full">
+                    <TabsList className="w-full justify-start mb-6 bg-muted/40 p-1 rounded-lg flex-wrap">
+                      {formSections.map((section) => (
+                        <TabsTrigger
+                          key={section.title}
+                          value={section.title}
+                          className="px-4 py-2 text-sm"
+                        >
+                          {section.title}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </ScrollArea>
+
+                  {formSections.map((section) => {
+                    const dataSection = formData.sections.find(s => s.title === section.title);
+                    return (
+                      <TabsContent key={section.title} value={section.title}>
+                        {dataSection && (
+                          <FormSection
+                            section={dataSection}
+                            answers={answers}
+                            onAnswerChange={handleAnswerChange}
+                            onObservationChange={handleObservationChange}
+                            onOptionsChange={handleOptionsChange}
+                          />
+                        )}
+                      </TabsContent>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+
+            {selectedEmployeeId && (
+              <div className="flex justify-end p-6 bg-muted/40 border-t">
+                <Button 
+                  onClick={handleSaveForm} 
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto"
+                >
+                  {isSubmitting ? "Salvando..." : "Salvar Formulário"}
+                </Button>
+              </div>
+            )}
+        </Card>
+      </div>
     </Layout>
   );
 };

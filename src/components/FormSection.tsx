@@ -2,7 +2,7 @@
 import React from "react";
 import { FormSection as FormSectionType, FormAnswer } from "@/types/form";
 import QuestionComponent from "./QuestionComponent";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Card } from "@/components/ui/card";
 
 interface FormSectionProps {
   section: FormSectionType;
@@ -20,31 +20,27 @@ const FormSection: React.FC<FormSectionProps> = ({
   onOptionsChange,
 }) => {
   return (
-    <div className="mb-8">
-      <Accordion type="single" collapsible defaultValue="item-1">
-        <AccordionItem value="item-1" className="border-none">
-          <AccordionTrigger className="py-4 bg-esocial-lightGray hover:bg-esocial-lightGray/80 px-4 rounded-lg text-esocial-darkGray">
-            <h2 className="text-lg font-medium">{section.title}</h2>
-          </AccordionTrigger>
-          <AccordionContent className="pt-4">
-            {section.description && (
-              <p className="text-sm text-muted-foreground mb-4">{section.description}</p>
-            )}
-            <div className="space-y-4">
-              {section.questions.map((question) => (
-                <QuestionComponent
-                  key={question.id}
-                  question={question}
-                  answer={answers[question.id]}
-                  onChange={onAnswerChange}
-                  onObservationChange={onObservationChange}
-                  onOptionsChange={onOptionsChange}
-                />
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold text-primary">{section.title}</h2>
+        {section.description && (
+          <p className="text-sm text-muted-foreground">{section.description}</p>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {section.questions.map((question) => (
+          <Card key={question.id} className="overflow-hidden">
+            <QuestionComponent
+              question={question}
+              answer={answers[question.id]}
+              onChange={onAnswerChange}
+              onObservationChange={onObservationChange}
+              onOptionsChange={onOptionsChange}
+            />
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };
