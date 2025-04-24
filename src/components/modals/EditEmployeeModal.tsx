@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,9 @@ import { Company, Department, Employee, JobRole } from "@/types/cadastro";
 import { z } from "zod";
 import { Plus } from "lucide-react";
 import JobRolesModal from "./JobRolesModal";
+import { useEmployeeDepartments } from "@/hooks/useEmployeeDepartments";
+import { Checkbox } from "../ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EditEmployeeModalProps {
   open: boolean;
@@ -51,6 +53,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   const [isJobRolesModalOpen, setIsJobRolesModalOpen] = useState(false);
   
   const { toast } = useToast();
+  const { departmentIds, setDepartmentIds, updateEmployeeDepartments } = useEmployeeDepartments(employee.id);
 
   useEffect(() => {
     // Ensure we're getting valid arrays or defaulting to empty arrays
@@ -60,7 +63,10 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
     loadJobRoles();
     
     loadDepartments(companyId);
-  }, [companyId]);
+    if (employee.id) {
+      loadEmployeeDepartments(employee.id);
+    }
+  }, [companyId, employee]);
 
   const loadJobRoles = () => {
     const loadedJobRoles = getJobRoles() || [];
@@ -78,6 +84,17 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
       setDepartments(company.departments);
     } else {
       setDepartments([]);
+    }
+  };
+
+  const loadEmployeeDepartments = async (employeeId: string) => {
+    const { data } = await supabase
+      .from('employee_departments')
+      .select('department_id')
+      .eq('employee_id', employeeId);
+    
+    if (data) {
+      setDepartmentIds(data.map(d => d.department_id));
     }
   };
 
@@ -111,31 +128,55 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleDepartmentToggle = (departmentId: string) => {
+    setDepartmentIds(prev => {
+      if (prev.includes(departmentId)) {
+        return prev.filter(id => id !== departmentId);
+      }
+      return [...prev, departmentId];
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
     
-    const updatedEmployee: Employee = {
-      id: employee.id,
-      name,
-      cpf,
-      roleId,
-      companyId,
-      departmentId
-    };
-    
-    updateEmployee(updatedEmployee);
-    
-    toast({
-      title: "Funcionário atualizado",
-      description: "As informações do funcionário foram atualizadas com sucesso.",
-    });
-    
-    onOpenChange(false);
-    if (onEmployeeUpdated) onEmployeeUpdated();
+    try {
+      // Atualiza o funcionário
+      const { error: employeeError } = await supabase
+        .from('funcionarios')
+        .update({
+          nome: name,
+          cpf,
+          cargo_id: roleId,
+          empresa_id: companyId,
+        })
+        .eq('id', employee.id);
+
+      if (employeeError) throw employeeError;
+
+      // Atualiza os departamentos
+      const result = await updateEmployeeDepartments(employee.id, departmentIds);
+      if (!result.success) throw result.error;
+
+      toast({
+        title: "Funcionário atualizado",
+        description: "As informações do funcionário foram atualizadas com sucesso.",
+      });
+      
+      onOpenChange(false);
+      if (onEmployeeUpdated) onEmployeeUpdated();
+    } catch (error) {
+      console.error('Erro ao atualizar funcionário:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar funcionário",
+        variant: "destructive",
+      });
+    }
   };
 
   // Only render dialog content when dialog is open to avoid command component issues
@@ -191,24 +232,24 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="department">Departamento</Label>
-              <Select 
-                value={departmentId} 
-                onValueChange={setDepartmentId}
-                disabled={!companyId || departments.length === 0}
-              >
-                <SelectTrigger id="department">
-                  <SelectValue placeholder="Selecione um departamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((department) => (
-                    <SelectItem key={department.id} value={department.id}>
+              <Label>Setores</Label>
+              <div className="space-y-2">
+                {departments.map((department) => (
+                  <div key={department.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`dept-${department.id}`}
+                      checked={departmentIds.includes(department.id)}
+                      onCheckedChange={() => handleDepartmentToggle(department.id)}
+                    />
+                    <Label
+                      htmlFor={`dept-${department.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
                       {department.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.departmentId && <p className="text-sm text-destructive">{errors.departmentId}</p>}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
             
             <div className="grid gap-2">

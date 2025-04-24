@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +41,8 @@ import {
 import { Company, Department, JobRole } from "@/types/cadastro";
 import { useToast } from "@/hooks/use-toast";
 import JobRolesModal from "./JobRolesModal";
+import { Checkbox } from "../ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NewEmployeeModalProps {
   open: boolean;
@@ -67,6 +68,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
   const [openRoleCombobox, setOpenRoleCombobox] = useState(false);
   const [isJobRolesModalOpen, setIsJobRolesModalOpen] = useState(false);
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   
   const { toast } = useToast();
 
@@ -133,20 +135,20 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
     setCpf(formatted);
   };
 
-  const resetForm = () => {
-    setName("");
-    setCpf("");
-    setRoleId("");
-    if (!preselectedCompanyId) {
-      setCompanyId("");
-    }
-    setDepartmentId("");
+  const handleDepartmentToggle = (departmentId: string) => {
+    setSelectedDepartments(prev => {
+      if (prev.includes(departmentId)) {
+        return prev.filter(id => id !== departmentId);
+      } else {
+        return [...prev, departmentId];
+      }
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !cpf.trim() || !roleId || !companyId || !departmentId) {
+    if (!name.trim() || !cpf.trim() || !roleId || !companyId || selectedDepartments.length === 0) {
       toast({
         title: "Erro",
         description: "Todos os campos são obrigatórios",
@@ -155,22 +157,59 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
       return;
     }
 
-    addEmployee({
-      name,
-      cpf,
-      roleId,
-      companyId,
-      departmentId
-    });
-    
-    toast({
-      title: "Sucesso",
-      description: "Funcionário cadastrado com sucesso!",
-    });
-    
-    resetForm();
-    onOpenChange(false);
-    if (onEmployeeAdded) onEmployeeAdded();
+    try {
+      // Primeiro cria o funcionário
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('funcionarios')
+        .insert([{
+          nome: name,
+          cpf,
+          cargo_id: roleId,
+          empresa_id: companyId
+        }])
+        .select()
+        .single();
+
+      if (employeeError) throw employeeError;
+
+      // Então cria as associações com os departamentos
+      const { error: deptError } = await supabase
+        .from('employee_departments')
+        .insert(
+          selectedDepartments.map(deptId => ({
+            employee_id: employeeData.id,
+            department_id: deptId
+          }))
+        );
+
+      if (deptError) throw deptError;
+      
+      toast({
+        title: "Sucesso",
+        description: "Funcionário cadastrado com sucesso!",
+      });
+      
+      resetForm();
+      onOpenChange(false);
+      if (onEmployeeAdded) onEmployeeAdded();
+    } catch (error) {
+      console.error('Erro ao cadastrar funcionário:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao cadastrar funcionário",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setName("");
+    setCpf("");
+    setRoleId("");
+    if (!preselectedCompanyId) {
+      setCompanyId("");
+    }
+    setSelectedDepartments([]);
   };
 
   const handleRoleSelect = (value: string) => {
@@ -250,40 +289,35 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="department" className="text-right">
-                  Setor
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="departments" className="text-right pt-2">
+                  Setores
                 </Label>
-                <div className="col-span-3">
-                  <Select 
-                    value={departmentId} 
-                    onValueChange={setDepartmentId}
-                    disabled={!companyId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        !companyId 
-                          ? "Selecione uma empresa primeiro" 
-                          : hasDepartments
-                            ? "Selecione um setor"
-                            : "Nenhum setor cadastrado ainda"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {hasDepartments ? (
-                        departments.map((department) => (
-                          <SelectItem key={department.id} value={department.id}>
-                            {department.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                          <FolderX className="mr-2 h-4 w-4" />
-                          Nenhum setor cadastrado ainda 😟
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
+                <div className="col-span-3 space-y-2">
+                  {hasDepartments ? (
+                    departments.map((department) => (
+                      <div key={department.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`dept-${department.id}`}
+                          checked={selectedDepartments.includes(department.id)}
+                          onCheckedChange={() => handleDepartmentToggle(department.id)}
+                        />
+                        <Label
+                          htmlFor={`dept-${department.id}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {department.name}
+                        </Label>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+                      <FolderX className="mr-2 h-4 w-4" />
+                      {companyId 
+                        ? "Nenhum setor cadastrado ainda para esta empresa 😟" 
+                        : "Selecione uma empresa primeiro"}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
