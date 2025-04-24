@@ -391,6 +391,36 @@ export type Database = {
           },
         ]
       }
+      formularios: {
+        Row: {
+          ativo: boolean | null
+          created_at: string
+          descricao: string | null
+          id: string
+          titulo: string
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          titulo: string
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          titulo?: string
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: []
+      }
       funcionarios: {
         Row: {
           cargo_id: string | null

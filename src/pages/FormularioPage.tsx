@@ -1,11 +1,10 @@
-
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { getCompanies, getEmployeesByCompany, getFormResultByEmployeeId, saveFormResult } from "@/services"; 
+import { getCompanies, getEmployeesByCompany } from "@/services"; 
+import { getFormQuestions, getFormResultByEmployeeId, saveFormResult } from "@/services/form/formService";
 import { Company, Employee } from "@/types/cadastro";
-import { formSections, formData } from "@/data/formData";
-import { FormAnswer } from "@/types/form";
+import { Question, FormAnswer, FormResult } from "@/types/form";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,7 +19,7 @@ const FormularioPage: React.FC = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | undefined>("");
   const [formResult, setFormResult] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [answers, setAnswers] = useState<Record<number, FormAnswer>>({});
+  const [answers, setAnswers] = useState<Record<string, FormAnswer>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -102,33 +101,61 @@ const FormularioPage: React.FC = () => {
     setSelectedEmployeeId(value);
   };
 
-  const handleAnswerChange = (questionId: number, answer: boolean | null) => {
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [formSections, setFormSections] = useState<{title: string, questions: Question[]}[]>([]);
+  
+  useEffect(() => {
+    const loadFormQuestions = async () => {
+      try {
+        const formId = 'a3b97a26-405e-4e13-9339-557db4099351'; // ISTAS21-BR form ID
+        const questionsData = await getFormQuestions(formId);
+        setQuestions(questionsData);
+        
+        // Group questions by section
+        const sections = questionsData.reduce((acc, question) => {
+          const section = acc.find(s => s.title === question.secao);
+          if (section) {
+            section.questions.push(question);
+          } else {
+            acc.push({ title: question.secao, questions: [question] });
+          }
+          return acc;
+        }, [] as {title: string, questions: Question[]}[]);
+        
+        setFormSections(sections);
+      } catch (error) {
+        console.error("Erro ao carregar perguntas:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar as perguntas do formulário",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadFormQuestions();
+  }, [toast]);
+
+  // Update handleAnswerChange to work with string IDs instead of numbers
+  const handleAnswerChange = (questionId: string, answer: boolean | null) => {
     setAnswers(prev => {
-      // Create a safe copy to work with
-      const result: Record<number, FormAnswer> = { ...prev };
-      
-      // If the current entry doesn't exist, create it
+      const result = { ...prev };
       if (!result[questionId]) {
         result[questionId] = { questionId, answer: answer === null ? false : answer, observation: '' };
       } else {
-        // Update the existing entry
         result[questionId] = { ...result[questionId], answer: answer === null ? false : answer };
       }
-      
       return result;
     });
   };
 
-  const handleObservationChange = (questionId: number, observation: string) => {
+  const handleObservationChange = (questionId: string, observation: string) => {
     setAnswers(prev => {
-      // Create a safe copy to work with
-      const result: Record<number, FormAnswer> = { ...prev };
+      const result: Record<string, FormAnswer> = { ...prev };
       
-      // If the current entry doesn't exist, create it
       if (!result[questionId]) {
         result[questionId] = { questionId, answer: false, observation };
       } else {
-        // Update the existing entry
         result[questionId] = { ...result[questionId], observation };
       }
       
@@ -136,16 +163,13 @@ const FormularioPage: React.FC = () => {
     });
   };
 
-  const handleOptionsChange = (questionId: number, selectedOptions: string[]) => {
+  const handleOptionsChange = (questionId: string, selectedOptions: string[]) => {
     setAnswers(prev => {
-      // Create a safe copy to work with
-      const result: Record<number, FormAnswer> = { ...prev };
+      const result: Record<string, FormAnswer> = { ...prev };
       
-      // If the current entry doesn't exist, create it
       if (!result[questionId]) {
         result[questionId] = { questionId, answer: false, selectedOptions };
       } else {
-        // Update the existing entry
         result[questionId] = { ...result[questionId], selectedOptions };
       }
       
@@ -156,47 +180,29 @@ const FormularioPage: React.FC = () => {
   const handleSaveForm = async () => {
     setIsSubmitting(true);
     try {
-      // Calculate summary statistics
       let totalYes = 0;
       let totalNo = 0;
-      let severityCounts = {
-        "LEVEMENTE PREJUDICIAL": 0,
-        "PREJUDICIAL": 0,
-        "EXTREMAMENTE PREJUDICIAL": 0
-      };
       
-      let yesPerSeverity = {
-        "LEVEMENTE PREJUDICIAL": 0,
-        "PREJUDICIAL": 0,
-        "EXTREMAMENTE PREJUDICIAL": 0
-      };
-      
-      // Count answers by severity
-      formData.sections.forEach(section => {
-        section.questions.forEach(question => {
-          const answer = answers[question.id];
-          if (answer) {
-            if (answer.answer === true) {
-              totalYes++;
-              yesPerSeverity[question.severity]++;
-            } else if (answer.answer === false) {
-              totalNo++;
-            }
-          }
-        });
+      // Count answers
+      Object.values(answers).forEach(answer => {
+        if (answer.answer === true) {
+          totalYes++;
+        } else if (answer.answer === false) {
+          totalNo++;
+        }
       });
       
-      // Prepare form result object
-      const formResultData = {
-        employeeId: selectedEmployeeId,
+      const formResultData: FormResult = {
+        id: '',
+        employeeId: selectedEmployeeId!,
+        empresa_id: selectedCompanyId!,
         answers,
-        totalYes,
-        totalNo,
-        severityCounts,
-        yesPerSeverity,
-        isComplete: true,
-        lastUpdated: Date.now(),
-        analyistNotes: ""
+        total_sim: totalYes,
+        total_nao: totalNo,
+        is_complete: true,
+        last_updated: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
       await saveFormResult(formResultData);
@@ -206,7 +212,6 @@ const FormularioPage: React.FC = () => {
         description: "Formulário salvo com sucesso!",
       });
       
-      // Refresh form result data
       setFormResult(formResultData);
     } catch (error) {
       console.error("Erro ao salvar o formulário:", error);
@@ -288,18 +293,15 @@ const FormularioPage: React.FC = () => {
                   </ScrollArea>
 
                   {formSections.map((section) => {
-                    const dataSection = formData.sections.find(s => s.title === section.title);
                     return (
                       <TabsContent key={section.title} value={section.title}>
-                        {dataSection && (
-                          <FormSection
-                            section={dataSection}
-                            answers={answers}
-                            onAnswerChange={handleAnswerChange}
-                            onObservationChange={handleObservationChange}
-                            onOptionsChange={handleOptionsChange}
-                          />
-                        )}
+                        <FormSection
+                          section={section}
+                          answers={answers}
+                          onAnswerChange={handleAnswerChange}
+                          onObservationChange={handleObservationChange}
+                          onOptionsChange={handleOptionsChange}
+                        />
                       </TabsContent>
                     );
                   })}

@@ -1,16 +1,17 @@
 
 import React from "react";
 import { AlertTriangle, Flame, AlertCircle } from "lucide-react";
-import { SeverityLevel } from "@/types/form";
+import { Severity } from "@/types/form";
 import { cn } from "@/lib/utils";
 
 interface SeverityBadgeProps {
-  severity: SeverityLevel;
+  severity: Severity;
 }
 
 const SeverityBadge = ({ severity }: SeverityBadgeProps) => {
   const getSeverityDetails = () => {
-    switch (severity) {
+    const nivel = severity.nivel;
+    switch (nivel) {
       case "LEVEMENTE PREJUDICIAL":
         return {
           icon: <AlertCircle size={14} />,
@@ -33,7 +34,7 @@ const SeverityBadge = ({ severity }: SeverityBadgeProps) => {
         return {
           icon: <AlertCircle size={14} />,
           className: "severity-light",
-          label: severity
+          label: nivel
         };
     }
   };

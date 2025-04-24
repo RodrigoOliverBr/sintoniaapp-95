@@ -1,43 +1,61 @@
 
-// Add FormAnswer interface to fix TypeScript errors
 export interface FormAnswer {
-  questionId: number;
+  questionId: string;
   answer: boolean;
   observation?: string;
   selectedOptions?: string[];
 }
 
-// Add missing types for FormResult and SeverityLevel
 export interface FormResult {
-  employeeId: string;
-  data: any;
-  lastUpdated: number;
-}
-
-export interface SeverityLevel {
   id: string;
-  level: string;
-  description?: string;
+  employeeId: string;
+  empresa_id: string;
+  answers: Record<string, FormAnswer>;
+  total_sim: number;
+  total_nao: number;
+  notas_analista?: string;
+  is_complete: boolean;
+  last_updated: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Question {
   id: string;
-  text: string;
-  riskId: string;
-  section: string;
-  observationRequired?: boolean;
-  options?: string[];
+  texto: string;
+  risco_id: string;
+  secao: string;
+  ordem: number;
+  formulario_id: string;
+  opcoes?: { label: string; value: string; }[];
+  observacao_obrigatoria?: boolean;
+  risco?: Risk;
+}
+
+export interface Risk {
+  id: string;
+  texto: string;
+  severidade_id: string;
+  categoria: string;
+  severidade?: Severity;
+}
+
+export interface Severity {
+  id: string;
+  nivel: string;
+  descricao?: string;
+  cor: string;
+  peso: number;
 }
 
 export interface FormSection {
-  id: string;
   title: string;
-  description: string;
+  description?: string;
   questions: Question[];
 }
 
-export interface FormData {
-  title: string;
-  sections: FormSection[];
-  severityLevels: SeverityLevel[];
+export interface Mitigation {
+  id: string;
+  risco_id: string;
+  texto: string;
 }
