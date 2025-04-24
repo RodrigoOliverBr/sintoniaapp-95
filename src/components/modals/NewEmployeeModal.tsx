@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -10,22 +11,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, FolderMinus, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { 
-  getJobRolesByCompany, 
-  getDepartmentsByCompany,
-  getCompanies,
-  addEmployee 
-} from "@/services";
-import { supabase } from "@/integrations/supabase/client";
 import { Company, Department, JobRole } from "@/types/cadastro";
+import { getJobRolesByCompany, getDepartmentsByCompany, getCompanies, addEmployee } from "@/services";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import JobRolesModal from "./JobRolesModal";
+import DepartmentSelect from "../employees/DepartmentSelect";
+import CompanyInput from "../employees/CompanyInput";
+import JobRoleSelect from "../employees/JobRoleSelect";
+import { formatCPF, validateEmployeeForm } from "@/utils/employeeValidation";
 
 interface NewEmployeeModalProps {
   open: boolean;
@@ -44,13 +38,10 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const [cpf, setCpf] = useState("");
   const [roleId, setRoleId] = useState("");
   const [companyId, setCompanyId] = useState(preselectedCompanyId || "");
-  const [departmentId, setDepartmentId] = useState("");
-  
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
-  const [openRoleCombobox, setOpenRoleCombobox] = useState(false);
   const [isJobRolesModalOpen, setIsJobRolesModalOpen] = useState(false);
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,37 +49,37 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        setIsLoading(true);
-        const loadedCompanies = await getCompanies();
-        setCompanies(loadedCompanies);
-        
-        if (preselectedCompanyId) {
-          setCompanyId(preselectedCompanyId);
-          loadDepartments(preselectedCompanyId);
-          loadJobRoles(preselectedCompanyId);
-          
-          const company = loadedCompanies.find(c => c.id === preselectedCompanyId);
-          setSelectedCompany(company || null);
-        }
-      } catch (error) {
-        console.error("Error fetching companies:", error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar as empresas",
-          variant: "destructive",
-        });
-        setCompanies([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     if (open) {
       fetchCompanies();
     }
-  }, [preselectedCompanyId, open, toast]);
+  }, [open]);
+
+  const fetchCompanies = async () => {
+    try {
+      setIsLoading(true);
+      const loadedCompanies = await getCompanies();
+      setCompanies(loadedCompanies);
+      
+      if (preselectedCompanyId) {
+        setCompanyId(preselectedCompanyId);
+        loadDepartments(preselectedCompanyId);
+        loadJobRoles(preselectedCompanyId);
+        
+        const company = loadedCompanies.find(c => c.id === preselectedCompanyId);
+        setSelectedCompany(company || null);
+      }
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as empresas",
+        variant: "destructive",
+      });
+      setCompanies([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadJobRoles = async (companyId: string) => {
     if (!companyId) {
@@ -109,14 +100,12 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const loadDepartments = async (companyId: string) => {
     if (!companyId) {
       setDepartments([]);
-      setDepartmentId("");
       return;
     }
     
     try {
       const loadedDepartments = await getDepartmentsByCompany(companyId);
       setDepartments(loadedDepartments);
-      setDepartmentId("");
     } catch (error) {
       console.error("Error loading departments:", error);
       setDepartments([]);
@@ -129,20 +118,6 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
     setSelectedCompany(company || null);
     loadDepartments(value);
     loadJobRoles(value);
-  };
-
-  const formatCPF = (value: string) => {
-    const digits = value.replace(/\D/g, "");
-    
-    if (digits.length <= 3) {
-      return digits;
-    } else if (digits.length <= 6) {
-      return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-    } else if (digits.length <= 9) {
-      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-    } else {
-      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
-    }
   };
 
   const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,10 +138,11 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !cpf.trim() || !roleId || !companyId || selectedDepartments.length === 0) {
+    const validation = validateEmployeeForm(name, cpf, roleId, companyId, selectedDepartments);
+    if (!validation.isValid) {
       toast({
         title: "Erro",
-        description: "Todos os campos são obrigatórios",
+        description: validation.message,
         variant: "destructive",
       });
       return;
@@ -226,22 +202,13 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
     setSelectedDepartments([]);
   };
 
-  const handleRoleSelect = (value: string) => {
-    setRoleId(value);
-  };
-
   const handleJobRolesUpdated = () => {
     if (companyId) {
       loadJobRoles(companyId);
     }
   };
 
-  if (!open) {
-    return null;
-  }
-
-  const hasDepartments = departments.length > 0;
-  const hasRoles = jobRoles.length > 0;
+  if (!open) return null;
 
   return (
     <>
@@ -280,102 +247,30 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                   placeholder="000.000.000-00"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="company" className="text-right">
-                  Empresa
-                </Label>
-                <div className="col-span-3">
-                  {preselectedCompanyId ? (
-                    <Input
-                      value={selectedCompany?.name || "Empresa selecionada"}
-                      readOnly
-                      disabled
-                      className="bg-muted"
-                    />
-                  ) : (
-                    <Select value={companyId} onValueChange={handleCompanyChange} disabled={isLoading}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione uma empresa"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {companies.map((company) => (
-                          <SelectItem key={company.id} value={company.id}>
-                            {company.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="departments" className="text-right pt-2">
-                  Setores
-                </Label>
-                <div className="col-span-3 space-y-2">
-                  {hasDepartments ? (
-                    departments.map((department) => (
-                      <div key={department.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`dept-${department.id}`}
-                          checked={selectedDepartments.includes(department.id)}
-                          onCheckedChange={() => handleDepartmentToggle(department.id)}
-                        />
-                        <Label
-                          htmlFor={`dept-${department.id}`}
-                          className="text-sm font-normal cursor-pointer"
-                        >
-                          {department.name}
-                        </Label>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                      <FolderMinus className="mr-2 h-4 w-4" />
-                      {companyId 
-                        ? "Nenhum setor cadastrado ainda para esta empresa 😟" 
-                        : "Selecione uma empresa primeiro"}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="role" className="text-right">
-                  Função
-                </Label>
-                <div className="col-span-3 flex gap-2">
-                  <div className="flex-1">
-                    <Select value={roleId} onValueChange={handleRoleSelect} disabled={!companyId}>
-                      <SelectTrigger>
-                        <SelectValue 
-                          placeholder={!companyId 
-                            ? "Selecione uma empresa primeiro" 
-                            : hasRoles 
-                              ? "Selecione uma função..." 
-                              : "Nenhuma função cadastrada"}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {jobRoles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon"
-                    onClick={() => setIsJobRolesModalOpen(true)}
-                    title="Gerenciar funções"
-                    disabled={!companyId}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              
+              <CompanyInput
+                companies={companies}
+                companyId={companyId}
+                onCompanyChange={handleCompanyChange}
+                preselectedCompanyId={preselectedCompanyId}
+                selectedCompany={selectedCompany}
+                isLoading={isLoading}
+              />
+
+              <DepartmentSelect
+                departments={departments}
+                selectedDepartments={selectedDepartments}
+                onDepartmentToggle={handleDepartmentToggle}
+                companyId={companyId}
+              />
+
+              <JobRoleSelect
+                jobRoles={jobRoles}
+                roleId={roleId}
+                companyId={companyId}
+                onRoleSelect={setRoleId}
+                onOpenJobRolesModal={() => setIsJobRolesModalOpen(true)}
+              />
             </div>
             <DialogFooter>
               <Button type="submit">Cadastrar</Button>
