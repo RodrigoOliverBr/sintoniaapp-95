@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,45 +70,71 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const [openRoleCombobox, setOpenRoleCombobox] = useState(false);
   const [isJobRolesModalOpen, setIsJobRolesModalOpen] = useState(false);
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const { toast } = useToast();
 
   useEffect(() => {
-    const loadedCompanies = getCompanies() || [];
-    setCompanies(loadedCompanies);
+    const fetchCompanies = async () => {
+      try {
+        setIsLoading(true);
+        const loadedCompanies = await getCompanies();
+        setCompanies(loadedCompanies);
+        
+        if (preselectedCompanyId) {
+          setCompanyId(preselectedCompanyId);
+          loadDepartments(preselectedCompanyId);
+          loadJobRoles(preselectedCompanyId);
+        }
+      } catch (error) {
+        console.error("Error fetching companies:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar as empresas",
+          variant: "destructive",
+        });
+        setCompanies([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    if (preselectedCompanyId) {
-      setCompanyId(preselectedCompanyId);
-      loadDepartments(preselectedCompanyId);
-      loadJobRoles(preselectedCompanyId);
+    if (open) {
+      fetchCompanies();
     }
-  }, [preselectedCompanyId]);
+  }, [preselectedCompanyId, open, toast]);
 
-  const loadJobRoles = (companyId: string) => {
+  const loadJobRoles = async (companyId: string) => {
     if (!companyId) {
       setJobRoles([]);
       setRoleId("");
       return;
     }
-    const loadedJobRoles = getJobRolesByCompany(companyId) || [];
-    setJobRoles(loadedJobRoles);
-    setRoleId("");
+    try {
+      const loadedJobRoles = await getJobRolesByCompany(companyId);
+      setJobRoles(loadedJobRoles);
+      setRoleId("");
+    } catch (error) {
+      console.error("Error loading job roles:", error);
+      setJobRoles([]);
+    }
   };
 
-  const loadDepartments = (companyId: string) => {
+  const loadDepartments = async (companyId: string) => {
     if (!companyId) {
       setDepartments([]);
       setDepartmentId("");
       return;
     }
     
-    const company = companies.find(c => c.id === companyId);
-    if (company && company.departments) {
-      setDepartments(company.departments);
-    } else {
+    try {
+      const loadedDepartments = await getDepartmentsByCompany(companyId);
+      setDepartments(loadedDepartments);
+      setDepartmentId("");
+    } catch (error) {
+      console.error("Error loading departments:", error);
       setDepartments([]);
     }
-    setDepartmentId("");
   };
 
   const handleCompanyChange = (value: string) => {
@@ -275,9 +302,9 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                   Empresa
                 </Label>
                 <div className="col-span-3">
-                  <Select value={companyId} onValueChange={handleCompanyChange} disabled={!!preselectedCompanyId}>
+                  <Select value={companyId} onValueChange={handleCompanyChange} disabled={!!preselectedCompanyId || isLoading}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma empresa" />
+                      <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione uma empresa"} />
                     </SelectTrigger>
                     <SelectContent>
                       {companies.map((company) => (
