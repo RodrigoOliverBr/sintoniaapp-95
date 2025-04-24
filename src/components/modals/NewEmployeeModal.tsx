@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -12,13 +13,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown, FolderMinus, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { 
   getJobRolesByCompany, 
-  getDepartmentsByCompany, 
+  getDepartmentsByCompany,
+  getCompanies,
   addEmployee 
 } from "@/services";
+import { supabase } from "@/integrations/supabase/client";
 import { Company, Department, JobRole } from "@/types/cadastro";
 import { useToast } from "@/hooks/use-toast";
+import JobRolesModal from "./JobRolesModal";
 
 interface NewEmployeeModalProps {
   open: boolean;
@@ -312,7 +320,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                     ))
                   ) : (
                     <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                      <FolderX className="mr-2 h-4 w-4" />
+                      <FolderMinus className="mr-2 h-4 w-4" />
                       {companyId 
                         ? "Nenhum setor cadastrado ainda para esta empresa 😟" 
                         : "Selecione uma empresa primeiro"}
@@ -370,7 +378,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                           </Command>
                         ) : (
                           <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                            <FolderX className="mr-2 h-4 w-4" />
+                            <FolderMinus className="mr-2 h-4 w-4" />
                             {companyId 
                               ? "Nenhuma função cadastrada ainda para esta empresa 😟" 
                               : "Selecione uma empresa primeiro"}
