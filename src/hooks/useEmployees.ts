@@ -1,6 +1,5 @@
-
 import { useState, useCallback } from "react";
-import { Company, Employee, JobRole } from "@/types/cadastro";
+import { Company, Employee } from "@/types/cadastro";
 import {
   getCompanies,
   getEmployeesByCompany,
@@ -25,7 +24,6 @@ export const useEmployees = () => {
     setIsLoading(true);
     try {
       const companiesData = await getCompanies();
-      // Ensure we always set an array, even if the API returns null/undefined
       setCompanies(Array.isArray(companiesData) ? companiesData : []);
     } catch (error) {
       console.error("Erro ao carregar empresas:", error);
@@ -34,7 +32,7 @@ export const useEmployees = () => {
         description: "Não foi possível carregar as empresas",
         variant: "destructive",
       });
-      setCompanies([]); // Set empty array on error
+      setCompanies([]);
     } finally {
       setIsLoading(false);
     }
@@ -46,7 +44,6 @@ export const useEmployees = () => {
     setIsLoading(true);
     try {
       const employeesData = await getEmployeesByCompany(companyId);
-      // Ensure we always set an array, even if the API returns null/undefined
       setEmployees(Array.isArray(employeesData) ? employeesData : []);
       
       const roleIds = Array.isArray(employeesData) 
@@ -79,7 +76,7 @@ export const useEmployees = () => {
         description: "Não foi possível carregar os funcionários",
         variant: "destructive",
       });
-      setEmployees([]); // Set empty array on error
+      setEmployees([]);
     } finally {
       setIsLoading(false);
     }

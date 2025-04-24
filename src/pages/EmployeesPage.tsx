@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Employee } from "@/types/cadastro";
@@ -12,9 +11,9 @@ import CompanySelect from "@/components/employees/CompanySelect";
 import { useEmployees } from "@/hooks/useEmployees";
 
 const EmployeesPage: React.FC = () => {
-  const [openNewModal, setOpenNewModal] = useState(false);
-  const [openEditModal, setOpenEditModal] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [openNewModal, setOpenNewModal] = React.useState(false);
+  const [openEditModal, setOpenEditModal] = React.useState(false);
+  const [selectedEmployee, setSelectedEmployee] = React.useState<Employee | null>(null);
   
   const {
     companies,
@@ -65,16 +64,13 @@ const EmployeesPage: React.FC = () => {
     }
   };
 
-  // Ensure we have a companies array to pass to CompanySelect
-  const safeCompanies = Array.isArray(companies) ? companies : [];
-
   return (
     <Layout title="Funcionários">
       <Card>
         <div className="flex items-center justify-between p-4">
           <h2 className="text-lg font-semibold">Lista de Funcionários</h2>
           <CompanySelect
-            companies={safeCompanies}
+            companies={companies}
             selectedCompanyId={selectedCompanyId}
             onCompanyChange={handleCompanyChange}
             onNewEmployee={() => setOpenNewModal(true)}
@@ -82,14 +78,12 @@ const EmployeesPage: React.FC = () => {
         </div>
         <Card>
           <EmployeeList
-            employees={Array.isArray(employees) ? employees : []}
+            employees={employees}
             isLoading={isLoading}
-            roleNames={roleNames || {}}
+            roleNames={roleNames}
             onEdit={(employee) => {
-              if (employee) {
-                setSelectedEmployee(employee);
-                setOpenEditModal(true);
-              }
+              setSelectedEmployee(employee);
+              setOpenEditModal(true);
             }}
             onDelete={handleDeleteEmployee}
             getStatusComponent={getStatusComponent}
