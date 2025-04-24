@@ -4,6 +4,7 @@ export interface Company {
   name: string;
   departments: Department[];
   clienteId?: string; // Added to associate companies with clients
+  cpf_cnpj?: string;
 }
 
 export interface Department {
@@ -23,6 +24,19 @@ export interface Employee {
   name: string;
   cpf: string;
   roleId: string;
-  departmentId: string;
   companyId: string;
+  departmentIds: string[]; // Fixed: Added departmentIds property as array of strings
+  departmentId?: string;   // Kept for backwards compatibility
+}
+
+export type FormStatus = 'not-started' | 'in-progress' | 'complete';
+
+export interface FormResult {
+  answers: Record<number, any>;
+  totalYes: number;
+  totalNo: number;
+  severityCounts: Record<string, number>;
+  yesPerSeverity: Record<string, number>;
+  analyistNotes?: string;
+  isComplete?: boolean;
 }

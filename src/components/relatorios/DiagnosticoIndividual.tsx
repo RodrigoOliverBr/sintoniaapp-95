@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { EyeIcon } from "lucide-react";
 import { getEmployeesByCompany, getDepartmentById, getJobRoleById } from "@/services/storageService";
-import { Employee } from "@/types/cadastro";
+import { Employee, Department, JobRole } from "@/types/cadastro";
 
 interface DiagnosticoIndividualProps {
   companyId: string;
@@ -25,6 +25,8 @@ interface EmployeeWithRisk extends Employee {
   riskScore: number;
   riskStatus: "Crítico" | "Atenção" | "Baixo Risco";
   lastEvaluation?: string;
+  departmentName?: string;
+  jobRoleName?: string;
 }
 
 const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
@@ -38,60 +40,100 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
     attention: 0,
     lowRisk: 0,
   });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!companyId) return;
+    const loadData = async () => {
+      if (!companyId) return;
 
-    // Buscar funcionários
-    const fetchedEmployees = getEmployeesByCompany(companyId);
-    
-    // Filtrar por departamento se necessário
-    const filteredEmployees = departmentId
-      ? fetchedEmployees.filter(emp => emp.departmentId === departmentId)
-      : fetchedEmployees;
-    
-    // Adicionar dados de risco simulados para cada funcionário
-    const employeesWithRisk = filteredEmployees.map(emp => {
-      // Gerar um score aleatório entre 0 e 100
-      const riskScore = Math.floor(Math.random() * 101);
-      
-      // Determinar o status baseado no score
-      let riskStatus: "Crítico" | "Atenção" | "Baixo Risco";
-      if (riskScore >= 70) {
-        riskStatus = "Crítico";
-      } else if (riskScore >= 50) {
-        riskStatus = "Atenção";
-      } else {
-        riskStatus = "Baixo Risco";
+      setLoading(true);
+      try {
+        // Fetch employees
+        const fetchedEmployees = await getEmployeesByCompany(companyId);
+        
+        // Filter by department if necessary
+        const filteredEmployees = departmentId
+          ? fetchedEmployees.filter(emp => emp.departmentIds && emp.departmentIds.includes(departmentId))
+          : fetchedEmployees;
+
+        // Add simulated risk data for each employee
+        const employeesWithRisk = await Promise.all(filteredEmployees.map(async (emp) => {
+          // Generate random risk score between 0 and 100
+          const riskScore = Math.floor(Math.random() * 101);
+          
+          // Determine status based on score
+          let riskStatus: "Crítico" | "Atenção" | "Baixo Risco";
+          if (riskScore >= 70) {
+            riskStatus = "Crítico";
+          } else if (riskScore >= 50) {
+            riskStatus = "Atenção";
+          } else {
+            riskStatus = "Baixo Risco";
+          }
+          
+          // Generate random date for last evaluation (1-90 days ago)
+          const today = new Date();
+          const randomDaysAgo = Math.floor(Math.random() * 90) + 1;
+          const lastEvalDate = new Date(today);
+          lastEvalDate.setDate(today.getDate() - randomDaysAgo);
+          const lastEvaluation = lastEvalDate.toLocaleDateString('pt-BR');
+          
+          // Get department name (just use the first department in case there are multiple)
+          let departmentName = "Não definido";
+          if (emp.departmentIds && emp.departmentIds.length > 0) {
+            try {
+              const deptData = await getDepartmentById(emp.departmentIds[0]);
+              if (deptData) {
+                departmentName = deptData.name;
+              }
+            } catch (error) {
+              console.error("Error fetching department:", error);
+            }
+          }
+          
+          // Get job role name
+          let jobRoleName = "Não definido";
+          if (emp.roleId) {
+            try {
+              const roleData = await getJobRoleById(emp.roleId);
+              if (roleData) {
+                jobRoleName = roleData.name;
+              }
+            } catch (error) {
+              console.error("Error fetching job role:", error);
+            }
+          }
+          
+          return {
+            ...emp,
+            riskScore,
+            riskStatus,
+            lastEvaluation,
+            departmentName,
+            jobRoleName
+          };
+        }));
+        
+        setEmployees(employeesWithRisk);
+        
+        // Calculate counters
+        const critical = employeesWithRisk.filter(emp => emp.riskStatus === "Crítico").length;
+        const attention = employeesWithRisk.filter(emp => emp.riskStatus === "Atenção").length;
+        const lowRisk = employeesWithRisk.filter(emp => emp.riskStatus === "Baixo Risco").length;
+        
+        setCounters({
+          critical,
+          attention,
+          lowRisk
+        });
+      } catch (error) {
+        console.error("Error loading diagnostic data:", error);
+      } finally {
+        setLoading(false);
       }
-      
-      // Gerar uma data aleatória para a última avaliação
-      const today = new Date();
-      const randomDaysAgo = Math.floor(Math.random() * 90) + 1; // 1-90 dias atrás
-      const lastEvalDate = new Date(today);
-      lastEvalDate.setDate(today.getDate() - randomDaysAgo);
-      const lastEvaluation = lastEvalDate.toLocaleDateString('pt-BR');
-      
-      return {
-        ...emp,
-        riskScore,
-        riskStatus,
-        lastEvaluation
-      };
-    });
+    };
     
-    setEmployees(employeesWithRisk);
-    
-    // Calcular contadores
-    const critical = employeesWithRisk.filter(emp => emp.riskStatus === "Crítico").length;
-    const attention = employeesWithRisk.filter(emp => emp.riskStatus === "Atenção").length;
-    const lowRisk = employeesWithRisk.filter(emp => emp.riskStatus === "Baixo Risco").length;
-    
-    setCounters({
-      critical,
-      attention,
-      lowRisk
-    });
+    loadData();
   }, [companyId, departmentId]);
 
   const getBadgeVariant = (status: string) => {
@@ -99,13 +141,17 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
       case "Crítico":
         return "destructive";
       case "Atenção":
-        return "warning";  // Now we can use "warning" since we added it to the Badge variants
+        return "warning";
       case "Baixo Risco":
-        return "success";  // Now we can use "success" since we added it to the Badge variants
+        return "success";
       default:
         return "secondary";
     }
   };
+
+  if (loading) {
+    return <div className="text-center p-8">Carregando dados...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -159,17 +205,18 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {employees.map((employee) => {
-                // Obter o nome do departamento
-                const department = getDepartmentById(employee.companyId, employee.departmentId);
-                // Obter o cargo
-                const jobRole = getJobRoleById(employee.roleId);
-                
-                return (
+              {employees.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    Nenhum empregado encontrado para os filtros selecionados.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                employees.map((employee) => (
                   <TableRow key={employee.id}>
                     <TableCell className="font-medium">{employee.name}</TableCell>
-                    <TableCell>{department?.name || "Não definido"}</TableCell>
-                    <TableCell>{jobRole?.name || "Não definido"}</TableCell>
+                    <TableCell>{employee.departmentName}</TableCell>
+                    <TableCell>{employee.jobRoleName}</TableCell>
                     <TableCell>{employee.riskScore}%</TableCell>
                     <TableCell>
                       <Badge variant={getBadgeVariant(employee.riskStatus)}>
@@ -184,15 +231,7 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
                       </Button>
                     </TableCell>
                   </TableRow>
-                );
-              })}
-              
-              {employees.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    Nenhum empregado encontrado para os filtros selecionados.
-                  </TableCell>
-                </TableRow>
+                ))
               )}
             </TableBody>
           </Table>

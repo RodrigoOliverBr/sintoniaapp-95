@@ -50,20 +50,17 @@ const FormularioPage: React.FC = () => {
     analyistNotes: ""
   });
 
-  // Load companies and job roles on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
         
-        // Fetch companies and job roles
         const loadedCompanies = await getCompanies();
         setCompanies(loadedCompanies || []);
         
         const loadedJobRoles = await getJobRoles();
         setJobRoles(loadedJobRoles || []);
 
-        // Load employee from URL param if present
         if (employeeIdFromUrl) {
           const allEmployees = await getEmployees();
           const employee = allEmployees?.find(e => e.id === employeeIdFromUrl);
@@ -74,7 +71,6 @@ const FormularioPage: React.FC = () => {
             setSelectedEmployee(employee);
             setIsEditingExistingResponses(true);
             
-            // Load existing form responses
             const existingResult = getFormResultByEmployeeId(employeeIdFromUrl);
             if (existingResult) {
               setFormAnswers(existingResult.answers);
@@ -87,7 +83,6 @@ const FormularioPage: React.FC = () => {
                 analyistNotes: existingResult.analyistNotes
               });
               setShowForm(true);
-              // If form is complete, show results directly
               if (existingResult.isComplete) {
                 setShowResults(true);
               }
@@ -115,7 +110,6 @@ const FormularioPage: React.FC = () => {
     loadData();
   }, [employeeIdFromUrl, toast]);
 
-  // Load employees when selected company changes
   useEffect(() => {
     const loadEmployees = async () => {
       if (selectedCompanyId) {
@@ -123,7 +117,6 @@ const FormularioPage: React.FC = () => {
           const employeesForCompany = await getEmployeesByCompany(selectedCompanyId);
           setEmployees(employeesForCompany || []);
           
-          // Only reset selected employee when company changes and we're not in edit mode
           if (!isEditingExistingResponses) {
             setSelectedEmployeeId("");
             setSelectedEmployee(null);
@@ -138,7 +131,6 @@ const FormularioPage: React.FC = () => {
     loadEmployees();
   }, [selectedCompanyId, isEditingExistingResponses]);
 
-  // Update selected employee object when ID changes
   useEffect(() => {
     const updateSelectedEmployee = async () => {
       if (selectedEmployeeId && employees.length > 0) {
@@ -146,14 +138,12 @@ const FormularioPage: React.FC = () => {
         setSelectedEmployee(employee || null);
         setShowForm(!!employee);
         
-        // Only reset form state when employee changes and we're not in edit mode
         if (!isEditingExistingResponses) {
           setFormAnswers({});
           setCurrentStep(1);
           setShowResults(false);
         }
         
-        // When editing existing, only load data if it's the initial load
         if (isEditingExistingResponses) {
           setIsEditingExistingResponses(false);
         }
@@ -163,11 +153,9 @@ const FormularioPage: React.FC = () => {
     updateSelectedEmployee();
   }, [selectedEmployeeId, employees, isEditingExistingResponses]);
 
-  // Calculate results whenever answers change
   useEffect(() => {
     calculateResults();
     
-    // Save form progress as answers change
     if (selectedEmployeeId && Object.keys(formAnswers).length > 0) {
       saveFormResult();
     }
@@ -180,7 +168,6 @@ const FormularioPage: React.FC = () => {
   const handleEmployeeChange = (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
     
-    // If employee has existing responses, load them
     const existingResult = getFormResultByEmployeeId(employeeId);
     if (existingResult) {
       setFormAnswers(existingResult.answers);
@@ -192,11 +179,9 @@ const FormularioPage: React.FC = () => {
         yesPerSeverity: existingResult.yesPerSeverity,
         analyistNotes: existingResult.analyistNotes
       });
-      // If form is complete, don't show results yet, let user navigate through the form
       setShowResults(false);
       setCurrentStep(1);
     } else {
-      // Reset form for new employee
       setFormAnswers({});
       setFormResult({
         answers: {},
@@ -218,7 +203,6 @@ const FormularioPage: React.FC = () => {
   };
 
   const handleEmployeeAdded = async () => {
-    // Reload employees for the selected company
     if (selectedCompanyId) {
       const employeesForCompany = await getEmployeesByCompany(selectedCompanyId);
       setEmployees(employeesForCompany || []);
@@ -264,7 +248,6 @@ const FormularioPage: React.FC = () => {
       analyistNotes: notes
     }));
     
-    // Save the notes immediately when they change
     if (selectedEmployeeId) {
       saveFormResult(selectedEmployeeId, {
         ...formResult,
@@ -274,7 +257,6 @@ const FormularioPage: React.FC = () => {
   };
 
   const calculateResults = () => {
-    // Count yes/no answers
     let totalYes = 0;
     let totalNo = 0;
     const severityCounts = {
@@ -288,10 +270,8 @@ const FormularioPage: React.FC = () => {
       "EXTREMAMENTE PREJUDICIAL": 0,
     };
 
-    // Get all questions from all sections
     const allQuestions = formData.sections.flatMap(section => section.questions);
     
-    // Calculate statistics
     Object.values(formAnswers).forEach(answer => {
       const question = allQuestions.find(q => q.id === answer.questionId);
       
@@ -350,12 +330,10 @@ const FormularioPage: React.FC = () => {
     window.location.reload();
   };
 
-  // Utility function to get job role by id
   const getJobRoleById = (roleId: string) => {
     return jobRoles.find(role => role.id === roleId);
   };
 
-  // Check if current section has all required fields filled
   const isSectionComplete = () => {
     const currentSection = formData.sections[currentStep - 1];
     if (!currentSection) return true;
@@ -366,7 +344,6 @@ const FormularioPage: React.FC = () => {
     );
   };
 
-  // Progress indicator
   const progress = Math.round((currentStep / formData.sections.length) * 100);
 
   if (loading) {
@@ -410,11 +387,11 @@ const FormularioPage: React.FC = () => {
                     <SelectValue placeholder="Escolha uma empresa" />
                   </SelectTrigger>
                   <SelectContent>
-                    {companies?.map((company) => (
+                    {companies && companies.length > 0 ? companies.map((company) => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
                       </SelectItem>
-                    ))}
+                    )) : <SelectItem value="none" disabled>Nenhuma empresa encontrada</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -437,7 +414,7 @@ const FormularioPage: React.FC = () => {
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees?.map((employee) => (
+                        {employees.map((employee) => (
                           <SelectItem key={employee.id} value={employee.id}>
                             {employee.name}
                           </SelectItem>

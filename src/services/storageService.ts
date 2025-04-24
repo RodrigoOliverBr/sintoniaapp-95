@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { Company, Department, JobRole, Employee, FormResult, FormStatus } from '@/types/cadastro';
@@ -50,7 +51,7 @@ export const getCompanies = async (clienteId?: string) => {
     return companies as Company[];
   } catch (error) {
     console.error('Erro ao buscar empresas:', error);
-    return [];
+    return []; // Return empty array instead of a rejected promise
   }
 };
 
@@ -62,6 +63,7 @@ export const deleteCompany = async (companyId: string) => {
       .eq('id', companyId);
 
     if (error) throw error;
+    return true;
   } catch (error) {
     console.error('Erro ao excluir empresa:', error);
     throw error;
@@ -77,7 +79,12 @@ export const getCompanyById = async (companyId: string) => {
       .single();
 
     if (error) throw error;
-    return data as Company;
+    return {
+      id: data.id,
+      name: data.nome,
+      cpf_cnpj: data.cpf_cnpj,
+      departments: [],
+    } as Company;
   } catch (error) {
     console.error('Erro ao buscar empresa:', error);
     return null;
@@ -129,7 +136,7 @@ export const getDepartmentsByCompany = async (companyId: string) => {
     return departments as Department[];
   } catch (error) {
     console.error('Erro ao buscar setores:', error);
-    return [];
+    return []; // Return empty array instead of a rejected promise
   }
 };
 
@@ -163,6 +170,7 @@ export const deleteDepartment = async (companyId: string, departmentId: string) 
       .eq('empresa_id', companyId);
 
     if (error) throw error;
+    return true;
   } catch (error) {
     console.error('Erro ao excluir setor:', error);
     throw error;
@@ -214,7 +222,7 @@ export const getJobRolesByCompany = async (companyId: string) => {
     return roles as JobRole[];
   } catch (error) {
     console.error('Erro ao buscar cargos:', error);
-    return [];
+    return []; // Return empty array instead of a rejected promise
   }
 };
 
@@ -235,7 +243,7 @@ export const getJobRoles = async () => {
     return roles as JobRole[];
   } catch (error) {
     console.error('Erro ao buscar cargos:', error);
-    return [];
+    return []; // Return empty array instead of a rejected promise
   }
 };
 
@@ -288,6 +296,7 @@ export const deleteJobRole = async (roleId: string) => {
       .eq('id', roleId);
 
     if (error) throw error;
+    return true;
   } catch (error) {
     console.error('Erro ao excluir cargo:', error);
     throw error;
@@ -377,7 +386,7 @@ export const getEmployees = async () => {
     return employees as Employee[];
   } catch (error) {
     console.error('Erro ao buscar funcionários:', error);
-    return [];
+    return []; // Return empty array instead of a rejected promise
   }
 };
 
@@ -422,7 +431,7 @@ export const getEmployeesByCompany = async (companyId: string) => {
     return employees as Employee[];
   } catch (error) {
     console.error('Erro ao buscar funcionários:', error);
-    return [];
+    return []; // Return empty array instead of a rejected promise
   }
 };
 
@@ -485,13 +494,14 @@ export const deleteEmployee = async (employeeId: string) => {
       .eq('id', employeeId);
 
     if (error) throw error;
+    return true;
   } catch (error) {
     console.error('Erro ao excluir funcionário:', error);
     throw error;
   }
 };
 
-// Form Status and Result (placeholders for now)
+// Form Status and Result
 export const getFormStatusByEmployeeId = (employeeId: string): FormStatus => {
   // TODO: Implement actual status retrieval from Supabase
   return 'not-started';
@@ -502,7 +512,8 @@ export const getFormResultByEmployeeId = (employeeId: string): FormResult | null
   return null;
 };
 
-export const saveFormResult = async () => {
+export const saveFormResult = async (employeeId?: string, result?: FormResult) => {
   // TODO: Implement form result save
+  console.log('Saving form result for employee:', employeeId, result);
   return null;
 };
