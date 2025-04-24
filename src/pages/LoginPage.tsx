@@ -17,17 +17,21 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     // Verificar se o usuário já está logado e redirecionar de acordo com o tipo
     const checkAuthStatus = async () => {
-      const { data } = await supabase.auth.getSession();
-      
-      if (data.session) {
-        const userType = localStorage.getItem("sintonia:userType");
-        console.log("Usuário já autenticado. Tipo:", userType);
+      try {
+        const { data } = await supabase.auth.getSession();
         
-        if (userType === 'admin') {
-          navigate("/admin/dashboard");
-        } else if (userType === 'client') {
-          navigate("/");
+        if (data.session) {
+          const userType = localStorage.getItem("sintonia:userType");
+          console.log("Usuário já autenticado. Tipo:", userType);
+          
+          if (userType === 'admin') {
+            navigate("/admin/dashboard");
+          } else if (userType === 'client') {
+            navigate("/");
+          }
         }
+      } catch (error) {
+        console.error("Erro ao verificar sessão:", error);
       }
     };
     

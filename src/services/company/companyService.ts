@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Company } from '@/types/cadastro';
 import { getDepartmentsByCompany } from '../department/departmentService';
@@ -15,7 +16,7 @@ export const getCompanies = async (): Promise<Company[]> => {
     name: company.nome,
     cpf_cnpj: company.cpf_cnpj,
     departments: [],
-    clienteId: company.cliente_id
+    clienteId: company.cliente_id || null // Handle possible null values
   }));
 
   // Load departments for each company
@@ -43,7 +44,7 @@ export const getCompanyById = async (companyId: string): Promise<Company | null>
     name: data.nome,
     cpf_cnpj: data.cpf_cnpj,
     departments: [],
-    clienteId: data.cliente_id
+    clienteId: data.cliente_id || null // Handle possible null values
   };
 
   // Load departments for this company
@@ -72,7 +73,7 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
     name: data.nome,
     cpf_cnpj: data.cpf_cnpj,
     departments: [],
-    clienteId: data.cliente_id
+    clienteId: data.cliente_id || null // Handle possible null values
   };
 };
 

@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,41 +7,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { 
-  Command, 
-  CommandEmpty, 
-  CommandGroup, 
-  CommandInput, 
-  CommandItem,
-  CommandList
-} from "@/components/ui/command";
-import { Check, ChevronsUpDown, Plus, FolderX } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { 
-  addEmployee, 
-  getCompanies, 
-  getDepartmentsByCompany,
-  getJobRolesByCompany
-} from "@/services/storageService";
+  getJobRolesByCompany, 
+  getDepartmentsByCompany, 
+  addEmployee 
+} from "@/services";
 import { Company, Department, JobRole } from "@/types/cadastro";
 import { useToast } from "@/hooks/use-toast";
-import JobRolesModal from "./JobRolesModal";
-import { Checkbox } from "../ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
 
 interface NewEmployeeModalProps {
   open: boolean;
@@ -184,7 +160,6 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
     }
 
     try {
-      // Primeiro cria o funcionário
       const { data: employeeData, error: employeeError } = await supabase
         .from('funcionarios')
         .insert([{
@@ -198,7 +173,6 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
 
       if (employeeError) throw employeeError;
 
-      // Então cria as associações com os departamentos
       const { error: deptError } = await supabase
         .from('employee_departments')
         .insert(

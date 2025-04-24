@@ -1,15 +1,14 @@
-
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import FilterSection from "@/components/relatorios/FilterSection";
+import { Card } from "@/components/ui/card";
 import MapaRiscoPsicossocial from "@/components/relatorios/MapaRiscoPsicossocial";
-import RankingAreasCriticas from "@/components/relatorios/RankingAreasCriticas";
 import DiagnosticoIndividual from "@/components/relatorios/DiagnosticoIndividual";
+import RankingAreasCriticas from "@/components/relatorios/RankingAreasCriticas";
 import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
-import { getCompanies } from "@/services/storageService";
+import FilterSection from "@/components/relatorios/FilterSection";
+import { getCompanies, getFormResults } from "@/services";
+import { Company } from "@/types/cadastro";
 import { Download, FileText, RefreshCcw } from "lucide-react";
 
 export default function RelatoriosPage() {

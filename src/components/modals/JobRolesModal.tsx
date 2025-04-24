@@ -1,56 +1,55 @@
 
 import React, { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Trash2 } from "lucide-react";
-import { addJobRole, getJobRolesByCompany } from "@/services/storageService";
+import { 
+  getJobRolesByCompany, 
+  addJobRole 
+} from "@/services"; // Updated import path
+import { useToast } from "@/hooks/use-toast";
 import { JobRole } from "@/types/cadastro";
+import { Trash2 } from "lucide-react";
 
 interface JobRolesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  companyId: string;
   onRolesUpdated?: () => void;
-  preselectedCompanyId?: string;
 }
 
 const JobRolesModal: React.FC<JobRolesModalProps> = ({
   open,
   onOpenChange,
+  companyId,
   onRolesUpdated,
-  preselectedCompanyId,
 }) => {
+  const [roles, setRoles] = useState<JobRole[]>([]);
   const [newRoleName, setNewRoleName] = useState("");
-  const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (open && preselectedCompanyId) {
-      loadJobRoles();
-    }
-  }, [open, preselectedCompanyId]);
-
-  const loadJobRoles = async () => {
-    if (!preselectedCompanyId) return;
-
+  const loadRoles = async () => {
+    if (!companyId) return;
+    
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const roles = await getJobRolesByCompany(preselectedCompanyId);
-      setJobRoles(roles);
+      const loadedRoles = await getJobRolesByCompany(companyId);
+      setRoles(loadedRoles);
     } catch (error) {
-      console.error("Error loading job roles:", error);
+      console.error("Erro ao carregar cargos:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar as funções",
+        description: "Não foi possível carregar os cargos",
         variant: "destructive",
       });
     } finally {
@@ -58,147 +57,110 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
     }
   };
 
-  // Já existente, mas com pequenas melhorias de tratamento de erros
-  const handleAddRole = async () => {
+  useEffect(() => {
+    if (open) {
+      loadRoles();
+    }
+  }, [open, companyId]);
+
+  const handleAddRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!newRoleName.trim()) {
       toast({
         title: "Erro",
-        description: "O nome da função não pode estar vazio",
+        description: "O nome do cargo é obrigatório",
         variant: "destructive",
       });
       return;
     }
 
-    if (!preselectedCompanyId) {
-      toast({
-        title: "Erro",
-        description: "É necessário selecionar uma empresa primeiro",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    setIsSubmitting(true);
+    
     try {
-      setIsLoading(true);
+      await addJobRole(companyId, { name: newRoleName.trim() });
       
-      // Verifica duplicidade considerando case-insensitive
-      const existingRole = jobRoles.find(role => 
-        role.name.toLowerCase().trim() === newRoleName.toLowerCase().trim() && 
-        role.companyId === preselectedCompanyId
-      );
-
-      if (existingRole) {
-        toast({
-          title: "Erro",
-          description: "Já existe uma função com este nome nesta empresa",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      await addJobRole(preselectedCompanyId, { 
-        name: newRoleName.trim(),
-        companyId: preselectedCompanyId
+      toast({
+        title: "Sucesso",
+        description: "Cargo cadastrado com sucesso!",
       });
       
       setNewRoleName("");
-      toast({
-        title: "Função adicionada",
-        description: "A função foi adicionada com sucesso",
-      });
-      
-      await loadJobRoles();
+      loadRoles();
       if (onRolesUpdated) onRolesUpdated();
     } catch (error) {
-      console.error("Erro ao adicionar job role:", error);
+      console.error("Erro ao adicionar cargo:", error);
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao adicionar função",
+        description: "Não foi possível adicionar o cargo",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
-  };
-
-  const handleDeleteRole = async (roleId: string) => {
-    // Implementação futura
-    toast({
-      title: "Funcionalidade não implementada",
-      description: "A exclusão de funções será implementada em uma atualização futura.",
-    });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Gerenciar Funções</DialogTitle>
+          <DialogTitle>Gerenciar Cargos</DialogTitle>
+          <DialogDescription>
+            Adicione ou remova cargos desta empresa
+          </DialogDescription>
         </DialogHeader>
-
-        <div className="py-4">
-          <div className="grid grid-cols-[1fr_auto] items-end gap-4 mb-6">
-            <div>
-              <Label htmlFor="new-role" className="mb-2 block">
-                Nova Função
-              </Label>
+        
+        <div className="space-y-4 my-4 overflow-auto max-h-[40vh]">
+          {isLoading ? (
+            <p className="text-center text-gray-500">Carregando...</p>
+          ) : roles.length === 0 ? (
+            <p className="text-center text-gray-500">Nenhum cargo cadastrado</p>
+          ) : (
+            <div className="space-y-2">
+              {roles.map((role) => (
+                <div
+                  key={role.id}
+                  className="flex items-center justify-between p-2 rounded border"
+                >
+                  <span>{role.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    // Esta função seria implementada se houvesse necessidade de remover cargos
+                    // onClick={() => handleDeleteRole(role.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <form onSubmit={handleAddRole}>
+          <div className="grid grid-cols-4 items-center gap-4 mb-4">
+            <Label htmlFor="roleName" className="text-right">
+              Novo Cargo
+            </Label>
+            <div className="col-span-3 flex">
               <Input
-                id="new-role"
+                id="roleName"
                 value={newRoleName}
                 onChange={(e) => setNewRoleName(e.target.value)}
-                placeholder="Nome da função"
+                placeholder="Nome do cargo"
+                className="flex-1 mr-2"
+                disabled={isSubmitting}
               />
-            </div>
-            <Button 
-              onClick={handleAddRole} 
-              disabled={isLoading || !newRoleName.trim() || !preselectedCompanyId}
-              type="button"
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Adicionar
-            </Button>
-          </div>
-
-          <div className="border rounded-md">
-            <div className="px-4 py-3 bg-muted font-medium">
-              Funções cadastradas
-            </div>
-            <div className="p-2 max-h-60 overflow-y-auto">
-              {isLoading ? (
-                <div className="flex justify-center items-center p-4 text-sm text-muted-foreground">
-                  Carregando...
-                </div>
-              ) : jobRoles.length > 0 ? (
-                <ul className="divide-y">
-                  {jobRoles.map((role) => (
-                    <li key={role.id} className="px-2 py-3 flex justify-between items-center">
-                      <span>{role.name}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteRole(role.id)}
-                        title="Excluir função"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="flex justify-center items-center p-4 text-sm text-muted-foreground">
-                  {preselectedCompanyId
-                    ? "Nenhuma função cadastrada ainda."
-                    : "Selecione uma empresa primeiro."}
-                </div>
-              )}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Salvando..." : "Adicionar"}
+              </Button>
             </div>
           </div>
-        </div>
-
+        </form>
+        
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Fechar
-          </Button>
+          <Button onClick={() => onOpenChange(false)}>Fechar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

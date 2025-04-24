@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addCompany } from "@/services/storageService";
+import { addCompany } from "@/services"; // Updated import path
 import { useToast } from "@/hooks/use-toast";
 import { getClienteIdAtivo } from "@/utils/clientContext";
 
@@ -56,7 +56,7 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      await addCompany({ name }, clienteId);
+      await addCompany({ name, clienteId });
       
       toast({
         title: "Sucesso",

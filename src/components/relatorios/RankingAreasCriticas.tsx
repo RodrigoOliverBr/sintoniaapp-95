@@ -1,146 +1,142 @@
-
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getDepartmentsByCompany } from "@/services/storageService";
-import { AlertTriangle, CheckCircle, CircleDashed } from "lucide-react";
+import { ResponsiveBar } from "@nivo/bar";
+import { getFormResults } from "@/services";
+import { formSections } from "@/data/formData";
 
-interface RankingAreasCriticasProps {
-  companyId: string;
-  departmentId: string;
-  dateRange: { from?: Date; to?: Date };
+interface RankingData {
+  area: string;
+  value: number;
 }
 
-export default function RankingAreasCriticas({
-  companyId,
-  departmentId,
-  dateRange
-}: RankingAreasCriticasProps) {
-  // Simular dados de ranking de setores
-  const departments = getDepartmentsByCompany(companyId);
-  
-  const departmentRisks = departments.map(dept => {
-    const riskPercentage = Math.floor(Math.random() * 100);
-    let riskLevel: 'high' | 'medium' | 'low';
-    
-    if (riskPercentage >= 70) {
-      riskLevel = 'high';
-    } else if (riskPercentage >= 50) {
-      riskLevel = 'medium';
-    } else {
-      riskLevel = 'low';
-    }
-    
-    return {
-      id: dept.id,
-      name: dept.name,
-      employeeCount: Math.floor(Math.random() * 20) + 5, // 5-25 empregados
-      riskPercentage,
-      riskLevel
+const RankingAreasCriticas = () => {
+  const [rankingData, setRankingData] = React.useState<RankingData[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const results = await getFormResults();
+        
+        // Process the results to calculate the ranking data
+        const areaScores: { [key: string]: number } = {};
+        formSections.forEach(section => {
+          areaScores[section.title] = 0;
+        });
+
+        results.forEach(result => {
+          formSections.forEach(section => {
+            // Assuming each question in the section contributes to the area score
+            const sectionScore = Object.keys(result)
+              .filter(key => formSections.find(s => s.title === section.title)?.questions.includes(key))
+              .reduce((sum, key) => sum + (result[key] || 0), 0); // Ensure default value if result[key] is undefined
+            
+            areaScores[section.title] += sectionScore;
+          });
+        });
+
+        // Convert areaScores to the desired ranking data format
+        const ranking: RankingData[] = Object.keys(areaScores).map(area => ({
+          area: area,
+          value: areaScores[area]
+        }));
+
+        // Sort the ranking data by value in descending order
+        ranking.sort((a, b) => b.value - a.value);
+
+        setRankingData(ranking);
+      } catch (error) {
+        console.error("Erro ao buscar resultados:", error);
+        // Handle error appropriately, e.g., display an error message
+      } finally {
+        setIsLoading(false);
+      }
     };
-  });
-  
-  // Ordenar do mais crítico ao menos crítico
-  const sortedDepartments = [...departmentRisks].sort((a, b) => 
-    b.riskPercentage - a.riskPercentage
-  );
-  
-  // Contagem por nível de risco
-  const highRiskCount = sortedDepartments.filter(d => d.riskLevel === 'high').length;
-  const mediumRiskCount = sortedDepartments.filter(d => d.riskLevel === 'medium').length;
-  const lowRiskCount = sortedDepartments.filter(d => d.riskLevel === 'low').length;
-  
+
+    fetchData();
+  }, []);
+
+  const chartData = rankingData.map(item => ({
+    area: item.area,
+    score: item.value,
+  }));
+
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-red-50 border-red-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-red-800">Áreas em Alto Risco</p>
-                <h3 className="text-2xl font-bold text-red-900">{highRiskCount}</h3>
-              </div>
-              <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-red-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-yellow-50 border-yellow-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-yellow-800">Áreas em Atenção</p>
-                <h3 className="text-2xl font-bold text-yellow-900">{mediumRiskCount}</h3>
-              </div>
-              <div className="h-12 w-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                <CircleDashed className="h-6 w-6 text-yellow-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-green-50 border-green-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-800">Áreas em Baixo Risco</p>
-                <h3 className="text-2xl font-bold text-green-900">{lowRiskCount}</h3>
-              </div>
-              <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-green-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Ranking de Áreas por Nível de Risco</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Posição</TableHead>
-                <TableHead>Setor</TableHead>
-                <TableHead>Empregados Avaliados</TableHead>
-                <TableHead>Nível de Risco</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedDepartments.map((dept, index) => (
-                <TableRow key={dept.id}>
-                  <TableCell className="font-medium">{index + 1}</TableCell>
-                  <TableCell>{dept.name}</TableCell>
-                  <TableCell>{dept.employeeCount}</TableCell>
-                  <TableCell>{dept.riskPercentage}%</TableCell>
-                  <TableCell>
-                    {dept.riskLevel === 'high' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        <AlertTriangle className="h-3 w-3 mr-1" /> Alto Risco
-                      </span>
-                    )}
-                    {dept.riskLevel === 'medium' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        <CircleDashed className="h-3 w-3 mr-1" /> Atenção
-                      </span>
-                    )}
-                    {dept.riskLevel === 'low' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        <CheckCircle className="h-3 w-3 mr-1" /> Baixo Risco
-                      </span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Ranking de Áreas Críticas</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p>Carregando...</p>
+        ) : chartData.length > 0 ? (
+          <div style={{ height: '400px' }}>
+            <ResponsiveBar
+              data={chartData}
+              keys={['score']}
+              indexBy="area"
+              margin={{ top: 50, right: 130, bottom: 50, left: 60 }}
+              padding={0.3}
+              colors={{ scheme: 'category10' }}
+              axisTop={null}
+              axisRight={null}
+              axisBottom={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: 'Área',
+                legendPosition: 'middle',
+                legendOffset: 32
+              }}
+              axisLeft={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: 'Pontuação',
+                legendPosition: 'middle',
+                legendOffset: -40
+              }}
+              labelSkipWidth={12}
+              labelSkipHeight={12}
+              labelTextColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
+              legends={[
+                {
+                  dataFrom: 'keys',
+                  anchor: 'bottom-right',
+                  direction: 'column',
+                  justify: false,
+                  translateX: 120,
+                  translateY: 0,
+                  itemsSpacing: 2,
+                  itemWidth: 100,
+                  itemHeight: 20,
+                  itemDirection: 'left-to-right',
+                  itemOpacity: 0.85,
+                  symbolSize: 20,
+                  effects: [
+                    {
+                      on: 'hover',
+                      style: {
+                        itemOpacity: 1
+                      }
+                    }
+                  ]
+                }
+              ]}
+              tooltip={({ data, indexValue, color }) => (
+                <div style={{ padding: '10px', background: 'white', border: `1px solid ${color}` }}>
+                  <strong>Área:</strong> {indexValue}<br />
+                  <strong>Pontuação:</strong> {data.score}
+                </div>
+              )}
+            />
+          </div>
+        ) : (
+          <p>Nenhum dado disponível para o ranking.</p>
+        )}
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default RankingAreasCriticas;

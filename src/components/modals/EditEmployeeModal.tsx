@@ -1,249 +1,204 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  getJobRolesByCompany, 
+  getDepartmentsByCompany, 
+  updateEmployee 
+} from "@/services";
+import { Employee, Department, JobRole } from "@/types/cadastro";
 import { useToast } from "@/hooks/use-toast";
-import { getCompanies, getJobRoles, updateEmployee } from "@/services/storageService";
-import { Company, Department, Employee, JobRole } from "@/types/cadastro";
-import { z } from "zod";
-import { Plus } from "lucide-react";
-import JobRolesModal from "./JobRolesModal";
-import { useEmployeeDepartments } from "@/hooks/useEmployeeDepartments";
-import { Checkbox } from "../ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
 
 interface EditEmployeeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  employee: Employee | null;
   onEmployeeUpdated?: () => void;
-  employee: Employee;
 }
-
-const employeeSchema = z.object({
-  name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres"),
-  cpf: z.string().min(11, "CPF deve ter 11 dígitos").max(14, "CPF deve ter no máximo 14 caracteres"),
-  roleId: z.string().min(1, "Selecione uma função"),
-  companyId: z.string().min(1, "Selecione uma empresa"),
-  departmentId: z.string().min(1, "Selecione um setor"),
-});
 
 const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   open,
   onOpenChange,
+  employee,
   onEmployeeUpdated,
-  employee
 }) => {
-  const [name, setName] = useState(employee.name);
-  const [cpf, setCpf] = useState(employee.cpf);
-  const [roleId, setRoleId] = useState(employee.roleId);
-  const [companyId, setCompanyId] = useState(employee.companyId);
-  const [departmentId, setDepartmentId] = useState(employee.departmentId);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [name, setName] = useState(employee?.name || "");
+  const [cpf, setCpf] = useState(employee?.cpf || "");
+  const [selectedRole, setSelectedRole] = useState(employee?.roleId || "");
   const [departments, setDepartments] = useState<Department[]>([]);
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isJobRolesModalOpen, setIsJobRolesModalOpen] = useState(false);
-  
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { departmentIds, setDepartmentIds, updateEmployeeDepartments } = useEmployeeDepartments(employee.id);
+  
+  const companyId = employee?.companyId || "";
 
   useEffect(() => {
-    // Ensure we're getting valid arrays or defaulting to empty arrays
-    const loadedCompanies = getCompanies() || [];
-    setCompanies(loadedCompanies);
-    
-    loadJobRoles();
-    
-    loadDepartments(companyId);
-    if (employee.id) {
-      loadEmployeeDepartments(employee.id);
+    if (employee) {
+      setName(employee.name || "");
+      setCpf(employee.cpf || "");
+      setSelectedRole(employee.roleId || "");
+      setSelectedDepartments(employee.departmentIds || []);
     }
-  }, [companyId, employee]);
+  }, [employee]);
 
-  const loadJobRoles = () => {
-    const loadedJobRoles = getJobRoles() || [];
-    setJobRoles(loadedJobRoles);
-  };
-
-  const loadDepartments = (companyId: string) => {
-    if (!companyId) {
-      setDepartments([]);
-      return;
+  useEffect(() => {
+    if (open && companyId) {
+      loadJobRoles(companyId);
+      loadDepartments(companyId);
     }
-    
-    const company = companies.find(c => c.id === companyId);
-    if (company && company.departments) {
-      setDepartments(company.departments);
-    } else {
-      setDepartments([]);
-    }
-  };
+  }, [open, companyId]);
 
-  const loadEmployeeDepartments = async (employeeId: string) => {
-    const { data } = await supabase
-      .from('employee_departments')
-      .select('department_id')
-      .eq('employee_id', employeeId);
-    
-    if (data) {
-      setDepartmentIds(data.map(d => d.department_id));
-    }
-  };
-
-  const handleCompanyChange = (value: string) => {
-    setCompanyId(value);
-    setDepartmentId("");
-  };
-
-  const validateForm = () => {
+  const loadJobRoles = async (companyId: string) => {
     try {
-      employeeSchema.parse({
-        name,
-        cpf,
-        roleId,
-        companyId,
-        departmentId
-      });
-      setErrors({});
-      return true;
+      const roles = await getJobRolesByCompany(companyId);
+      setJobRoles(roles);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        const formattedErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            formattedErrors[err.path[0].toString()] = err.message;
-          }
-        });
-        setErrors(formattedErrors);
-      }
-      return false;
-    }
-  };
-
-  const handleDepartmentToggle = (departmentId: string) => {
-    setDepartmentIds(prev => {
-      if (prev.includes(departmentId)) {
-        return prev.filter(id => id !== departmentId);
-      }
-      return [...prev, departmentId];
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    try {
-      // Atualiza o funcionário
-      const { error: employeeError } = await supabase
-        .from('funcionarios')
-        .update({
-          nome: name,
-          cpf,
-          cargo_id: roleId,
-          empresa_id: companyId,
-        })
-        .eq('id', employee.id);
-
-      if (employeeError) throw employeeError;
-
-      // Atualiza os departamentos
-      const result = await updateEmployeeDepartments(employee.id, departmentIds);
-      if (!result.success) throw result.error;
-
-      toast({
-        title: "Funcionário atualizado",
-        description: "As informações do funcionário foram atualizadas com sucesso.",
-      });
-      
-      onOpenChange(false);
-      if (onEmployeeUpdated) onEmployeeUpdated();
-    } catch (error) {
-      console.error('Erro ao atualizar funcionário:', error);
+      console.error("Erro ao carregar cargos:", error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar funcionário",
+        description: "Não foi possível carregar os cargos",
         variant: "destructive",
       });
     }
   };
 
-  // Only render dialog content when dialog is open to avoid command component issues
-  if (!open) {
-    return null;
-  }
+  const loadDepartments = async (companyId: string) => {
+    try {
+      const depts = await getDepartmentsByCompany(companyId);
+      setDepartments(depts);
+    } catch (error) {
+      console.error("Erro ao carregar setores:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os setores",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      if (!employee?.id) {
+        throw new Error("ID do funcionário não encontrado");
+      }
+      
+      const updatedEmployeeData = {
+        name: name.trim(),
+        cpf: cpf.trim(),
+        roleId: selectedRole,
+        departmentIds: selectedDepartments,
+      };
+      
+      await updateEmployee(employee.id, updatedEmployeeData);
+
+      toast({
+        title: "Sucesso",
+        description: "Funcionário atualizado com sucesso!",
+      });
+
+      onOpenChange(false);
+      if (onEmployeeUpdated) onEmployeeUpdated();
+    } catch (error: any) {
+      console.error("Erro ao atualizar funcionário:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível atualizar o funcionário",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const toggleDepartment = (departmentId: string) => {
+    setSelectedDepartments((prev) =>
+      prev.includes(departmentId)
+        ? prev.filter((id) => id !== departmentId)
+        : [...prev, departmentId]
+    );
+  };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Editar Funcionário</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Nome</Label>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[525px]">
+        <DialogHeader>
+          <DialogTitle>Editar Funcionário</DialogTitle>
+          <DialogDescription>
+            Altere os dados do funcionário para atualizar o cadastro
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Nome
+              </Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nome completo"
+                className="col-span-3"
+                disabled={isSubmitting}
               />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
             </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="cpf">CPF</Label>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cpf" className="text-right">
+                CPF
+              </Label>
               <Input
                 id="cpf"
                 value={cpf}
                 onChange={(e) => setCpf(e.target.value)}
-                placeholder="000.000.000-00"
+                className="col-span-3"
+                disabled={isSubmitting}
               />
-              {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
             </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="company">Empresa</Label>
-              <Select value={companyId} onValueChange={handleCompanyChange}>
-                <SelectTrigger id="company">
-                  <SelectValue placeholder="Selecione uma empresa" />
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="role" className="text-right">
+                Cargo
+              </Label>
+              <Select onValueChange={setSelectedRole}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecione o cargo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
+                  {jobRoles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.companyId && <p className="text-sm text-destructive">{errors.companyId}</p>}
             </div>
-            
-            <div className="grid gap-2">
-              <Label>Setores</Label>
-              <div className="space-y-2">
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right mt-1">Setores</Label>
+              <div className="col-span-3 space-y-1">
                 {departments.map((department) => (
                   <div key={department.id} className="flex items-center space-x-2">
                     <Checkbox
-                      id={`dept-${department.id}`}
-                      checked={departmentIds.includes(department.id)}
-                      onCheckedChange={() => handleDepartmentToggle(department.id)}
+                      id={`department-${department.id}`}
+                      checked={selectedDepartments.includes(department.id)}
+                      onCheckedChange={() => toggleDepartment(department.id)}
+                      disabled={isSubmitting}
                     />
                     <Label
-                      htmlFor={`dept-${department.id}`}
-                      className="text-sm font-normal cursor-pointer"
+                      htmlFor={`department-${department.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
                       {department.name}
                     </Label>
@@ -251,52 +206,15 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 ))}
               </div>
             </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="role">Função</Label>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Select value={roleId} onValueChange={setRoleId}>
-                    <SelectTrigger id="role">
-                      <SelectValue placeholder="Selecione uma função" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {jobRoles.map((role) => (
-                        <SelectItem key={role.id} value={role.id}>
-                          {role.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => setIsJobRolesModalOpen(true)}
-                  title="Gerenciar funções"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              {errors.roleId && <p className="text-sm text-destructive">{errors.roleId}</p>}
-            </div>
-            
-            <DialogFooter className="pt-4">
-              <Button type="submit">Salvar alterações</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {isJobRolesModalOpen && (
-        <JobRolesModal 
-          open={isJobRolesModalOpen} 
-          onOpenChange={setIsJobRolesModalOpen}
-          onRolesUpdated={loadJobRoles}
-        />
-      )}
-    </>
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Atualizando..." : "Atualizar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

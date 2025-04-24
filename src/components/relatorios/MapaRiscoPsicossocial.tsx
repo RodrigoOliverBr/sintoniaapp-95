@@ -1,28 +1,18 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  RadarChart, 
-  PolarGrid, 
-  PolarAngleAxis, 
-  PolarRadiusAxis, 
-  Radar, 
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-  BarChart as RechartBarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Cell,
-  ReferenceLine,
-  Text
-} from "recharts";
-import { BarChart } from "@/components/ui/BarChart";
-import { getFormResults, getEmployeesByCompany, getDepartmentsByCompany } from "@/services/storageService";
-import { formData } from "@/data/formData";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
+import React, { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import BarChart from "@/components/ui/BarChart";
+import { getDepartmentsByCompany, getEmployeesByCompany, getFormResultByEmployeeId } from "@/services";
+import { Department } from "@/types/cadastro";
+import { formSections } from "@/data/formData";
 
 const dimensoes = [
   "Demandas Psicológicas", 
