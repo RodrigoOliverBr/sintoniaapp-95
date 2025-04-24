@@ -51,42 +51,71 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
   const [editedRoleName, setEditedRoleName] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<JobRole | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   const { toast } = useToast();
 
   useEffect(() => {
+    if (open) {
+      if (preselectedCompanyId) {
+        loadJobRolesByCompany(preselectedCompanyId);
+      } else {
+        loadAllJobRoles();
+      }
+    }
+  }, [preselectedCompanyId, open]);
+
+  const loadAllJobRoles = async () => {
+    try {
+      setIsLoading(true);
+      const roles = await getJobRoles();
+      setJobRoles(roles || []);
+      if (onRolesUpdated) {
+        onRolesUpdated();
+      }
+    } catch (error) {
+      console.error("Error loading job roles:", error);
+      setJobRoles([]);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as funções",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadJobRolesByCompany = async (companyId: string) => {
+    try {
+      setIsLoading(true);
+      const roles = await getJobRolesByCompany(companyId);
+      setJobRoles(roles || []);
+      if (onRolesUpdated) {
+        onRolesUpdated();
+      }
+    } catch (error) {
+      console.error("Error loading job roles for company:", error);
+      setJobRoles([]);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as funções para esta empresa",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadJobRoles = async () => {
     if (preselectedCompanyId) {
-      loadJobRolesByCompany(preselectedCompanyId);
+      await loadJobRolesByCompany(preselectedCompanyId);
     } else {
-      loadAllJobRoles();
-    }
-  }, [preselectedCompanyId]);
-
-  const loadAllJobRoles = () => {
-    const roles = getJobRoles() || [];
-    setJobRoles(roles);
-    if (onRolesUpdated) {
-      onRolesUpdated();
+      await loadAllJobRoles();
     }
   };
 
-  const loadJobRolesByCompany = (companyId: string) => {
-    const roles = getJobRolesByCompany(companyId) || [];
-    setJobRoles(roles);
-    if (onRolesUpdated) {
-      onRolesUpdated();
-    }
-  };
-
-  const loadJobRoles = () => {
-    if (preselectedCompanyId) {
-      loadJobRolesByCompany(preselectedCompanyId);
-    } else {
-      loadAllJobRoles();
-    }
-  };
-
-  const handleAddRole = () => {
+  const handleAddRole = async () => {
     if (!newRoleName.trim()) {
       toast({
         title: "Erro",
@@ -119,7 +148,8 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
     }
 
     try {
-      addJobRole({ 
+      setIsLoading(true);
+      await addJobRole(preselectedCompanyId, { 
         name: newRoleName.trim(),
         companyId: preselectedCompanyId
       });
@@ -129,15 +159,24 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
         title: "Função adicionada",
         description: "A função foi adicionada com sucesso",
       });
-      loadJobRoles();
+      await loadJobRoles();
     } catch (error) {
+      console.error("Error adding job role:", error);
       if (error instanceof Error) {
         toast({
           title: "Erro",
           description: error.message,
           variant: "destructive",
         });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Ocorreu um erro ao adicionar a função",
+          variant: "destructive",
+        });
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -151,7 +190,7 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
     setEditedRoleName("");
   };
 
-  const saveEditing = () => {
+  const saveEditing = async () => {
     if (!editingRole) return;
     
     if (!editedRoleName.trim()) {
@@ -177,20 +216,32 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
       return;
     }
 
-    updateJobRole({
-      id: editingRole.id,
-      name: editedRoleName.trim(),
-      companyId: editingRole.companyId
-    });
-    
-    toast({
-      title: "Função atualizada",
-      description: "A função foi atualizada com sucesso",
-    });
-    
-    setEditingRole(null);
-    setEditedRoleName("");
-    loadJobRoles();
+    try {
+      setIsLoading(true);
+      await updateJobRole(editingRole.id, {
+        id: editingRole.id,
+        name: editedRoleName.trim(),
+        companyId: editingRole.companyId
+      });
+      
+      toast({
+        title: "Função atualizada",
+        description: "A função foi atualizada com sucesso",
+      });
+      
+      setEditingRole(null);
+      setEditedRoleName("");
+      await loadJobRoles();
+    } catch (error) {
+      console.error("Error updating job role:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao atualizar a função",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const confirmDelete = (role: JobRole) => {
@@ -198,15 +249,27 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
     setIsDeleteDialogOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (roleToDelete) {
-      deleteJobRole(roleToDelete.id);
-      toast({
-        title: "Função excluída",
-        description: "A função foi excluída com sucesso",
-      });
-      setIsDeleteDialogOpen(false);
-      loadJobRoles();
+      try {
+        setIsLoading(true);
+        await deleteJobRole(roleToDelete.id);
+        toast({
+          title: "Função excluída",
+          description: "A função foi excluída com sucesso",
+        });
+        setIsDeleteDialogOpen(false);
+        await loadJobRoles();
+      } catch (error) {
+        console.error("Error deleting job role:", error);
+        toast({
+          title: "Erro",
+          description: "Ocorreu um erro ao excluir a função",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -229,10 +292,14 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
               value={newRoleName}
               onChange={(e) => setNewRoleName(e.target.value)}
               className="flex-1"
-              disabled={!preselectedCompanyId}
+              disabled={!preselectedCompanyId || isLoading}
             />
-            <Button onClick={handleAddRole} disabled={!preselectedCompanyId}>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={handleAddRole} 
+              disabled={!preselectedCompanyId || isLoading}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
               Adicionar
             </Button>
           </div>
@@ -252,7 +319,13 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {jobRoles.length > 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center py-4">
+                      Carregando...
+                    </TableCell>
+                  </TableRow>
+                ) : jobRoles.length > 0 ? (
                   jobRoles.map((role) => (
                     <TableRow key={role.id}>
                       <TableCell>
@@ -261,6 +334,7 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
                             value={editedRoleName}
                             onChange={(e) => setEditedRoleName(e.target.value)}
                             autoFocus
+                            disabled={isLoading}
                           />
                         ) : (
                           role.name
@@ -269,16 +343,31 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
                       <TableCell className="text-right">
                         {editingRole?.id === role.id ? (
                           <div className="flex justify-end space-x-2">
-                            <Button variant="ghost" size="icon" onClick={saveEditing}>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={saveEditing}
+                              disabled={isLoading}
+                            >
                               <Check className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={cancelEditing}>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={cancelEditing}
+                              disabled={isLoading}
+                            >
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
                         ) : (
                           <div className="flex justify-end space-x-2">
-                            <Button variant="ghost" size="icon" onClick={() => startEditing(role)}>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => startEditing(role)}
+                              disabled={isLoading}
+                            >
                               <Pencil className="h-4 w-4" />
                             </Button>
                             <Button 
@@ -286,6 +375,7 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
                               size="icon" 
                               className="text-destructive hover:text-destructive" 
                               onClick={() => confirmDelete(role)}
+                              disabled={isLoading}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
