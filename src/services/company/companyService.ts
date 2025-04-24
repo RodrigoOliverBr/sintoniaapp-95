@@ -66,11 +66,19 @@ export const getCompanyById = async (companyId: string): Promise<Company | null>
 };
 
 export const addCompany = async (companyData: Partial<Company>): Promise<Company> => {
-  const dbData = {
+  // Remove perfil_id/clienteId from insertion if it's not provided
+  // to prevent foreign key constraint error
+  const dbData: any = {
     nome: companyData.name,
     cpf_cnpj: companyData.cpf_cnpj,
-    perfil_id: companyData.clienteId // Using clienteId as perfil_id
   };
+  
+  // Only include perfil_id if clienteId is provided and not null/undefined
+  if (companyData.clienteId) {
+    dbData.perfil_id = companyData.clienteId;
+  }
+
+  console.log("Inserindo empresa com dados:", dbData);
 
   const { data, error } = await supabase
     .from('empresas')
@@ -78,7 +86,10 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Erro ao inserir empresa:", error);
+    throw error;
+  }
   
   return {
     id: data.id,

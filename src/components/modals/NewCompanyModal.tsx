@@ -42,21 +42,19 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       return;
     }
     
+    // Try to get the active client ID, but don't require it
     const clienteId = getClienteIdAtivo();
-    
-    if (!clienteId) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível identificar o cliente atual",
-        variant: "destructive",
-      });
-      return;
-    }
 
     setIsSubmitting(true);
     
     try {
-      await addCompany({ name, clienteId });
+      // Only pass clienteId if it's available
+      const companyData: Partial<{name: string, clienteId?: string}> = { name };
+      if (clienteId) {
+        companyData.clienteId = clienteId;
+      }
+      
+      await addCompany(companyData);
       
       toast({
         title: "Sucesso",
