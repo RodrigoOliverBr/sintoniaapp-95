@@ -43,6 +43,8 @@ const EmployeesPage: React.FC = () => {
   };
 
   const getStatusComponent = (employeeId: string) => {
+    if (!employeeId) return null;
+    
     const status = getFormStatusByEmployeeId(employeeId);
 
     switch (status) {
@@ -80,12 +82,14 @@ const EmployeesPage: React.FC = () => {
         </div>
         <Card>
           <EmployeeList
-            employees={employees}
+            employees={Array.isArray(employees) ? employees : []}
             isLoading={isLoading}
-            roleNames={roleNames}
+            roleNames={roleNames || {}}
             onEdit={(employee) => {
-              setSelectedEmployee(employee);
-              setOpenEditModal(true);
+              if (employee) {
+                setSelectedEmployee(employee);
+                setOpenEditModal(true);
+              }
             }}
             onDelete={handleDeleteEmployee}
             getStatusComponent={getStatusComponent}

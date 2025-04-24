@@ -47,24 +47,30 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
             <CommandInput placeholder="Buscar empresa..." />
             <CommandEmpty>Nenhuma empresa encontrada.</CommandEmpty>
             <CommandGroup>
-              {safeCompanies.map((company) => (
-                <CommandItem
-                  key={company.id}
-                  value={company.name}
-                  onSelect={() => {
-                    onCompanyChange(company.id);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedCompanyId === company.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {company.name}
-                </CommandItem>
-              ))}
+              {safeCompanies.length > 0 ? (
+                safeCompanies.map((company) => (
+                  <CommandItem
+                    key={company.id}
+                    value={company.name || ""}
+                    onSelect={() => {
+                      onCompanyChange(company.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedCompanyId === company.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {company.name}
+                  </CommandItem>
+                ))
+              ) : (
+                <div className="py-2 px-2 text-sm text-muted-foreground">
+                  Nenhuma empresa disponível
+                </div>
+              )}
             </CommandGroup>
           </Command>
         </PopoverContent>

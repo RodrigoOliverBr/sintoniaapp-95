@@ -41,15 +41,19 @@ export const useEmployees = () => {
   };
 
   const loadEmployees = useCallback(async (companyId: string) => {
+    if (!companyId) return;
+    
     setIsLoading(true);
     try {
       const employeesData = await getEmployeesByCompany(companyId);
       // Ensure we always set an array, even if the API returns null/undefined
       setEmployees(Array.isArray(employeesData) ? employeesData : []);
       
-      const roleIds = employeesData
-        ?.filter(emp => emp.roleId)
-        .map(emp => emp.roleId as string) || [];
+      const roleIds = Array.isArray(employeesData) 
+        ? employeesData
+            .filter(emp => emp && emp.roleId)
+            .map(emp => emp.roleId as string)
+        : [];
       
       const uniqueRoleIds = [...new Set(roleIds)];
       const newRoleNames: JobRoleMap = {};
@@ -82,6 +86,8 @@ export const useEmployees = () => {
   }, [toast]);
 
   const handleDeleteEmployee = async (employeeId: string) => {
+    if (!employeeId) return;
+    
     try {
       await deleteEmployee(employeeId);
       toast({
