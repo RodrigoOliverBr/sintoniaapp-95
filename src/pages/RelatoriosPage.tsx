@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +9,7 @@ import DiagnosticoIndividual from "@/components/relatorios/DiagnosticoIndividual
 import RankingAreasCriticas from "@/components/relatorios/RankingAreasCriticas";
 import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import FilterSection from "@/components/relatorios/FilterSection";
-import { getCompanies, getFormResults } from "@/services/form/formService";
+import { getCompanies } from "@/services";
 import { Company } from "@/types/cadastro";
 import { Download, FileText, RefreshCcw } from "lucide-react";
 

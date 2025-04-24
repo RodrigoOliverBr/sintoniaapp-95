@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer } from '@/types/form';
-import { Database } from '@/integrations/supabase/types';
+import { Company } from '@/types/cadastro';
 
 export async function getFormQuestions(formId: string): Promise<Question[]> {
   const { data: questions, error } = await supabase
@@ -28,7 +28,7 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
     secao: q.secao,
     ordem: q.ordem,
     formulario_id: q.formulario_id,
-    opcoes: q.opcoes,
+    opcoes: q.opcoes ? Array.isArray(q.opcoes) ? q.opcoes : [] : [],
     observacao_obrigatoria: q.observacao_obrigatoria,
     risco: q.risco
   }));
@@ -153,6 +153,46 @@ export async function getMitigationsByRiskId(riskId: string): Promise<Mitigation
   }
 
   return mitigacoes;
+}
+
+// Add the missing function to get companies
+export async function getCompanies(): Promise<Company[]> {
+  const { data: companies, error } = await supabase
+    .from('empresas')
+    .select(`
+      *,
+      departments:setores (*)
+    `)
+    .order('nome');
+
+  if (error) {
+    console.error('Error fetching companies:', error);
+    throw error;
+  }
+
+  return companies.map(company => ({
+    id: company.id,
+    name: company.nome,
+    cpfCnpj: company.cpf_cnpj,
+    telefone: company.telefone,
+    email: company.email,
+    address: company.endereco,
+    type: company.tipo,
+    status: company.situacao,
+    contact: company.contato,
+    zipCode: company.cep,
+    state: company.estado,
+    city: company.cidade,
+    createdAt: company.created_at,
+    updatedAt: company.updated_at,
+    departments: company.departments ? company.departments.map((dept: any) => ({
+      id: dept.id,
+      name: dept.nome,
+      companyId: dept.empresa_id,
+      createdAt: dept.created_at,
+      updatedAt: dept.updated_at
+    })) : []
+  }));
 }
 
 // Temporary function to get form results for reports
