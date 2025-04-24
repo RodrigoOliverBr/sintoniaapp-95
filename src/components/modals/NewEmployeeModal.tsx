@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -48,6 +47,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const [departmentId, setDepartmentId] = useState("");
   
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
   const [openRoleCombobox, setOpenRoleCombobox] = useState(false);
@@ -68,6 +68,9 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
           setCompanyId(preselectedCompanyId);
           loadDepartments(preselectedCompanyId);
           loadJobRoles(preselectedCompanyId);
+          
+          const company = loadedCompanies.find(c => c.id === preselectedCompanyId);
+          setSelectedCompany(company || null);
         }
       } catch (error) {
         console.error("Error fetching companies:", error);
@@ -122,6 +125,8 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
 
   const handleCompanyChange = (value: string) => {
     setCompanyId(value);
+    const company = companies.find(c => c.id === value);
+    setSelectedCompany(company || null);
     loadDepartments(value);
     loadJobRoles(value);
   };
@@ -216,6 +221,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
     setRoleId("");
     if (!preselectedCompanyId) {
       setCompanyId("");
+      setSelectedCompany(null);
     }
     setSelectedDepartments([]);
   };
@@ -283,18 +289,27 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                   Empresa
                 </Label>
                 <div className="col-span-3">
-                  <Select value={companyId} onValueChange={handleCompanyChange} disabled={!!preselectedCompanyId || isLoading}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione uma empresa"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {companies.map((company) => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {preselectedCompanyId ? (
+                    <Input
+                      value={selectedCompany?.name || "Empresa selecionada"}
+                      readOnly
+                      disabled
+                      className="bg-muted"
+                    />
+                  ) : (
+                    <Select value={companyId} onValueChange={handleCompanyChange} disabled={isLoading}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione uma empresa"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-4 items-start gap-4">
@@ -412,7 +427,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
           open={isJobRolesModalOpen} 
           onOpenChange={setIsJobRolesModalOpen}
           onRolesUpdated={handleJobRolesUpdated}
-          preselectedCompanyId={companyId}
+          companyId={companyId}
         />
       )}
     </>

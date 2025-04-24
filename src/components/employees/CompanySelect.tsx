@@ -16,6 +16,11 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
   onCompanyChange,
   onNewEmployee,
 }) => {
+  // Find the selected company name to display in the button
+  const selectedCompany = selectedCompanyId 
+    ? companies.find(company => company.id === selectedCompanyId)
+    : null;
+
   return (
     <div className="flex space-x-2">
       <select
