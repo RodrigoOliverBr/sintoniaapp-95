@@ -25,7 +25,8 @@ export const useEmployees = () => {
     setIsLoading(true);
     try {
       const companiesData = await getCompanies();
-      setCompanies(companiesData);
+      // Ensure we always set an array, even if the API returns null/undefined
+      setCompanies(Array.isArray(companiesData) ? companiesData : []);
     } catch (error) {
       console.error("Erro ao carregar empresas:", error);
       toast({
@@ -33,6 +34,7 @@ export const useEmployees = () => {
         description: "Não foi possível carregar as empresas",
         variant: "destructive",
       });
+      setCompanies([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }
@@ -42,11 +44,12 @@ export const useEmployees = () => {
     setIsLoading(true);
     try {
       const employeesData = await getEmployeesByCompany(companyId);
-      setEmployees(employeesData);
+      // Ensure we always set an array, even if the API returns null/undefined
+      setEmployees(Array.isArray(employeesData) ? employeesData : []);
       
       const roleIds = employeesData
-        .filter(emp => emp.roleId)
-        .map(emp => emp.roleId as string);
+        ?.filter(emp => emp.roleId)
+        .map(emp => emp.roleId as string) || [];
       
       const uniqueRoleIds = [...new Set(roleIds)];
       const newRoleNames: JobRoleMap = {};
@@ -72,6 +75,7 @@ export const useEmployees = () => {
         description: "Não foi possível carregar os funcionários",
         variant: "destructive",
       });
+      setEmployees([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card } from "@/components/ui/card";
@@ -62,13 +63,16 @@ const EmployeesPage: React.FC = () => {
     }
   };
 
+  // Ensure we have a companies array to pass to CompanySelect
+  const safeCompanies = Array.isArray(companies) ? companies : [];
+
   return (
     <Layout title="Funcionários">
       <Card>
         <div className="flex items-center justify-between p-4">
           <h2 className="text-lg font-semibold">Lista de Funcionários</h2>
           <CompanySelect
-            companies={companies}
+            companies={safeCompanies}
             selectedCompanyId={selectedCompanyId}
             onCompanyChange={handleCompanyChange}
             onNewEmployee={() => setOpenNewModal(true)}

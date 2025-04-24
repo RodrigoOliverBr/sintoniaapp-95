@@ -21,11 +21,13 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
   onNewEmployee,
 }) => {
   const [open, setOpen] = useState(false);
-  const selectedCompany = companies?.find(company => company.id === selectedCompanyId);
   
   // Ensure companies is always an array to prevent "undefined is not iterable" error
   const safeCompanies = Array.isArray(companies) ? companies : [];
-
+  
+  // Safely find the selected company
+  const selectedCompany = safeCompanies.find(company => company.id === selectedCompanyId);
+  
   return (
     <div className="flex space-x-2">
       <Popover open={open} onOpenChange={setOpen}>
