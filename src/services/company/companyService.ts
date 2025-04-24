@@ -66,19 +66,21 @@ export const getCompanyById = async (companyId: string): Promise<Company | null>
 };
 
 export const addCompany = async (companyData: Partial<Company>): Promise<Company> => {
-  // Remove perfil_id/clienteId from insertion if it's not provided
-  // to prevent foreign key constraint error
-  const dbData: any = {
+  // Simplificando a estrutura de dados para inserção
+  const dbData = {
     nome: companyData.name,
-    cpf_cnpj: companyData.cpf_cnpj,
   };
-  
-  // Only include perfil_id if clienteId is provided and not null/undefined
-  if (companyData.clienteId) {
-    dbData.perfil_id = companyData.clienteId;
+
+  // Apenas adicione cpf_cnpj se estiver presente nos dados
+  if (companyData.cpf_cnpj) {
+    // @ts-ignore - Ignorando erro de tipo aqui, pois o TS não sabe a estrutura exata do objeto no DB
+    dbData.cpf_cnpj = companyData.cpf_cnpj;
   }
 
-  console.log("Inserindo empresa com dados:", dbData);
+  // IMPORTANTE: Remova completamente a referência ao perfil_id para evitar erros de chave estrangeira
+  // Agora não passamos o perfil_id de forma alguma
+
+  console.log("Inserindo empresa com dados simplificados:", dbData);
 
   const { data, error } = await supabase
     .from('empresas')

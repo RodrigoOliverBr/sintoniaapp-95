@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addCompany } from "@/services"; // Updated import path
 import { useToast } from "@/hooks/use-toast";
-import { getClienteIdAtivo } from "@/utils/clientContext";
 
 interface NewCompanyModalProps {
   open: boolean;
@@ -41,20 +40,12 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       });
       return;
     }
-    
-    // Try to get the active client ID, but don't require it
-    const clienteId = getClienteIdAtivo();
 
     setIsSubmitting(true);
     
     try {
-      // Only pass clienteId if it's available
-      const companyData: Partial<{name: string, clienteId?: string}> = { name };
-      if (clienteId) {
-        companyData.clienteId = clienteId;
-      }
-      
-      await addCompany(companyData);
+      // Simplificando ao máximo - apenas enviando o nome da empresa
+      await addCompany({ name: name.trim() });
       
       toast({
         title: "Sucesso",
