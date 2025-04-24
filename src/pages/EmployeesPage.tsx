@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card } from "@/components/ui/card";
@@ -38,8 +37,8 @@ const EmployeesPage: React.FC = () => {
     }
   }, [selectedCompanyId, loadEmployees]);
 
-  const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCompanyId(e.target.value || null);
+  const handleCompanyChange = (companyId: string) => {
+    setSelectedCompanyId(companyId);
   };
 
   const getStatusComponent = (employeeId: string) => {

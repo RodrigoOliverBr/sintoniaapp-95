@@ -227,13 +227,9 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   };
 
   const handleRoleSelect = (value: string) => {
-    const role = jobRoles.find(r => r.name.toLowerCase() === value.toLowerCase());
-    if (role) {
-      setRoleId(role.id);
-      setOpenRoleCombobox(false);
-    }
+    setRoleId(value);
   };
-  
+
   const handleJobRolesUpdated = () => {
     if (companyId) {
       loadJobRoles(companyId);
@@ -349,58 +345,24 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                 </Label>
                 <div className="col-span-3 flex gap-2">
                   <div className="flex-1">
-                    <Popover open={openRoleCombobox} onOpenChange={setOpenRoleCombobox}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={openRoleCombobox}
-                          className="w-full justify-between"
-                          disabled={!companyId}
-                        >
-                          {roleId && hasRoles
-                            ? jobRoles.find((role) => role.id === roleId)?.name
-                            : !companyId 
-                              ? "Selecione uma empresa primeiro"
-                              : "Selecione uma função..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[400px] p-0">
-                        {hasRoles ? (
-                          <Command>
-                            <CommandInput placeholder="Buscar função..." />
-                            <CommandList>
-                              <CommandEmpty>Nenhuma função encontrada.</CommandEmpty>
-                              <CommandGroup className="max-h-60 overflow-y-auto">
-                                {jobRoles.map((role) => (
-                                  <CommandItem
-                                    key={role.id}
-                                    value={role.name}
-                                    onSelect={handleRoleSelect}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        roleId === role.id ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    {role.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        ) : (
-                          <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                            <FolderMinus className="mr-2 h-4 w-4" />
-                            {companyId 
-                              ? "Nenhuma função cadastrada ainda para esta empresa 😟" 
-                              : "Selecione uma empresa primeiro"}
-                          </div>
-                        )}
-                      </PopoverContent>
-                    </Popover>
+                    <Select value={roleId} onValueChange={handleRoleSelect} disabled={!companyId}>
+                      <SelectTrigger>
+                        <SelectValue 
+                          placeholder={!companyId 
+                            ? "Selecione uma empresa primeiro" 
+                            : hasRoles 
+                              ? "Selecione uma função..." 
+                              : "Nenhuma função cadastrada"}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {jobRoles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <Button 
                     type="button" 
