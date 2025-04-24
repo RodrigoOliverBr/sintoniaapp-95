@@ -168,16 +168,18 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
       departmentId: selectedDepartmentIds[0],
     });
     
-    await updateEmployeeDepartments(newEmployee.id, selectedDepartmentIds);
-    
-    toast({
-      title: "Sucesso",
-      description: "Funcionário cadastrado com sucesso!",
-    });
-    
-    resetForm();
-    onOpenChange(false);
-    if (onEmployeeAdded) onEmployeeAdded();
+    if (newEmployee) {
+      await updateEmployeeDepartments(newEmployee.id, selectedDepartmentIds);
+      
+      toast({
+        title: "Sucesso",
+        description: "Funcionário cadastrado com sucesso!",
+      });
+      
+      resetForm();
+      onOpenChange(false);
+      if (onEmployeeAdded) onEmployeeAdded();
+    }
   };
 
   const toggleDepartment = (departmentId: string) => {
@@ -320,7 +322,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[400px] p-0" align="start" onMouseDownOutside={(e) => e.preventDefault()}>
+                      <PopoverContent className="w-[400px] p-0" align="start">
                         {hasRoles ? (
                           <Command>
                             <CommandInput placeholder="Buscar função..." />
@@ -331,8 +333,8 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                                   <CommandItem
                                     key={role.id}
                                     value={role.name}
-                                    onMouseDown={(e) => e.preventDefault()}
                                     onSelect={() => handleRoleClick(role.id)}
+                                    onMouseDown={(e) => e.preventDefault()}
                                   >
                                     <Check
                                       className={cn(

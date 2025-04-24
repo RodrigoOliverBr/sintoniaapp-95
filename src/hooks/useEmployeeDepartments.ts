@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface EmployeeDepartment {
@@ -25,9 +25,9 @@ export const useEmployeeDepartments = () => {
   };
 
   const updateEmployeeDepartments = async (employeeId: string, departmentIds: string[]) => {
-    // Verificar se departmentIds é um array
+    // Make sure departmentIds is an array
     if (!Array.isArray(departmentIds)) {
-      console.error('departmentIds deve ser um array');
+      console.error('departmentIds must be an array');
       return false;
     }
     
@@ -44,14 +44,14 @@ export const useEmployeeDepartments = () => {
 
     // Then insert the new departments
     if (departmentIds.length > 0) {
+      const departmentsToInsert = departmentIds.map(departmentId => ({
+        employee_id: employeeId,
+        department_id: departmentId
+      }));
+
       const { error: insertError } = await supabase
         .from('employee_departments')
-        .insert(
-          departmentIds.map(departmentId => ({
-            employee_id: employeeId,
-            department_id: departmentId
-          }))
-        );
+        .insert(departmentsToInsert);
 
       if (insertError) {
         console.error('Error inserting new departments:', insertError);

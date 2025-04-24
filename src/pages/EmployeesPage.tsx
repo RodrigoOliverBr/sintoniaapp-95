@@ -72,14 +72,14 @@ const EmployeesPage: React.FC = () => {
     
     setEmployees(loadedEmployees);
 
-    // Carregar os departamentos para cada funcionário
+    // Load departments for each employee
     const departmentsMap: Record<string, string[]> = {};
     for (const employee of loadedEmployees) {
       try {
         const departments = await getDepartmentsByEmployeeId(employee.id);
         departmentsMap[employee.id] = departments;
       } catch (error) {
-        console.error(`Erro ao carregar departamentos para ${employee.id}:`, error);
+        console.error(`Error loading departments for ${employee.id}:`, error);
         departmentsMap[employee.id] = [];
       }
     }
@@ -175,7 +175,7 @@ const EmployeesPage: React.FC = () => {
       }
     };
 
-    const config = statusConfig[status];
+    const config = statusConfig[status] || statusConfig['not-started'];
 
     return (
       <div className="flex flex-col">
