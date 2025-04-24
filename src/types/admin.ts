@@ -5,6 +5,7 @@ export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'e
 export type TipoPessoa = 'juridica' | 'fisica';
 export type StatusContrato = 'ativo' | 'cancelado' | 'em-analise' | 'sem-contrato';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
+export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
 
 export interface Fatura {
   id: string;
@@ -75,7 +76,7 @@ export interface ClienteSistema {
   dataInclusao: number;
   situacao: ClienteStatus;
   cnpj: string;
-  cpfCnpj: string;
+  cpfCnpj?: string;
   email: string;
   telefone?: string;
   responsavel?: string;
@@ -83,6 +84,10 @@ export interface ClienteSistema {
   planoId?: string;
   contratoId?: string;
   clienteId?: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
 }
 
 // Existing FormResult interface

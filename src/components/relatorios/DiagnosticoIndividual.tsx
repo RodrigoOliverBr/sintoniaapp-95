@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { formSections } from "@/data/formData";
 import SeverityBadge from "@/components/SeverityBadge";
 import { BarChart } from "@/components/ui/BarChart";
@@ -64,7 +63,7 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ companyId
   }, [selectedEmployee]);
 
   const chartData = enhancedFormSections.map(section => {
-    const sectionResult = formResult?.respostas.find((resp: any) => resp.section === section.id);
+    const sectionResult = formResult?.respostas?.find((resp: any) => resp.section === section.id);
     const severity = sectionResult ? sectionResult.severity : 0;
     return {
       name: section.title,
@@ -107,7 +106,7 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ companyId
               <>
                 <div className="mb-4">
                   {enhancedFormSections.map(section => {
-                    const sectionResult = formResult.respostas.find((resp: any) => resp.section === section.id);
+                    const sectionResult = formResult.respostas?.find((resp: any) => resp.section === section.id);
                     const severity = sectionResult ? sectionResult.severity : 0;
 
                     return (

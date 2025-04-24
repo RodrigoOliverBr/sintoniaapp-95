@@ -113,11 +113,8 @@ export default function RelatoriosPage() {
               </TabsContent>
               
               <TabsContent value="pgr">
-                <RelatorioPGR
-                  companyId={selectedCompanyId}
-                  departmentId=""
-                  dateRange={{}}
-                />
+                {/* Match what RelatorioPGR expects as props */}
+                <RelatorioPGR />
               </TabsContent>
             </Tabs>
           </div>

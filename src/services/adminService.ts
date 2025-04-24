@@ -1,5 +1,4 @@
-
-import { ClienteSistema, Plano, Contrato, Fatura, StatusFatura, CicloFaturamento, ClienteStatus } from "@/types/admin";
+import { ClienteSistema, Plano, Contrato, Fatura, StatusFatura, StatusContrato, ClienteStatus, TipoPessoa, CicloFaturamento } from "@/types/admin";
 
 // Keys de localStorage
 const CLIENTES_SISTEMA_KEY = "sintonia:clientesSistema";
@@ -18,7 +17,9 @@ const defaultAdminUser = {
 const clientesIniciais: ClienteSistema[] = [
   {
     id: "1",
+    razao_social: "eSocial Brasil",
     razaoSocial: "eSocial Brasil",
+    nome: "eSocial Brasil",
     tipo: "juridica",
     numeroEmpregados: 50,
     dataInclusao: Date.now(),
@@ -26,15 +27,14 @@ const clientesIniciais: ClienteSistema[] = [
     cnpj: "12.345.678/0001-90",
     email: "contato@esocial.com.br",
     telefone: "(11) 99999-9999",
-    endereco: "Av. Paulista, 1000",
-    cidade: "São Paulo",
-    estado: "SP",
-    cep: "01310-100",
-    responsavel: "João Silva"
+    responsavel: "João Silva",
+    contato: "João Silva"
   },
   {
     id: "2",
+    razao_social: "Tech Solutions Ltda.",
     razaoSocial: "Tech Solutions Ltda.",
+    nome: "Tech Solutions Ltda.",
     tipo: "juridica",
     numeroEmpregados: 25,
     dataInclusao: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 dias atrás
@@ -42,11 +42,8 @@ const clientesIniciais: ClienteSistema[] = [
     cnpj: "98.765.432/0001-10",
     email: "client@empresa.com",
     telefone: "(11) 88888-8888",
-    endereco: "Rua Augusta, 500",
-    cidade: "São Paulo",
-    estado: "SP",
-    cep: "01305-000",
-    responsavel: "Maria Oliveira"
+    responsavel: "Maria Oliveira",
+    contato: "Maria Oliveira"
   }
 ];
 
@@ -101,6 +98,7 @@ const contratosIniciais: Contrato[] = [
   {
     id: "1",
     numero: "CONT-2025-001",
+    clienteId: "1",
     clienteSistemaId: "1",
     planoId: "3",
     dataInicio: Date.now() - 60 * 24 * 60 * 60 * 1000, // 60 dias atrás
@@ -116,6 +114,7 @@ const contratosIniciais: Contrato[] = [
   {
     id: "2",
     numero: "CONT-2025-002",
+    clienteId: "2",
     clienteSistemaId: "2",
     planoId: "2",
     dataInicio: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 dias atrás
@@ -135,6 +134,7 @@ const faturasIniciais: Fatura[] = [
   {
     id: "1",
     numero: "FAT-2025-001",
+    clienteId: "1",
     clienteSistemaId: "1",
     contratoId: "1",
     dataEmissao: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 dias atrás
@@ -146,6 +146,7 @@ const faturasIniciais: Fatura[] = [
   {
     id: "2",
     numero: "FAT-2025-002",
+    clienteId: "1",
     clienteSistemaId: "1",
     contratoId: "1",
     dataEmissao: Date.now() - 5 * 24 * 60 * 60 * 1000, // 5 dias atrás
@@ -157,6 +158,7 @@ const faturasIniciais: Fatura[] = [
   {
     id: "3",
     numero: "FAT-2025-003",
+    clienteId: "2", 
     clienteSistemaId: "2",
     contratoId: "2",
     dataEmissao: Date.now() - 10 * 24 * 60 * 60 * 1000, // 10 dias atrás
@@ -509,10 +511,10 @@ export const gerarFaturasProgramadas = (contrato: Contrato): Fatura[] => {
   const faturas = getFaturas();
   const faturasGeradas: Fatura[] = [];
   
-  // Determinar quantas faturas devem ser geradas
-  let quantidadeFaturas = 12; // Padrão: 12 faturas para contratos sem data fim
+  // Determine how many invoices should be generated
+  let quantidadeFaturas = 12; // Default: 12 invoices for contracts without end date
   
-  // Para contratos com data fim definida, calcular quantas faturas cabem no período
+  // For contracts with a defined end date, calculate how many invoices fit in the period
   if (!getPlanoById(contrato.planoId)?.semVencimento) {
     const dataInicio = new Date(contrato.dataInicio);
     const dataFim = new Date(contrato.dataFim);
@@ -520,11 +522,11 @@ export const gerarFaturasProgramadas = (contrato: Contrato): Fatura[] => {
     switch (contrato.cicloFaturamento) {
       case 'mensal':
         quantidadeFaturas = (dataFim.getFullYear() - dataInicio.getFullYear()) * 12 + 
-                            (dataFim.getMonth() - dataInicio.getMonth());
+                          (dataFim.getMonth() - dataInicio.getMonth());
         break;
       case 'trimestral':
         quantidadeFaturas = Math.floor(((dataFim.getFullYear() - dataInicio.getFullYear()) * 12 + 
-                            (dataFim.getMonth() - dataInicio.getMonth())) / 3);
+                          (dataFim.getMonth() - dataInicio.getMonth())) / 3);
         break;
       case 'anual':
         quantidadeFaturas = dataFim.getFullYear() - dataInicio.getFullYear();
@@ -534,19 +536,20 @@ export const gerarFaturasProgramadas = (contrato: Contrato): Fatura[] => {
     quantidadeFaturas = Math.max(1, quantidadeFaturas);
   }
   
-  // Usar a data do primeiro vencimento como base
+  // Use the date of the first expiration as a base
   const dataPrimeiroVencimento = new Date(contrato.dataPrimeiroVencimento);
   
-  // Verificar faturas existentes para este contrato
+  // Check existing invoices for this contract
   const faturasExistentes = faturas.filter(f => f.contratoId === contrato.id);
   const referenciasExistentes = new Set(faturasExistentes.map(f => f.referencia));
   
-  // Gerar fatura de implantação se houver taxa
+  // Generate implementation invoice if there is a fee
   if (contrato.taxaImplantacao > 0) {
     const dataEmissaoImplantacao = new Date(dataPrimeiroVencimento);
-    dataEmissaoImplantacao.setDate(dataEmissaoImplantacao.getDate() - 15); // 15 dias antes
+    dataEmissaoImplantacao.setDate(dataEmissaoImplantacao.getDate() - 15); // 15 days before
     
     const faturaImplantacao: Omit<Fatura, "id" | "numero" | "referencia"> = {
+      clienteId: contrato.clienteId,
       clienteSistemaId: contrato.clienteSistemaId,
       contratoId: contrato.id,
       dataEmissao: dataEmissaoImplantacao.getTime(),
@@ -555,9 +558,10 @@ export const gerarFaturasProgramadas = (contrato: Contrato): Fatura[] => {
       status: 'pendente'
     };
     
-    // Verificar se já existe uma fatura de implantação
+    // Check if an implementation invoice already exists
     const implantacaoExistente = faturasExistentes.find(f => 
       f.valor === contrato.taxaImplantacao && 
+      typeof f.dataVencimento === 'number' && typeof dataPrimeiroVencimento.getTime() === 'number' &&
       f.dataVencimento === dataPrimeiroVencimento.getTime()
     );
     
@@ -567,9 +571,9 @@ export const gerarFaturasProgramadas = (contrato: Contrato): Fatura[] => {
     }
   }
 
-  // Gerar as faturas recorrentes
+  // Generate recurring invoices
   for (let i = 0; i < quantidadeFaturas; i++) {
-    // Calcular data de vencimento baseada no ciclo e incrementando os meses corretamente
+    // Calculate the due date based on the cycle and incrementing the months correctly
     const dataVencimento = new Date(dataPrimeiroVencimento);
     switch (contrato.cicloFaturamento) {
       case 'mensal':
@@ -583,23 +587,24 @@ export const gerarFaturasProgramadas = (contrato: Contrato): Fatura[] => {
         break;
     }
     
-    // Calcular data de emissão (15 dias antes do vencimento)
+    // Calculate issue date (15 days before due date)
     const dataEmissaoFatura = new Date(dataVencimento);
     dataEmissaoFatura.setDate(dataEmissaoFatura.getDate() - 15);
     
-    // Gerar referência para esta fatura
+    // Generate reference for this invoice
     const month = (dataVencimento.getMonth() + 1).toString().padStart(2, '0');
     const year = dataVencimento.getFullYear();
     const referencia = `${month}/${year}`;
     
-    // Verificar se já existe uma fatura com esta referência para este contrato
+    // Check if an invoice with this reference already exists for this contract
     if (referenciasExistentes.has(referencia)) {
       console.log(`Fatura com referência ${referencia} já existe para o contrato ${contrato.numero}, pulando.`);
       continue;
     }
     
-    // Criar a fatura
+    // Create the invoice
     const novaFatura: Omit<Fatura, "id" | "numero" | "referencia"> = {
+      clienteId: contrato.clienteId,
       clienteSistemaId: contrato.clienteSistemaId,
       contratoId: contrato.id,
       dataEmissao: dataEmissaoFatura.getTime(),
@@ -608,13 +613,13 @@ export const gerarFaturasProgramadas = (contrato: Contrato): Fatura[] => {
       status: 'pendente'
     };
     
-    // Adicionar a fatura
+    // Add the invoice
     const faturaAdicionada = addFatura(novaFatura);
     faturasGeradas.push(faturaAdicionada);
     referenciasExistentes.add(faturaAdicionada.referencia);
   }
   
-  // Atualizar o número de ciclos gerados no contrato
+  // Update the number of generated cycles in the contract
   const contratoAtualizado: Contrato = {
     ...contrato,
     ciclosGerados: quantidadeFaturas
@@ -661,12 +666,12 @@ export const getContratosParaRenovar = (diasAntecedencia: number = 30): Contrato
     
     // Se tiver proximaRenovacao, compara com o limite
     if (contrato.proximaRenovacao) {
-      return contrato.proximaRenovacao <= limiteRenovacao.getTime();
+      return typeof contrato.proximaRenovacao === 'number' && contrato.proximaRenovacao <= limiteRenovacao.getTime();
     }
     
     // Para contratos com data fim, verifica se está próximo de vencer
     if (!getPlanoById(contrato.planoId)?.semVencimento) {
-      return contrato.dataFim <= limiteRenovacao.getTime();
+      return typeof contrato.dataFim === 'number' && contrato.dataFim <= limiteRenovacao.getTime();
     }
     
     return false;
@@ -753,41 +758,4 @@ export const checkClienteCredentials = (email: string, password: string): Client
     
     // Verificação simplificada: aceita 'client123' como senha padrão
     if (password === "client123") {
-      console.log("Senha padrão aceita");
-      return cliente;
-    }
-    
-    // Verificação alternativa (mantida para compatibilidade)
-    if (cliente.cnpj) {
-      const reverseCpfCnpj = cliente.cnpj.split('').reverse().join('').replace(/[^0-9]/g, '');
-      if (password === reverseCpfCnpj) {
-        console.log("Senha baseada em CPF/CNPJ aceita");
-        return cliente;
-      }
-    }
-  }
-  
-  console.log("Autenticação de cliente falhou");
-  return null;
-};
-
-export const checkCredentials = (email: string, password: string): { isValid: boolean, userType: 'admin' | 'cliente' | null, userData?: any } => {
-  console.log("Verificando credenciais para:", email);
-  
-  // Verificar se é admin
-  if (checkAdminCredentials(email, password)) {
-    console.log("Admin autenticado com sucesso");
-    return { isValid: true, userType: 'admin' };
-  }
-  
-  // Verificar se é cliente
-  const cliente = checkClienteCredentials(email, password);
-  if (cliente) {
-    console.log("Cliente autenticado com sucesso");
-    return { isValid: true, userType: 'cliente', userData: cliente };
-  }
-  
-  // Nenhum usuário válido encontrado
-  console.log("Falha na autenticação");
-  return { isValid: false, userType: null };
-};
+      console.log("Senha padrão

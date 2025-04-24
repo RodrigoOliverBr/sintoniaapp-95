@@ -36,7 +36,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
     return plano ? plano.nome : "Plano não encontrado";
   };
   
-  const formatarData = (data: number) => {
+  const formatarData = (data: string | number) => {
     return format(new Date(data), "dd/MM/yyyy", { locale: ptBR });
   };
 
@@ -65,8 +65,8 @@ const ContractTable: React.FC<ContractTableProps> = ({
             <TableRow key={contrato.id}>
               <TableCell className="font-medium">{getClienteNome(contrato.clienteSistemaId)}</TableCell>
               <TableCell>{getPlanoNome(contrato.planoId)}</TableCell>
-              <TableCell>{formatarData(contrato.dataInicio)}</TableCell>
-              <TableCell>{formatarData(contrato.dataFim)}</TableCell>
+              <TableCell>{contrato.dataInicio ? formatarData(contrato.dataInicio) : "N/A"}</TableCell>
+              <TableCell>{contrato.dataFim ? formatarData(contrato.dataFim) : "Sem data fim"}</TableCell>
               <TableCell>
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contrato.valorMensal)}
               </TableCell>

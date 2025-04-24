@@ -50,8 +50,7 @@ export const ClienteDialogs: React.FC<ClienteDialogsProps> = ({
               cnpj: currentCliente?.cnpj || '',
               email: currentCliente?.email || '',
               telefone: currentCliente?.telefone || '',
-              responsavel: currentCliente?.responsavel || '',
-              situacao: currentCliente?.situacao || 'liberado'
+              responsavel: currentCliente?.responsavel || ''
             }}
             isLoading={isLoading}
             isEditing={true}

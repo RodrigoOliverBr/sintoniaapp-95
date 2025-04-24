@@ -54,19 +54,19 @@ export const useClienteContext = () => {
           razao_social: data.razao_social,
           razaoSocial: data.razao_social, // Alias para compatibilidade
           nome: data.razao_social, // Usando razão social como nome para compatibilidade
-          tipo: data.tipo || 'juridica',
-          numeroEmpregados: data.numero_empregados || 0,
-          dataInclusao: data.data_inclusao ? new Date(data.data_inclusao).getTime() : Date.now(),
+          tipo: "juridica", // Default value
+          numeroEmpregados: 0, // Default value
+          dataInclusao: Date.now(), // Default value
           situacao: data.situacao,
           cnpj: data.cnpj,
           cpfCnpj: data.cnpj, // Alias para compatibilidade
-          email: data.email,
+          email: data.email || "",
           telefone: data.telefone,
           responsavel: data.responsavel,
-          contato: data.contato,
+          contato: data.telefone, // Using telefone as contato
           planoId: data.plano_id,
           contratoId: data.contrato_id,
-          clienteId: data.cliente_id
+          clienteId: data.id // Using self id as clienteId
         };
         
         setClienteData(normalizedData);

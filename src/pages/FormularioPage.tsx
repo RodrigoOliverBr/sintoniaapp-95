@@ -102,36 +102,54 @@ const FormularioPage: React.FC = () => {
   };
 
   const handleAnswerChange = (questionId: number, answer: boolean | null) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: {
-        ...prev[questionId] || {},
-        questionId,
-        answer
+    setAnswers(prev => {
+      // Create a safe copy to work with
+      const result: Record<number, FormAnswer> = { ...prev };
+      
+      // If the current entry doesn't exist, create it
+      if (!result[questionId]) {
+        result[questionId] = { questionId, answer: answer === null ? false : answer, observation: '' };
+      } else {
+        // Update the existing entry
+        result[questionId] = { ...result[questionId], answer: answer === null ? false : answer };
       }
-    }));
+      
+      return result;
+    });
   };
 
   const handleObservationChange = (questionId: number, observation: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: {
-        ...prev[questionId] || {},
-        questionId,
-        observation
+    setAnswers(prev => {
+      // Create a safe copy to work with
+      const result: Record<number, FormAnswer> = { ...prev };
+      
+      // If the current entry doesn't exist, create it
+      if (!result[questionId]) {
+        result[questionId] = { questionId, answer: false, observation };
+      } else {
+        // Update the existing entry
+        result[questionId] = { ...result[questionId], observation };
       }
-    }));
+      
+      return result;
+    });
   };
 
   const handleOptionsChange = (questionId: number, selectedOptions: string[]) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: {
-        ...prev[questionId] || {},
-        questionId,
-        selectedOptions
+    setAnswers(prev => {
+      // Create a safe copy to work with
+      const result: Record<number, FormAnswer> = { ...prev };
+      
+      // If the current entry doesn't exist, create it
+      if (!result[questionId]) {
+        result[questionId] = { questionId, answer: false, selectedOptions };
+      } else {
+        // Update the existing entry
+        result[questionId] = { ...result[questionId], selectedOptions };
       }
-    }));
+      
+      return result;
+    });
   };
 
   const handleSaveForm = async () => {

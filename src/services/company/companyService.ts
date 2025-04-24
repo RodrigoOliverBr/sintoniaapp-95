@@ -20,7 +20,7 @@ export const getCompanies = async (): Promise<Company[]> => {
     name: company.nome,
     cpf_cnpj: company.cpf_cnpj,
     departments: [],
-    clienteId: company.cliente_id || null // Handle possible null values
+    clienteId: company.perfil_id || null // Using perfil_id as clienteId
   }));
 
   console.log("Empresas encontradas:", companies.length);
@@ -56,7 +56,7 @@ export const getCompanyById = async (companyId: string): Promise<Company | null>
     name: data.nome,
     cpf_cnpj: data.cpf_cnpj,
     departments: [],
-    clienteId: data.cliente_id || null // Handle possible null values
+    clienteId: data.perfil_id || null // Using perfil_id as clienteId
   };
 
   // Load departments for this company
@@ -69,7 +69,7 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
   const dbData = {
     nome: companyData.name,
     cpf_cnpj: companyData.cpf_cnpj,
-    cliente_id: companyData.clienteId
+    perfil_id: companyData.clienteId // Using clienteId as perfil_id
   };
 
   const { data, error } = await supabase
@@ -85,7 +85,7 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
     name: data.nome,
     cpf_cnpj: data.cpf_cnpj,
     departments: [],
-    clienteId: data.cliente_id || null // Handle possible null values
+    clienteId: data.perfil_id || null // Using perfil_id as clienteId
   };
 };
 
