@@ -21,7 +21,10 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
   onNewEmployee,
 }) => {
   const [open, setOpen] = useState(false);
-  const selectedCompany = companies.find(company => company.id === selectedCompanyId);
+  const selectedCompany = companies?.find(company => company.id === selectedCompanyId);
+  
+  // Ensure companies is always an array to prevent "undefined is not iterable" error
+  const safeCompanies = Array.isArray(companies) ? companies : [];
 
   return (
     <div className="flex space-x-2">
@@ -42,7 +45,7 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
             <CommandInput placeholder="Buscar empresa..." />
             <CommandEmpty>Nenhuma empresa encontrada.</CommandEmpty>
             <CommandGroup>
-              {companies.map((company) => (
+              {safeCompanies.map((company) => (
                 <CommandItem
                   key={company.id}
                   value={company.name}
