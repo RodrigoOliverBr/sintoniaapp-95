@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +42,7 @@ import {
 import { Company, Department, JobRole } from "@/types/cadastro";
 import { useToast } from "@/hooks/use-toast";
 import JobRolesModal from "./JobRolesModal";
+import { useEmployeeDepartments } from "@/hooks/useEmployeeDepartments";
 
 interface NewEmployeeModalProps {
   open: boolean;
@@ -60,7 +61,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const [cpf, setCpf] = useState("");
   const [roleId, setRoleId] = useState("");
   const [companyId, setCompanyId] = useState(preselectedCompanyId || "");
-  const [departmentId, setDepartmentId] = useState("");
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>([]);
   
   const [companies, setCompanies] = useState<Company[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -69,6 +70,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const [isJobRolesModalOpen, setIsJobRolesModalOpen] = useState(false);
   
   const { toast } = useToast();
+  const { updateEmployeeDepartments } = useEmployeeDepartments();
 
   useEffect(() => {
     const loadedCompanies = getCompanies() || [];
@@ -95,7 +97,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const loadDepartments = (companyId: string) => {
     if (!companyId) {
       setDepartments([]);
-      setDepartmentId("");
+      setSelectedDepartmentIds([]);
       return;
     }
     
@@ -105,7 +107,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
     } else {
       setDepartments([]);
     }
-    setDepartmentId("");
+    setSelectedDepartmentIds([]);
   };
 
   const handleCompanyChange = (value: string) => {
@@ -140,13 +142,13 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
     if (!preselectedCompanyId) {
       setCompanyId("");
     }
-    setDepartmentId("");
+    setSelectedDepartmentIds([]);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !cpf.trim() || !roleId || !companyId || !departmentId) {
+    if (!name.trim() || !cpf.trim() || !roleId || !companyId || selectedDepartmentIds.length === 0) {
       toast({
         title: "Erro",
         description: "Todos os campos são obrigatórios",
@@ -155,13 +157,15 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
       return;
     }
 
-    addEmployee({
+    const newEmployee = addEmployee({
       name,
       cpf,
       roleId,
       companyId,
-      departmentId
+      departmentId: selectedDepartmentIds[0],
     });
+    
+    await updateEmployeeDepartments(newEmployee.id, selectedDepartmentIds);
     
     toast({
       title: "Sucesso",
@@ -252,25 +256,26 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="department" className="text-right">
-                  Setor
+                  Setores
                 </Label>
                 <div className="col-span-3">
                   <Select 
-                    value={departmentId} 
-                    onValueChange={setDepartmentId}
+                    mode="multiple"
+                    value={selectedDepartmentIds}
+                    onValueChange={setSelectedDepartmentIds}
                     disabled={!companyId}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={
                         !companyId 
                           ? "Selecione uma empresa primeiro" 
-                          : hasDepartments
-                            ? "Selecione um setor"
+                          : departments.length > 0
+                            ? "Selecione os setores"
                             : "Nenhum setor cadastrado ainda"
                       } />
                     </SelectTrigger>
                     <SelectContent>
-                      {hasDepartments ? (
+                      {departments.length > 0 ? (
                         departments.map((department) => (
                           <SelectItem key={department.id} value={department.id}>
                             {department.name}
@@ -279,7 +284,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                       ) : (
                         <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
                           <FolderX className="mr-2 h-4 w-4" />
-                          Nenhum setor cadastrado ainda 😟
+                          Nenhum setor cadastrado ainda
                         </div>
                       )}
                     </SelectContent>
