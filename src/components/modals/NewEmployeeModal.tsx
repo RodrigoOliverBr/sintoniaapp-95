@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +44,7 @@ import { Company, Department, JobRole } from "@/types/cadastro";
 import { useToast } from "@/hooks/use-toast";
 import JobRolesModal from "./JobRolesModal";
 import { useEmployeeDepartments } from "@/hooks/useEmployeeDepartments";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface NewEmployeeModalProps {
   open: boolean;
@@ -157,6 +159,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
       return;
     }
 
+    // Usar o primeiro departamento como departmentId principal por compatibilidade
     const newEmployee = addEmployee({
       name,
       cpf,
@@ -177,12 +180,19 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
     if (onEmployeeAdded) onEmployeeAdded();
   };
 
-  const handleRoleSelect = (value: string) => {
-    const role = jobRoles.find(r => r.name.toLowerCase() === value.toLowerCase());
-    if (role) {
-      setRoleId(role.id);
-      setOpenRoleCombobox(false);
-    }
+  const toggleDepartment = (departmentId: string) => {
+    setSelectedDepartmentIds(current => {
+      if (current.includes(departmentId)) {
+        return current.filter(id => id !== departmentId);
+      } else {
+        return [...current, departmentId];
+      }
+    });
+  };
+
+  const handleRoleClick = (roleId: string) => {
+    setRoleId(roleId);
+    setOpenRoleCombobox(false);
   };
   
   const handleJobRolesUpdated = () => {
@@ -254,41 +264,37 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="department" className="text-right">
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="departments" className="text-right pt-2">
                   Setores
                 </Label>
                 <div className="col-span-3">
-                  <Select 
-                    mode="multiple"
-                    value={selectedDepartmentIds}
-                    onValueChange={setSelectedDepartmentIds}
-                    disabled={!companyId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        !companyId 
-                          ? "Selecione uma empresa primeiro" 
-                          : departments.length > 0
-                            ? "Selecione os setores"
-                            : "Nenhum setor cadastrado ainda"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.length > 0 ? (
-                        departments.map((department) => (
-                          <SelectItem key={department.id} value={department.id}>
+                  {!companyId ? (
+                    <div className="text-sm text-muted-foreground">Selecione uma empresa primeiro</div>
+                  ) : !hasDepartments ? (
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <FolderX className="mr-2 h-4 w-4" />
+                      Nenhum setor cadastrado ainda
+                    </div>
+                  ) : (
+                    <div className="space-y-2 border rounded-md p-2">
+                      {departments.map((department) => (
+                        <div key={department.id} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`dept-${department.id}`}
+                            checked={selectedDepartmentIds.includes(department.id)}
+                            onCheckedChange={() => toggleDepartment(department.id)}
+                          />
+                          <label 
+                            htmlFor={`dept-${department.id}`} 
+                            className="text-sm cursor-pointer"
+                          >
                             {department.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                          <FolderX className="mr-2 h-4 w-4" />
-                          Nenhum setor cadastrado ainda
+                          </label>
                         </div>
-                      )}
-                    </SelectContent>
-                  </Select>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -314,7 +320,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[400px] p-0">
+                      <PopoverContent className="w-[400px] p-0" align="start" onMouseDownOutside={(e) => e.preventDefault()}>
                         {hasRoles ? (
                           <Command>
                             <CommandInput placeholder="Buscar função..." />
@@ -325,7 +331,8 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                                   <CommandItem
                                     key={role.id}
                                     value={role.name}
-                                    onSelect={handleRoleSelect}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onSelect={() => handleRoleClick(role.id)}
                                   >
                                     <Check
                                       className={cn(

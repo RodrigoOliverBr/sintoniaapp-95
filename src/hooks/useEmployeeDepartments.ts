@@ -25,6 +25,12 @@ export const useEmployeeDepartments = () => {
   };
 
   const updateEmployeeDepartments = async (employeeId: string, departmentIds: string[]) => {
+    // Verificar se departmentIds é um array
+    if (!Array.isArray(departmentIds)) {
+      console.error('departmentIds deve ser um array');
+      return false;
+    }
+    
     // First remove all existing departments for this employee
     const { error: deleteError } = await supabase
       .from('employee_departments')

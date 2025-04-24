@@ -99,7 +99,15 @@ const FormularioPage: React.FC = () => {
   useEffect(() => {
     if (selectedCompanyId) {
       const employeesForCompany = getEmployeesByCompany(selectedCompanyId);
-      setEmployees(employeesForCompany);
+      // Remover possíveis duplicatas usando Set
+      const uniqueEmployeeIds = new Set();
+      const uniqueEmployees = employeesForCompany.filter(employee => {
+        const isDuplicate = uniqueEmployeeIds.has(employee.id);
+        uniqueEmployeeIds.add(employee.id);
+        return !isDuplicate;
+      });
+      setEmployees(uniqueEmployees);
+      
       // Only reset selected employee when company changes and we're not in edit mode
       if (!isEditingExistingResponses) {
         setSelectedEmployeeId("");
@@ -191,7 +199,14 @@ const FormularioPage: React.FC = () => {
     // Reload employees for the selected company
     if (selectedCompanyId) {
       const employeesForCompany = getEmployeesByCompany(selectedCompanyId);
-      setEmployees(employeesForCompany);
+      // Remover possíveis duplicatas usando Set
+      const uniqueEmployeeIds = new Set();
+      const uniqueEmployees = employeesForCompany.filter(employee => {
+        const isDuplicate = uniqueEmployeeIds.has(employee.id);
+        uniqueEmployeeIds.add(employee.id);
+        return !isDuplicate;
+      });
+      setEmployees(uniqueEmployees);
     }
   };
 

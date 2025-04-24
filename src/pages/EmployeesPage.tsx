@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -35,7 +36,6 @@ import EditEmployeeModal from "@/components/modals/EditEmployeeModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { FormStatus } from "@/types/form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { useEmployeeDepartments } from "@/hooks/useEmployeeDepartments";
@@ -64,18 +64,24 @@ const EmployeesPage: React.FC = () => {
     setCompanies(loadedCompanies || []);
     
     const allEmployees = getEmployees();
-    const loadedEmployees = allEmployees || [];
+    let loadedEmployees = allEmployees || [];
     
     if (selectedCompanyId && selectedCompanyId !== "all") {
-      setEmployees(loadedEmployees.filter(e => e.companyId === selectedCompanyId));
-    } else {
-      setEmployees(loadedEmployees);
+      loadedEmployees = loadedEmployees.filter(e => e.companyId === selectedCompanyId);
     }
+    
+    setEmployees(loadedEmployees);
 
+    // Carregar os departamentos para cada funcionário
     const departmentsMap: Record<string, string[]> = {};
-    for (const employee of employees) {
-      const departments = await getDepartmentsByEmployeeId(employee.id);
-      departmentsMap[employee.id] = departments;
+    for (const employee of loadedEmployees) {
+      try {
+        const departments = await getDepartmentsByEmployeeId(employee.id);
+        departmentsMap[employee.id] = departments;
+      } catch (error) {
+        console.error(`Erro ao carregar departamentos para ${employee.id}:`, error);
+        departmentsMap[employee.id] = [];
+      }
     }
     setEmployeeDepartments(departmentsMap);
   };
