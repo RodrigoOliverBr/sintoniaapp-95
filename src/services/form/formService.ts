@@ -107,38 +107,44 @@ export function getFormStatusByEmployeeId(employeeId: string): 'completed' | 'pe
 export async function saveFormResult(formData: FormResult): Promise<void> {
   const { employeeId, answers, total_sim, total_nao, is_complete, empresa_id } = formData;
 
-  const { data: avaliacao, error: avaliacaoError } = await supabase
-    .from('avaliacoes')
-    .insert({
-      funcionario_id: employeeId,
-      empresa_id: empresa_id,
-      total_sim,
-      total_nao,
-      is_complete
-    })
-    .select()
-    .single();
+  try {
+    const { data: avaliacao, error: avaliacaoError } = await supabase
+      .from('avaliacoes')
+      .insert({
+        funcionario_id: employeeId,
+        empresa_id: empresa_id,
+        total_sim,
+        total_nao,
+        is_complete,
+        last_updated: new Date().toISOString()
+      })
+      .select()
+      .single();
 
-  if (avaliacaoError) {
-    console.error('Error saving avaliacao:', avaliacaoError);
-    throw avaliacaoError;
-  }
+    if (avaliacaoError) {
+      console.error('Erro ao salvar avaliação:', avaliacaoError);
+      throw avaliacaoError;
+    }
 
-  const respostasToInsert = Object.entries(answers).map(([questionId, answer]) => ({
-    avaliacao_id: avaliacao.id,
-    pergunta_id: questionId,
-    resposta: answer.answer,
-    observacao: answer.observation,
-    opcoes_selecionadas: answer.selectedOptions
-  }));
+    const respostasToInsert = Object.entries(answers).map(([perguntaId, answer]) => ({
+      avaliacao_id: avaliacao.id,
+      pergunta_id: perguntaId,
+      resposta: answer.answer,
+      observacao: answer.observation || null,
+      opcoes_selecionadas: answer.selectedOptions || null
+    }));
 
-  const { error: respostasError } = await supabase
-    .from('respostas')
-    .insert(respostasToInsert);
+    const { error: respostasError } = await supabase
+      .from('respostas')
+      .insert(respostasToInsert);
 
-  if (respostasError) {
-    console.error('Error saving respostas:', respostasError);
-    throw respostasError;
+    if (respostasError) {
+      console.error('Erro ao salvar respostas:', respostasError);
+      throw respostasError;
+    }
+  } catch (error) {
+    console.error('Erro no processo de salvamento do formulário:', error);
+    throw error;
   }
 }
 
