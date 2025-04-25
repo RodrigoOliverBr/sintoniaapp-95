@@ -3,6 +3,7 @@ export interface FormAnswer {
   answer: boolean;
   observation?: string;
   selectedOptions?: string[];
+  otherText?: string;
 }
 
 export interface FormResult {
@@ -29,11 +30,20 @@ export interface Question {
   texto: string;
   risco_id: string;
   secao: string;
+  secao_descricao?: string;
   ordem: number;
   formulario_id?: string;
   opcoes?: { label: string; value: string; }[];
   observacao_obrigatoria?: boolean;
   risco?: Risk;
+  pergunta_opcoes?: QuestionOption[];
+}
+
+export interface QuestionOption {
+  id: string;
+  pergunta_id: string;
+  texto: string;
+  ordem: number;
 }
 
 export interface Risk {

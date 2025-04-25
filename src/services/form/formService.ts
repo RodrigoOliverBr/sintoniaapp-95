@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer } from '@/types/form';
-import { Company } from '@/types/cadastro';
 
 export async function getFormQuestions(formId: string): Promise<Question[]> {
   const { data: questions, error } = await supabase
@@ -10,6 +9,11 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
       risco:riscos (
         *,
         severidade:severidade (*)
+      ),
+      pergunta_opcoes (
+        id,
+        texto,
+        ordem
       )
     `);
 
@@ -23,6 +27,7 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
     texto: q.texto,
     risco_id: q.risco_id,
     secao: q.secao,
+    secao_descricao: q.secao_descricao,
     ordem: q.ordem || 0,
     formulario_id: formId,
     opcoes: Array.isArray(q.opcoes) 
@@ -37,9 +42,10 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
           }
           return { label: String(opt), value: String(opt) };
         })
-      : [],
+      : undefined,
     observacao_obrigatoria: q.observacao_obrigatoria,
-    risco: q.risco
+    risco: q.risco,
+    pergunta_opcoes: q.pergunta_opcoes
   }));
 }
 
@@ -136,11 +142,45 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
 
     const { error: respostasError } = await supabase
       .from('respostas')
-      .insert(respostasToInsert);
+      .insert(respostasToInsert)
+      .select('id');
 
     if (respostasError) {
       console.error('Erro ao salvar respostas:', respostasError);
       throw respostasError;
+    }
+
+    for (const [perguntaId, resposta] of Object.entries(answers)) {
+      if (resposta.selectedOptions && resposta.selectedOptions.length > 0) {
+        const { data: perguntaOpcoes } = await supabase
+          .from('pergunta_opcoes')
+          .select('id, texto')
+          .eq('pergunta_id', perguntaId);
+
+        if (perguntaOpcoes) {
+          const opcoesRespostas = [];
+          for (const opcaoTexto of resposta.selectedOptions) {
+            const opcao = perguntaOpcoes.find(o => o.texto === opcaoTexto);
+            if (opcao) {
+              opcoesRespostas.push({
+                resposta_id: respostasError?.id,
+                opcao_id: opcao.id,
+                texto_outro: opcaoTexto === 'Outro' ? resposta.otherText : null
+              });
+            }
+          }
+
+          if (opcoesRespostas.length > 0) {
+            const { error: opcoesError } = await supabase
+              .from('resposta_opcoes')
+              .insert(opcoesRespostas);
+
+            if (opcoesError) {
+              console.error('Erro ao salvar opções de resposta:', opcoesError);
+            }
+          }
+        }
+      }
     }
   } catch (error) {
     console.error('Erro no processo de salvamento do formulário:', error);

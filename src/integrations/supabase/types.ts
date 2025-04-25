@@ -525,6 +525,41 @@ export type Database = {
         }
         Relationships: []
       }
+      pergunta_opcoes: {
+        Row: {
+          created_at: string
+          id: string
+          ordem: number | null
+          pergunta_id: string | null
+          texto: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ordem?: number | null
+          pergunta_id?: string | null
+          texto: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ordem?: number | null
+          pergunta_id?: string | null
+          texto?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pergunta_opcoes_pergunta_id_fkey"
+            columns: ["pergunta_id"]
+            isOneToOne: false
+            referencedRelation: "perguntas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       perguntas: {
         Row: {
           created_at: string
@@ -533,6 +568,7 @@ export type Database = {
           opcoes: Json | null
           risco_id: string
           secao: string
+          secao_descricao: string | null
           texto: string
           updated_at: string
         }
@@ -543,6 +579,7 @@ export type Database = {
           opcoes?: Json | null
           risco_id: string
           secao: string
+          secao_descricao?: string | null
           texto: string
           updated_at?: string
         }
@@ -553,6 +590,7 @@ export type Database = {
           opcoes?: Json | null
           risco_id?: string
           secao?: string
+          secao_descricao?: string | null
           texto?: string
           updated_at?: string
         }
@@ -664,6 +702,48 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resposta_opcoes: {
+        Row: {
+          created_at: string
+          id: string
+          opcao_id: string | null
+          resposta_id: string | null
+          texto_outro: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          opcao_id?: string | null
+          resposta_id?: string | null
+          texto_outro?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          opcao_id?: string | null
+          resposta_id?: string | null
+          texto_outro?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resposta_opcoes_opcao_id_fkey"
+            columns: ["opcao_id"]
+            isOneToOne: false
+            referencedRelation: "pergunta_opcoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resposta_opcoes_resposta_id_fkey"
+            columns: ["resposta_id"]
+            isOneToOne: false
+            referencedRelation: "respostas"
             referencedColumns: ["id"]
           },
         ]
