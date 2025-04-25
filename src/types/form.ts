@@ -76,9 +76,12 @@ export interface FormData {
       id: number;
       text: string;
       severity: SeverityLevel;
+      risk?: string;
       options?: { label: string; value: string; }[];
       requireObservation?: boolean;
       risco?: string;
+      mitigationActions?: string[];
+      showObservation?: boolean;
     }[];
   }[];
 }

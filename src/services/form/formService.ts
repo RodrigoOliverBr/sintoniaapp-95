@@ -25,9 +25,19 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
     secao: q.secao,
     ordem: q.ordem || 0,
     formulario_id: formId,
-    opcoes: Array.isArray(q.opcoes) ? q.opcoes.map(opt => 
-      typeof opt === 'object' ? opt : { label: String(opt), value: String(opt) }
-    ) : [],
+    opcoes: Array.isArray(q.opcoes) 
+      ? q.opcoes.map(opt => {
+          if (typeof opt === 'string') {
+            return { label: opt, value: opt };
+          } else if (typeof opt === 'object' && opt !== null) {
+            return {
+              label: opt.label || opt.text || String(opt),
+              value: opt.value || opt.text || String(opt)
+            };
+          }
+          return { label: String(opt), value: String(opt) };
+        })
+      : [],
     observacao_obrigatoria: q.observacao_obrigatoria,
     risco: q.risco
   }));
@@ -60,7 +70,6 @@ export async function getFormResultByEmployeeId(employeeId: string): Promise<For
 
   if (!avaliacoes) return null;
 
-  // Transform respostas array into a Record<string, FormAnswer>
   const answers: Record<string, FormAnswer> = {};
   avaliacoes.respostas?.forEach((resposta: any) => {
     answers[resposta.pergunta_id] = {
