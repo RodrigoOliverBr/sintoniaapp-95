@@ -1,15 +1,15 @@
 
-import React from "react";
-import { Question, FormAnswer } from "@/types/form";
+import React, { useEffect, useState } from "react";
+import { Question, FormAnswer, Mitigation } from "@/types/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { CardContent } from "@/components/ui/card";
 import SeverityBadge from "./SeverityBadge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { getMitigationsByRiskId } from "@/services/form/formService";
 
 interface QuestionComponentProps {
   question: Question;
@@ -27,6 +27,21 @@ const QuestionComponent: React.FC<QuestionComponentProps> = ({
   onOptionsChange,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [mitigations, setMitigations] = useState<Mitigation[]>([]);
+
+  useEffect(() => {
+    if (question.risco_id && answer?.answer === true) {
+      const loadMitigations = async () => {
+        try {
+          const mitigationData = await getMitigationsByRiskId(question.risco_id);
+          setMitigations(mitigationData);
+        } catch (error) {
+          console.error("Error loading mitigations:", error);
+        }
+      };
+      loadMitigations();
+    }
+  }, [question.risco_id, answer?.answer]);
 
   return (
     <CardContent className="pt-6">
@@ -62,33 +77,39 @@ const QuestionComponent: React.FC<QuestionComponentProps> = ({
           </div>
         </div>
 
-        {question.opcoes && answer?.answer === true && (
+        {answer?.answer === true && mitigations.length > 0 && (
           <div className="mt-4 border-t pt-4">
-            <p className="text-sm font-medium mb-2">Selecione as situações que ocorreram:</p>
-            <div className="space-y-2">
-              {question.opcoes.map((option) => (
-                <div key={option.value} className="flex items-start space-x-2">
-                  <Checkbox
-                    id={`option-${question.id}-${option.value}`}
-                    checked={(answer?.selectedOptions || []).includes(option.value)}
-                    onCheckedChange={(checked) => {
-                      const currentOptions = answer?.selectedOptions || [];
-                      if (checked) {
-                        onOptionsChange(question.id, [...currentOptions, option.value]);
-                      } else {
-                        onOptionsChange(question.id, currentOptions.filter((opt) => opt !== option.value));
-                      }
-                    }}
-                  />
-                  <Label
-                    htmlFor={`option-${question.id}-${option.value}`}
-                    className="text-sm leading-tight"
+            <Collapsible
+              open={isOpen}
+              onOpenChange={setIsOpen}
+              className="w-full"
+            >
+              <div className="flex items-center space-x-2 py-2">
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full flex items-center justify-between"
                   >
-                    {option.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
+                    <span>Ações de mitigação</span>
+                    {isOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent className="bg-muted/50 rounded-md p-4 mt-2">
+                <ul className="space-y-2 list-disc pl-4">
+                  {mitigations.map((mitigation) => (
+                    <li key={mitigation.id} className="text-sm">
+                      {mitigation.texto}
+                    </li>
+                  ))}
+                </ul>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         )}
 
