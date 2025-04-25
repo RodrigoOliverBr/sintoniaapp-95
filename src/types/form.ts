@@ -30,7 +30,7 @@ export interface Question {
   risco_id: string;
   secao: string;
   ordem: number;
-  formulario_id: string;
+  formulario_id?: string;
   opcoes?: { label: string; value: string; }[];
   observacao_obrigatoria?: boolean;
   risco?: Risk;
@@ -78,6 +78,32 @@ export interface FormData {
       severity: SeverityLevel;
       options?: { label: string; value: string; }[];
       requireObservation?: boolean;
+      risco?: string;
     }[];
   }[];
+}
+
+// Add types for admin
+export type TipoPessoa = 'juridica' | 'fisica';
+export type StatusContrato = 'ativo' | 'cancelado' | 'em-analise' | 'sem-contrato';
+export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
+export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
+
+// Update ClienteSistema interface
+export interface ClienteSistema {
+  id: string;
+  razao_social: string;
+  nome: string;
+  tipo: TipoPessoa;
+  numeroEmpregados: number;
+  dataInclusao: number;
+  situacao: ClienteStatus;
+  cnpj: string;
+  cpfCnpj?: string;
+  email: string;
+  telefone?: string;
+  responsavel?: string;
+  contato?: string;
+  planoId?: string;
+  contratoId?: string;
 }

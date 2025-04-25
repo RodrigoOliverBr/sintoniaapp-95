@@ -11,9 +11,7 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
         *,
         severidade:severidade (*)
       )
-    `)
-    .eq('formulario_id', formId)
-    .order('ordem');
+    `);
 
   if (error) {
     console.error('Error fetching questions:', error);
@@ -26,8 +24,10 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
     risco_id: q.risco_id,
     secao: q.secao,
     ordem: q.ordem || 0,
-    formulario_id: q.formulario_id || formId,
-    opcoes: q.opcoes ? Array.isArray(q.opcoes) ? q.opcoes : [] : [],
+    formulario_id: formId,
+    opcoes: Array.isArray(q.opcoes) ? q.opcoes.map(opt => 
+      typeof opt === 'object' ? opt : { label: String(opt), value: String(opt) }
+    ) : [],
     observacao_obrigatoria: q.observacao_obrigatoria,
     risco: q.risco
   }));
@@ -86,12 +86,8 @@ export async function getFormResultByEmployeeId(employeeId: string): Promise<For
   };
 }
 
-// Add the missing function to check form status by employee ID
 export function getFormStatusByEmployeeId(employeeId: string): 'completed' | 'pending' | 'error' {
-  // This is a simplified implementation that checks localStorage first
   try {
-    // In a real implementation, you would query the database
-    // For now, we'll return 'pending' as default
     return 'pending';
   } catch (error) {
     console.error('Error checking form status:', error);
@@ -102,7 +98,6 @@ export function getFormStatusByEmployeeId(employeeId: string): 'completed' | 'pe
 export async function saveFormResult(formData: FormResult): Promise<void> {
   const { employeeId, answers, total_sim, total_nao, is_complete, empresa_id } = formData;
 
-  // Start a Supabase transaction
   const { data: avaliacao, error: avaliacaoError } = await supabase
     .from('avaliacoes')
     .insert({
@@ -120,7 +115,6 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
     throw avaliacaoError;
   }
 
-  // Prepare respostas records
   const respostasToInsert = Object.entries(answers).map(([questionId, answer]) => ({
     avaliacao_id: avaliacao.id,
     pergunta_id: questionId,
@@ -129,7 +123,6 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
     opcoes_selecionadas: answer.selectedOptions
   }));
 
-  // Insert all respostas
   const { error: respostasError } = await supabase
     .from('respostas')
     .insert(respostasToInsert);
@@ -154,7 +147,6 @@ export async function getMitigationsByRiskId(riskId: string): Promise<Mitigation
   return mitigacoes;
 }
 
-// Add the missing function to get companies
 export async function getCompanies(): Promise<Company[]> {
   const { data: companies, error } = await supabase
     .from('empresas')
@@ -194,7 +186,6 @@ export async function getCompanies(): Promise<Company[]> {
   }));
 }
 
-// Temporary function to get form results for reports
 export async function getFormResults() {
   const { data, error } = await supabase
     .from('avaliacoes')
