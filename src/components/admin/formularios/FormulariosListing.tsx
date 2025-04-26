@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { FileText, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 interface Formulario {
   id: string;
@@ -49,26 +51,59 @@ export const FormulariosListing = () => {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {formularios.map((formulario) => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Formulários Disponíveis</h2>
+        <Button onClick={() => navigate("/admin/formularios/novo")}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Formulário
+        </Button>
+      </div>
+
+      <Alert className="bg-yellow-50 border-yellow-200">
+        <AlertDescription className="text-yellow-800">
+          Os formulários padrão são baseados em metodologias científicas validadas e não podem ser alterados em sua estrutura principal.
+          Você pode duplicá-los e personalizar as cópias conforme necessário para sua empresa.
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {formularios.map((formulario) => (
+          <Card 
+            key={formulario.id}
+            className="cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => handleFormularioClick(formulario.id)}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-blue-500" />
+                {formulario.titulo}
+              </CardTitle>
+              {formulario.version && (
+                <div className="text-sm text-gray-500">
+                  Versão: {formulario.version}
+                </div>
+              )}
+            </CardHeader>
+            {formulario.descricao && (
+              <CardContent>
+                <CardDescription>{formulario.descricao}</CardDescription>
+              </CardContent>
+            )}
+          </Card>
+        ))}
+
         <Card 
-          key={formulario.id}
-          className="cursor-pointer hover:bg-gray-50 transition-colors"
-          onClick={() => handleFormularioClick(formulario.id)}
+          className="cursor-pointer hover:bg-gray-50 transition-colors border-dashed"
+          onClick={() => navigate("/admin/formularios/novo")}
         >
-          <CardHeader>
-            <CardTitle className="flex justify-between items-center">
-              <span className="text-lg">{formulario.titulo}</span>
-              <ArrowRight className="h-5 w-5 text-gray-400" />
-            </CardTitle>
+          <CardHeader className="flex items-center justify-center h-full text-center">
+            <Plus className="h-8 w-8 text-gray-400 mb-2" />
+            <CardTitle className="text-gray-600">Adicionar Novo Formulário</CardTitle>
+            <CardDescription>Criar um formulário personalizado</CardDescription>
           </CardHeader>
-          {formulario.descricao && (
-            <CardContent>
-              <p className="text-sm text-gray-600">{formulario.descricao}</p>
-            </CardContent>
-          )}
         </Card>
-      ))}
+      </div>
     </div>
   );
 };

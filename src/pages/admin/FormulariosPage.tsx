@@ -9,12 +9,9 @@ import MitigacoesTab from "@/components/admin/formularios/MitigacoesTab";
 import { FormulariosListing } from "@/components/admin/formularios/FormulariosListing";
 import { useParams } from "react-router-dom";
 
-interface FormParams {
-  formularioId?: string;
-}
-
 const FormulariosPage = () => {
-  const { formularioId } = useParams<FormParams>();
+  const params = useParams();
+  const formularioId = params.formularioId;
 
   if (!formularioId) {
     return (
