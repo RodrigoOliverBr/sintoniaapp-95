@@ -28,10 +28,10 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
   onSuccess
 }) => {
   const [formData, setFormData] = useState({
-    texto: currentPergunta?.texto || "",
-    secao: currentPergunta?.secao || "",
-    risco_id: currentPergunta?.risco_id || "",
-    observacao_obrigatoria: currentPergunta?.observacao_obrigatoria || false
+    texto: "",
+    secao: "",
+    risco_id: "",
+    observacao_obrigatoria: false
   });
   
   const [submitting, setSubmitting] = useState(false);
@@ -43,27 +43,29 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     if (open) {
       fetchSecoes();
       fetchRiscos();
+      
+      // Se estamos editando, atualize o formData com os dados da pergunta atual
+      if (isEditing && currentPergunta) {
+        setFormData({
+          texto: currentPergunta.texto || "",
+          secao: currentPergunta.secao || "",
+          risco_id: currentPergunta.risco_id || "",
+          observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
+        });
+      } else {
+        // Caso contrário, reset para valores vazios
+        setFormData({
+          texto: "",
+          secao: "",
+          risco_id: "",
+          observacao_obrigatoria: false
+        });
+      }
     }
-  }, [open, formularioId]);
+  }, [open, isEditing, currentPergunta]);
 
-  // Atualizar dados do formulário quando a pergunta atual mudar
-  useEffect(() => {
-    if (currentPergunta) {
-      setFormData({
-        texto: currentPergunta.texto || "",
-        secao: currentPergunta.secao || "",
-        risco_id: currentPergunta.risco_id || "",
-        observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
-      });
-    } else {
-      setFormData({
-        texto: "",
-        secao: secoes.length > 0 ? secoes[0].nome : "",
-        risco_id: "",
-        observacao_obrigatoria: false
-      });
-    }
-  }, [currentPergunta, secoes]);
+  // Não precisamos mais deste useEffect adicional já que estamos atualizando o formData no useEffect acima
+  // quando o diálogo é aberto e currentPergunta muda
 
   const fetchSecoes = async () => {
     try {
@@ -83,14 +85,6 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
       }));
 
       setSecoes(uniqueSections.length > 0 ? uniqueSections : []);
-      
-      // Se não tiver seção selecionada e existir seções, seleciona a primeira
-      if (!formData.secao && uniqueSections.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          secao: uniqueSections[0].nome
-        }));
-      }
     } catch (error) {
       console.error("Erro ao carregar seções:", error);
       toast.error("Erro ao carregar seções");
@@ -243,7 +237,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
                     <SelectValue placeholder="Selecione um risco" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value=" ">Nenhum</SelectItem>
                     {riscos.map((risco) => (
                       <SelectItem key={risco.id} value={risco.id}>
                         {risco.texto}
