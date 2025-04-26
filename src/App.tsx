@@ -24,7 +24,6 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, userType: 'admin' | 'cliente' | 'all' }) => {
   const currentUserType = localStorage.getItem("sintonia:userType") || "";
   
-  // Force remove dark class to ensure light mode
   useEffect(() => {
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark');
@@ -45,15 +44,13 @@ const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, use
   return children;
 };
 
-function App() {
+const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   useEffect(() => {
-    // Verificar autenticação no carregamento inicial
     const userType = localStorage.getItem("sintonia:userType");
     setIsAuthenticated(!!userType);
     
-    // Force remove dark class to ensure light mode
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark');
     document.documentElement.style.backgroundColor = "white";
@@ -68,10 +65,8 @@ function App() {
         <Toaster />
         <BrowserRouter>
           <Routes>
-            {/* Rota de Login (pública) */}
             <Route path="/login" element={<LoginPage />} />
             
-            {/* Rotas do sistema cliente */}
             <Route 
               path="/" 
               element={
@@ -129,7 +124,6 @@ function App() {
               } 
             />
             
-            {/* Rotas do sistema administrativo */}
             <Route 
               path="/admin/dashboard" 
               element={
@@ -179,7 +173,15 @@ function App() {
               } 
             />
             
-            {/* Rota inicial redireciona para o login se não autenticado */}
+            <Route 
+              path="/admin/formularios" 
+              element={
+                <ProtectedRoute userType="admin">
+                  <FormulariosPage />
+                </ProtectedRoute>
+              } 
+            />
+            
             <Route 
               path="/" 
               element={
@@ -189,13 +191,12 @@ function App() {
               } 
             />
             
-            {/* Rota de fallback */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>
     </QueryClientProvider>
   );
-}
+};
 
 export default App;
