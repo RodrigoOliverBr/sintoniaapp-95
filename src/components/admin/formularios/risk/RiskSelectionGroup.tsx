@@ -19,7 +19,7 @@ const RiskSelectionGroup: React.FC<RiskSelectionGroupProps> = ({
 }) => {
   const sortedRisks = [...risks].sort((a, b) => {
     if (a.severidade && b.severidade) {
-      return a.severidade.ordem || 0 - (b.severidade.ordem || 0);
+      return (a.severidade.ordem || 0) - (b.severidade.ordem || 0);
     }
     return 0;
   });

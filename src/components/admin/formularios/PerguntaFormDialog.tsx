@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Question, Risk, Severity } from "@/types/form";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import RiskSelectionGroup from "@/components/admin/formularios/risk/RiskSelectionGroup";
 
 interface PerguntaFormDialogProps {
   open: boolean;
@@ -93,7 +94,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     try {
       const { data, error } = await supabase
         .from('riscos')
-        .select('*, severidade(id, nivel)')
+        .select('*, severidade(id, nivel, ordem)')
         .order('texto');
         
       if (error) throw error;
