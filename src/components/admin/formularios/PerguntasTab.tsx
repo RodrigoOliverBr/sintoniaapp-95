@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
@@ -51,7 +50,11 @@ interface Risco {
   texto: string;
 }
 
-const PerguntasTab = () => {
+interface PerguntasTabProps {
+  formularioId: string;
+}
+
+const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
   const [perguntas, setPerguntas] = useState<Pergunta[]>([]);
   const [secoes, setSecoes] = useState<Secao[]>([]);
   const [riscos, setRiscos] = useState<Risco[]>([]);
@@ -81,7 +84,8 @@ const PerguntasTab = () => {
             *,
             severidade:severidade (*)
           )
-        `);
+        `)
+        .eq('formulario_id', formularioId);
 
       if (filtroSecao !== "all") {
         query = query.eq('secao', filtroSecao);

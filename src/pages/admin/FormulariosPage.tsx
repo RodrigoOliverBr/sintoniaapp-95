@@ -6,8 +6,20 @@ import SecoesTab from "@/components/admin/formularios/SecoesTab";
 import RiscosTab from "@/components/admin/formularios/RiscosTab";
 import PerguntasTab from "@/components/admin/formularios/PerguntasTab";
 import MitigacoesTab from "@/components/admin/formularios/MitigacoesTab";
+import { FormulariosListing } from "@/components/admin/formularios/FormulariosListing";
+import { useParams } from "react-router-dom";
 
 const FormulariosPage = () => {
+  const { formularioId } = useParams();
+
+  if (!formularioId) {
+    return (
+      <AdminLayout title="Gerenciamento de Formulários">
+        <FormulariosListing />
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout title="Gerenciamento de Formulários">
       <div className="space-y-6">
@@ -20,7 +32,7 @@ const FormulariosPage = () => {
           </TabsList>
           
           <TabsContent value="secoes">
-            <SecoesTab />
+            <SecoesTab formularioId={formularioId} />
           </TabsContent>
           
           <TabsContent value="riscos">
@@ -28,7 +40,7 @@ const FormulariosPage = () => {
           </TabsContent>
           
           <TabsContent value="perguntas">
-            <PerguntasTab />
+            <PerguntasTab formularioId={formularioId} />
           </TabsContent>
           
           <TabsContent value="mitigacoes">

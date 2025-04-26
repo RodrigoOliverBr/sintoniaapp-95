@@ -563,6 +563,7 @@ export type Database = {
       perguntas: {
         Row: {
           created_at: string
+          formulario_id: string
           id: string
           observacao_obrigatoria: boolean | null
           opcoes: Json | null
@@ -574,6 +575,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          formulario_id: string
           id?: string
           observacao_obrigatoria?: boolean | null
           opcoes?: Json | null
@@ -585,6 +587,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          formulario_id?: string
           id?: string
           observacao_obrigatoria?: boolean | null
           opcoes?: Json | null
@@ -595,6 +598,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "perguntas_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "formularios"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "perguntas_risco_id_fkey"
             columns: ["risco_id"]
