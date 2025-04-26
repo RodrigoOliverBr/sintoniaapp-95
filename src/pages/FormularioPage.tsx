@@ -100,17 +100,23 @@ const FormularioPage: React.FC = () => {
         const questionsData = await getFormQuestions(formId);
         setQuestions(questionsData);
         
-        const sections = questionsData.reduce((acc, question) => {
+        const sectionsMap = questionsData.reduce((acc, question) => {
           const section = acc.find(s => s.title === question.secao);
           if (section) {
             section.questions.push(question);
           } else {
-            acc.push({ title: question.secao, questions: [question] });
+            acc.push({ 
+              title: question.secao, 
+              description: question.secao_descricao,
+              ordem: question.ordem || 0,
+              questions: [question] 
+            });
           }
           return acc;
-        }, [] as {title: string, questions: Question[]}[]);
+        }, [] as {title: string, description?: string, ordem: number, questions: Question[]}[]);
         
-        setFormSections(sections);
+        const orderedSections = sectionsMap.sort((a, b) => a.ordem - b.ordem);
+        setFormSections(orderedSections);
       } catch (error) {
         console.error("Erro ao carregar perguntas:", error);
         toast({
@@ -134,7 +140,7 @@ const FormularioPage: React.FC = () => {
   };
 
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [formSections, setFormSections] = useState<{title: string, questions: Question[]}[]>([]);
+  const [formSections, setFormSections] = useState<{title: string, description?: string, ordem: number, questions: Question[]}[]>([]);
   
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
 
@@ -142,7 +148,7 @@ const FormularioPage: React.FC = () => {
     if (formSections.length > 0 && !currentSection) {
       setCurrentSection(formSections[0].title);
     }
-  }, [formSections]);
+  }, [formSections, currentSection]);
 
   const handleAnswerChange = (questionId: string, answer: boolean | null) => {
     setAnswers(prev => {

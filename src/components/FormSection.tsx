@@ -1,6 +1,6 @@
 
 import React from "react";
-import { FormSection as FormSectionType, FormAnswer, Question } from "@/types/form";
+import { FormAnswer, Question } from "@/types/form";
 import QuestionComponent from "./QuestionComponent";
 import { Card } from "@/components/ui/card";
 
@@ -22,6 +22,11 @@ const FormSection: React.FC<FormSectionProps> = ({
   onObservationChange,
   onOptionsChange,
 }) => {
+  // Ordenar as perguntas pela propriedade ordem
+  const orderedQuestions = [...section.questions].sort((a, b) => 
+    (a.ordem || 0) - (b.ordem || 0)
+  );
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -29,7 +34,7 @@ const FormSection: React.FC<FormSectionProps> = ({
       </div>
 
       <div className="space-y-4">
-        {section.questions.map((question) => (
+        {orderedQuestions.map((question) => (
           <Card key={question.id} className="overflow-hidden">
             <QuestionComponent
               question={question}

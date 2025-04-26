@@ -51,33 +51,42 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
   const fetchSecoes = async () => {
     try {
       setLoading(true);
-      // Modificado para buscar também a ordem das seções
+      // Query para buscar as seções e suas ordens
       const { data, error } = await supabase
         .from('perguntas')
         .select('secao, secao_descricao, ordem')
         .eq('formulario_id', formularioId)
+        .order('ordem', { ascending: true })
         .order('secao');
 
       if (error) {
         throw error;
       }
 
-      // Agrupando as perguntas por seção e pegando a ordem
-      const secoesCounts = data.reduce((acc: Record<string, Secao>, item) => {
+      // Agrupar as perguntas por seção e pegar a maior ordem para cada seção
+      const secoesMap: Record<string, Secao> = {};
+      
+      data.forEach(item => {
         const secao = item.secao;
-        if (!acc[secao]) {
-          acc[secao] = {
+        if (!secoesMap[secao]) {
+          secoesMap[secao] = {
             nome: secao,
             descricao: item.secao_descricao,
             count: 0,
             ordem: item.ordem || 0,
           };
         }
-        acc[secao].count++;
-        return acc;
-      }, {});
+        secoesMap[secao].count++;
+        
+        // Se encontrarmos uma pergunta com ordem maior, atualizamos a ordem da seção
+        if ((item.ordem || 0) > secoesMap[secao].ordem) {
+          secoesMap[secao].ordem = item.ordem || 0;
+        }
+      });
 
-      setSecoes(Object.values(secoesCounts));
+      // Ordenar as seções pela ordem antes de exibir
+      const secoesOrdenadas = Object.values(secoesMap).sort((a, b) => a.ordem - b.ordem);
+      setSecoes(secoesOrdenadas);
     } catch (error) {
       toast.error("Erro ao carregar seções");
       console.error("Erro ao carregar seções:", error);
@@ -124,7 +133,11 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
   const handleNew = () => {
     setIsEditing(false);
     setCurrentSecao(null);
-    setFormData({ nome: "", descricao: "", ordem: 0 });
+    // Definir a ordem para a próxima posição disponível
+    const nextOrder = secoes.length > 0 
+      ? Math.max(...secoes.map(s => s.ordem)) + 1 
+      : 1;
+    setFormData({ nome: "", descricao: "", ordem: nextOrder });
     setDialogOpen(true);
   };
 
@@ -135,14 +148,15 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
     try {
       if (formData.nome.trim() === "") {
         toast.error("O nome da seção é obrigatório");
+        setSubmitting(false);
         return;
       }
 
-      // Certifique-se de que ordem é um número
+      // Garantir que ordem seja um número inteiro
       const ordem = parseInt(String(formData.ordem)) || 0;
 
       if (isEditing && currentSecao) {
-        // Atualizando a seção e garantindo que ordem seja atualizada
+        // Atualizando todas as perguntas desta seção com a nova ordem e descrição
         const { error } = await supabase
           .from('perguntas')
           .update({
@@ -156,7 +170,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
         if (error) throw error;
         toast.success("Seção atualizada com sucesso");
       } else {
-        // Criando uma nova seção com ordem especificada
+        // Criando uma nova seção com uma pergunta exemplo
         const { error } = await supabase
           .from('perguntas')
           .insert({
@@ -170,6 +184,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
 
         if (error) {
           toast.error("Não foi possível criar a seção. Erro: " + error.message);
+          setSubmitting(false);
           return;
         }
         

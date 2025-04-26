@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer } from '@/types/form';
 
@@ -18,8 +19,9 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
       )
     `)
     .eq('formulario_id', formId)
+    .order('ordem', { ascending: true })
     .order('secao')
-    .order('ordem');
+    .order('id');
 
   if (error) {
     console.error('Error fetching questions:', error);
@@ -40,8 +42,8 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
             return { label: opt, value: opt };
           } else if (typeof opt === 'object' && opt !== null) {
             return {
-              label: opt.label || opt.text || String(opt),
-              value: opt.value || opt.text || String(opt)
+              label: typeof opt.label !== 'undefined' ? String(opt.label) : typeof opt.text !== 'undefined' ? String(opt.text) : String(opt),
+              value: typeof opt.value !== 'undefined' ? String(opt.value) : typeof opt.text !== 'undefined' ? String(opt.text) : String(opt)
             };
           }
           return { label: String(opt), value: String(opt) };
