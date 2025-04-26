@@ -43,7 +43,7 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
         title: question.secao,
         description: question.secao_descricao,
         questions: [],
-        ordem: 0
+        ordem: question.ordem || 0
       };
     }
     acc[question.secao].questions.push(question);
@@ -65,9 +65,17 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
     });
   });
 
-  // Sort sections by title alphabetically
+  // Get the maximum ordem for each section
+  Object.values(questionsBySection).forEach(section => {
+    const maxOrdem = section.questions.reduce((max, question) => {
+      return question.ordem && question.ordem > max ? question.ordem : max;
+    }, 0);
+    section.ordem = maxOrdem;
+  });
+
+  // Sort sections by ordem value (numerically)
   const sortedSections = Object.values(questionsBySection).sort((a, b) => 
-    a.title.localeCompare(b.title)
+    a.ordem - b.ordem
   );
 
   if (loading) {
@@ -94,6 +102,7 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
             key={section.title}
             title={section.title}
             description={section.description}
+            ordem={section.ordem}
             questions={section.questions}
             onEditQuestion={handleEdit}
             onDeleteQuestion={handleDelete}

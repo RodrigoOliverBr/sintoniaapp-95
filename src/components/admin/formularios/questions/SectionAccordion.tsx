@@ -26,6 +26,7 @@ import { toast } from "sonner";
 interface SectionProps {
   title: string;
   description?: string;
+  ordem?: number;
   questions: Question[];
   onEditQuestion: (question: Question) => void;
   onDeleteQuestion: (question: Question) => void;
@@ -34,6 +35,7 @@ interface SectionProps {
 export const SectionAccordion: React.FC<SectionProps> = ({
   title,
   description,
+  ordem,
   questions,
   onEditQuestion,
   onDeleteQuestion,
@@ -72,13 +74,16 @@ export const SectionAccordion: React.FC<SectionProps> = ({
     }
   };
 
+  // Format title with order if available
+  const formattedTitle = ordem && ordem > 0 ? `${ordem}. ${title}` : title;
+
   return (
     <>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value={title} className="border-[#C8C8C9]">
           <AccordionTrigger className="text-lg font-semibold hover:no-underline">
             <div className="flex items-center gap-3">
-              {title}
+              {formattedTitle}
               <span className="text-sm text-muted-foreground font-normal">
                 ({questions.length} {questions.length === 1 ? 'pergunta' : 'perguntas'})
               </span>
@@ -91,6 +96,7 @@ export const SectionAccordion: React.FC<SectionProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Ordem</TableHead>
                   <TableHead>Texto</TableHead>
                   <TableHead>Risco</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -99,6 +105,7 @@ export const SectionAccordion: React.FC<SectionProps> = ({
               <TableBody>
                 {sortedQuestions.map((question) => (
                   <TableRow key={question.id}>
+                    <TableCell>{question.ordem || "-"}</TableCell>
                     <TableCell className="font-medium">{question.texto}</TableCell>
                     <TableCell>{question.risco?.texto}</TableCell>
                     <TableCell className="text-right space-x-2">
