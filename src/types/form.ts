@@ -53,6 +53,7 @@ export interface Risk {
   severidade_id: string;
   categoria?: string;
   severidade?: Severity;
+  mitigations?: Mitigation[]; // Added mitigations property
 }
 
 export interface Severity {

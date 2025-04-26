@@ -32,7 +32,8 @@ export const RiskTable: React.FC<RiskTableProps> = ({
             <TableCell className="font-medium">{risco.texto}</TableCell>
             <TableCell>{risco.severidade?.nivel}</TableCell>
             <TableCell>
-              {risco.mitigacoes?.length || 0}
+              {/* Use optional chaining to safely access mitigations length */}
+              {Array.isArray(risco.mitigations) ? risco.mitigations.length : 0}
             </TableCell>
             <TableCell className="text-right space-x-2">
               <Button variant="ghost" size="sm" onClick={() => onEdit(risco)}>

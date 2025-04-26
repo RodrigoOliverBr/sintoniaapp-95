@@ -55,9 +55,10 @@ const FormulariosPage = () => {
     <AdminLayout title={`Formulário: ${formTitle}`}>
       <div className="space-y-6">
         <Tabs defaultValue="perguntas" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="perguntas">Perguntas</TabsTrigger>
             <TabsTrigger value="secoes">Seções</TabsTrigger>
+            <TabsTrigger value="riscos">Riscos</TabsTrigger>
           </TabsList>
           
           <TabsContent value="perguntas">
@@ -67,12 +68,14 @@ const FormulariosPage = () => {
           <TabsContent value="secoes">
             <SecoesTab formularioId={formularioId} />
           </TabsContent>
+          
+          <TabsContent value="riscos">
+            <div className="mt-2">
+              <h2 className="text-2xl font-bold mb-6">Gerenciamento de Riscos</h2>
+              <RiscosTab formularioId={formularioId} />
+            </div>
+          </TabsContent>
         </Tabs>
-        
-        <div className="mt-10">
-          <h2 className="text-2xl font-bold mb-6">Gerenciamento de Riscos</h2>
-          <RiscosTab formularioId={formularioId} />
-        </div>
       </div>
     </AdminLayout>
   );

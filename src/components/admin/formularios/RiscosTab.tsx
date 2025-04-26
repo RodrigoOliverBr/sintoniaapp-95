@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,25 @@ const RiscosTab: React.FC<RiscosTabProps> = ({ formularioId }) => {
         getAllSeverities()
       ]);
 
-      setRiscos(riscosData);
+      const risksWithMitigations = await Promise.all(
+        riscosData.map(async (risk) => {
+          try {
+            const mitigations = await getMitigationsByRiskId(risk.id);
+            return {
+              ...risk,
+              mitigations
+            };
+          } catch (error) {
+            console.error("Error fetching mitigations for risk:", risk.id, error);
+            return {
+              ...risk,
+              mitigations: []
+            };
+          }
+        })
+      );
+
+      setRiscos(risksWithMitigations);
       setSeveridades(severidadesData);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
