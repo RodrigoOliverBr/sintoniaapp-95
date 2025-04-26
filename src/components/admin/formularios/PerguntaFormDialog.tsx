@@ -1,15 +1,13 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Question, Risk, Severity } from "@/types/form";
+import { Question } from "@/types/form";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import RiskSelectionGroup from "@/components/admin/formularios/risk/RiskSelectionGroup";
+import RiskSelectionGroup from "./risk/RiskSelectionGroup";
 
 interface PerguntaFormDialogProps {
   open: boolean;
@@ -18,7 +16,7 @@ interface PerguntaFormDialogProps {
   isEditing: boolean;
   formularioId: string;
   onSuccess: () => void;
-  preSelectedSection?: string;
+  preSelectedSection: string;
 }
 
 const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
@@ -39,15 +37,11 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
   });
   
   const [submitting, setSubmitting] = useState(false);
-  const [secoes, setSecoes] = useState<{ nome: string; count: number; }[]>([]);
   const [riscos, setRiscos] = useState<Risk[]>([]);
-  const [severidades, setSeveridades] = useState<Severity[]>([]);
 
   useEffect(() => {
     if (open) {
-      fetchSecoes();
       fetchRiscos();
-      fetchSeveridades();
       
       if (isEditing && currentPergunta) {
         setFormData({
@@ -61,7 +55,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         // Use preSelectedSection if provided
         setFormData({
           texto: "",
-          secao: preSelectedSection || "",
+          secao: preSelectedSection,
           risco_id: "",
           ordem: 0,
           observacao_obrigatoria: false
@@ -70,35 +64,11 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     }
   }, [open, isEditing, currentPergunta, preSelectedSection]);
 
-  const fetchSecoes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('perguntas')
-        .select('secao, secao_descricao')
-        .eq('formulario_id', formularioId)
-        .order('secao');
-
-      if (error) throw error;
-
-      const uniqueSections = Array.from(
-        new Set((data || []).map(item => item.secao))
-      ).map(section => ({
-        nome: section,
-        count: (data || []).filter(item => item.secao === section).length
-      }));
-
-      setSecoes(uniqueSections.length > 0 ? uniqueSections : []);
-    } catch (error) {
-      console.error("Erro ao carregar seções:", error);
-      toast.error("Erro ao carregar seções");
-    }
-  };
-
   const fetchRiscos = async () => {
     try {
       const { data, error } = await supabase
         .from('riscos')
-        .select('*, severidade(id, nivel, ordem)')
+        .select('*, severidade(*)')
         .order('texto');
         
       if (error) throw error;
@@ -106,21 +76,6 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     } catch (error) {
       console.error("Erro ao carregar riscos:", error);
       toast.error("Erro ao carregar riscos");
-    }
-  };
-
-  const fetchSeveridades = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('severidade')
-        .select('*')
-        .order('ordem');
-        
-      if (error) throw error;
-      setSeveridades(data || []);
-    } catch (error) {
-      console.error("Erro ao carregar severidades:", error);
-      toast.error("Erro ao carregar severidades");
     }
   };
 
@@ -223,14 +178,21 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Editar Pergunta" : "Nova Pergunta"}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label>Seção</Label>
+              <div className="p-3 bg-muted rounded-md text-muted-foreground">
+                {formData.secao}
+              </div>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="texto">Texto da Pergunta</Label>
               <Input
@@ -242,38 +204,15 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="secao">Seção</Label>
-                <Select 
-                  name="secao" 
-                  value={formData.secao} 
-                  onValueChange={(value) => setFormData({...formData, secao: value})}
-                  disabled={preSelectedSection !== ""}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma seção" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {secoes.map((secao) => (
-                      <SelectItem key={secao.nome} value={secao.nome}>
-                        {secao.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Risco Associado</Label>
-                <RiskSelectionGroup
-                  risks={riscos}
-                  selectedRiskId={formData.risco_id}
-                  onRiskChange={(value) => setFormData({...formData, risco_id: value})}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Risco Associado</Label>
+              <RiskSelectionGroup
+                risks={riscos}
+                selectedRiskId={formData.risco_id}
+                onRiskChange={(value) => setFormData({...formData, risco_id: value})}
+              />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ordem">Ordem</Label>
@@ -287,7 +226,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
                 />
               </div>
               
-              <div className="flex items-center space-x-2 mt-6">
+              <div className="flex items-center space-x-2 pt-8">
                 <Checkbox 
                   id="observacao_obrigatoria" 
                   checked={formData.observacao_obrigatoria}
