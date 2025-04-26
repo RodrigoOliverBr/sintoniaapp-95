@@ -1,43 +1,37 @@
-
 export interface Company {
   id: string;
   name: string;
-  departments: Department[];
-  clienteId?: string; // Added to associate companies with clients
-  cpf_cnpj?: string;
+  cpfCnpj?: string;
+  telefone?: string;
+  email?: string;
+  address?: string;
+  type?: string;
+  status?: string;
+  contact?: string;
+  zipCode?: string;
+  state?: string;
+  city?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  departments?: Department[];
 }
 
 export interface Department {
   id: string;
   name: string;
   companyId: string;
-}
-
-export interface JobRole {
-  id: string;
-  name: string;
-  companyId: string; // Added companyId to associate roles with companies
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Employee {
   id: string;
   name: string;
-  cpf: string;
-  roleId: string;
-  companyId: string;
-  departmentIds: string[]; // Fixed: Added departmentIds property as array of strings
-  departmentId?: string;   // Kept for backwards compatibility
-}
-
-export type FormStatus = 'not-started' | 'in-progress' | 'completed';
-
-export interface FormResult {
-  answers: Record<number, any>;
-  totalYes: number;
-  totalNo: number;
-  severityCounts: Record<string, number>;
-  yesPerSeverity: Record<string, number>;
-  analyistNotes?: string;
-  isComplete?: boolean;
-  lastUpdated?: string; // Added to track when the form was last updated
+  email: string;
+  role?: string;
+  department_id: string;
+  company_id: string;
+  created_at: string;
+  updated_at: string;
+  status?: string;
 }

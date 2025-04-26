@@ -5,7 +5,7 @@ import { getCompanies, getEmployeesByCompany } from "@/services";
 import { getFormQuestions, getFormResultByEmployeeId, saveFormResult } from "@/services/form/formService";
 import { Company, Employee } from "@/types/cadastro";
 import { Question, FormAnswer, FormResult } from "@/types/form";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FormSection from "@/components/FormSection";
@@ -219,6 +219,17 @@ const FormularioPage: React.FC = () => {
       });
       
       setFormResult(formResultData);
+
+      const currentIndex = formSections.findIndex(s => s.title === currentSection);
+      if (currentIndex < formSections.length - 1) {
+        setCurrentSection(formSections[currentIndex + 1].title);
+      } else {
+        toast({
+          title: "Parabéns!",
+          description: "Você completou todas as seções do formulário!",
+          variant: "default",
+        });
+      }
     } catch (error) {
       console.error("Erro ao salvar o formulário:", error);
       toast({
@@ -281,11 +292,11 @@ const FormularioPage: React.FC = () => {
               </div>
             </div>
 
-            {selectedEmployeeId && (
+            {selectedEmployeeId && selectedEmployee && (
               <div className="mt-6">
                 <ProgressHeader 
-                  employeeName={selectedEmployee?.name || ""}
-                  jobRole={selectedEmployee?.cargo || ""}
+                  employeeName={selectedEmployee.name}
+                  jobRole={selectedEmployee.role || ""}
                   currentSection={formSections.findIndex(s => s.title === currentSection) + 1}
                   totalSections={formSections.length}
                 />
