@@ -1,7 +1,5 @@
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { Question } from "@/types/form";
 import { usePerguntas } from "@/hooks/usePerguntas";
 import PerguntaFormDialog from "./PerguntaFormDialog";
@@ -15,6 +13,7 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentPergunta, setCurrentPergunta] = useState<Question | null>(null);
+  const [selectedSection, setSelectedSection] = useState<string>("");
 
   const { perguntas, loading, refreshPerguntas } = usePerguntas({
     formularioId
@@ -23,6 +22,7 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
   const handleEdit = (pergunta: Question) => {
     setIsEditing(true);
     setCurrentPergunta(pergunta);
+    setSelectedSection(pergunta.secao);
     setDialogOpen(true);
   };
 
@@ -30,9 +30,10 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
     refreshPerguntas();
   };
 
-  const handleNew = () => {
+  const handleNewInSection = (sectionName: string) => {
     setIsEditing(false);
     setCurrentPergunta(null);
+    setSelectedSection(sectionName);
     setDialogOpen(true);
   };
 
@@ -65,18 +66,29 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
     });
   });
 
-  // Get the maximum ordem for each section
-  Object.values(questionsBySection).forEach(section => {
+  // Get the maximum ordem value for each section
+  Object.keys(questionsBySection).forEach(sectionKey => {
+    const section = questionsBySection[sectionKey];
     const maxOrdem = section.questions.reduce((max, question) => {
       return question.ordem && question.ordem > max ? question.ordem : max;
     }, 0);
+    
+    // Store the maximum ordem value for the section
     section.ordem = maxOrdem;
   });
 
   // Sort sections by ordem value (numerically)
-  const sortedSections = Object.values(questionsBySection).sort((a, b) => 
-    a.ordem - b.ordem
-  );
+  const sortedSections = Object.values(questionsBySection).sort((a, b) => {
+    if (a.ordem === 0 && b.ordem === 0) {
+      // If both have ordem 0, sort alphabetically
+      return a.title.localeCompare(b.title);
+    }
+    // If one has ordem 0, put it last
+    if (a.ordem === 0) return 1; 
+    if (b.ordem === 0) return -1;
+    // Sort normally by numbers
+    return a.ordem - b.ordem;
+  });
 
   if (loading) {
     return (
@@ -90,10 +102,6 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Perguntas</h2>
-        <Button onClick={handleNew}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Pergunta
-        </Button>
       </div>
       
       <div className="space-y-4">
@@ -106,6 +114,8 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
             questions={section.questions}
             onEditQuestion={handleEdit}
             onDeleteQuestion={handleDelete}
+            onNewQuestion={() => handleNewInSection(section.title)}
+            formularioId={formularioId}
           />
         ))}
       </div>
@@ -117,6 +127,7 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
         isEditing={isEditing}
         formularioId={formularioId}
         onSuccess={refreshPerguntas}
+        preSelectedSection={selectedSection}
       />
     </div>
   );

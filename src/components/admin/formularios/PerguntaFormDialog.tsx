@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ interface PerguntaFormDialogProps {
   isEditing: boolean;
   formularioId: string;
   onSuccess: () => void;
+  preSelectedSection?: string;
 }
 
 const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
@@ -25,7 +27,8 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
   currentPergunta,
   isEditing,
   formularioId,
-  onSuccess
+  onSuccess,
+  preSelectedSection = ""
 }) => {
   const [formData, setFormData] = useState({
     texto: "",
@@ -55,16 +58,17 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
         });
       } else {
+        // Use preSelectedSection if provided
         setFormData({
           texto: "",
-          secao: "",
+          secao: preSelectedSection || "",
           risco_id: "",
           ordem: 0,
           observacao_obrigatoria: false
         });
       }
     }
-  }, [open, isEditing, currentPergunta]);
+  }, [open, isEditing, currentPergunta, preSelectedSection]);
 
   const fetchSecoes = async () => {
     try {
@@ -162,12 +166,30 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         }
       }
 
+      // Get maximum order for this section to set new questions at the end
+      let nextOrder = formData.ordem;
+      if (!isEditing && formData.ordem === 0) {
+        const { data } = await supabase
+          .from('perguntas')
+          .select('ordem')
+          .eq('secao', formData.secao)
+          .eq('formulario_id', formularioId)
+          .order('ordem', { ascending: false })
+          .limit(1);
+
+        if (data && data.length > 0) {
+          nextOrder = (data[0].ordem || 0) + 1;
+        } else {
+          nextOrder = 1; // First question in section
+        }
+      }
+
       const perguntaData = {
         texto: formData.texto,
         secao: formData.secao,
         secao_descricao,
         risco_id: formData.risco_id || null,
-        ordem: formData.ordem || 0,
+        ordem: isEditing ? formData.ordem : nextOrder,
         observacao_obrigatoria: formData.observacao_obrigatoria,
         formulario_id: formularioId
       };
@@ -227,6 +249,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
                   name="secao" 
                   value={formData.secao} 
                   onValueChange={(value) => setFormData({...formData, secao: value})}
+                  disabled={preSelectedSection !== ""}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma seção" />

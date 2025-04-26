@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Question } from "@/types/form";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -30,6 +30,8 @@ interface SectionProps {
   questions: Question[];
   onEditQuestion: (question: Question) => void;
   onDeleteQuestion: (question: Question) => void;
+  onNewQuestion: () => void;
+  formularioId: string;
 }
 
 export const SectionAccordion: React.FC<SectionProps> = ({
@@ -39,6 +41,8 @@ export const SectionAccordion: React.FC<SectionProps> = ({
   questions,
   onEditQuestion,
   onDeleteQuestion,
+  onNewQuestion,
+  formularioId,
 }) => {
   const [sortedQuestions, setSortedQuestions] = useState([...questions].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)));
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -76,7 +80,7 @@ export const SectionAccordion: React.FC<SectionProps> = ({
 
   // Format title with order if available
   const formattedTitle = ordem && ordem > 0 ? `${ordem}. ${title}` : title;
-
+  
   return (
     <>
       <Accordion type="single" collapsible className="w-full">
@@ -93,6 +97,14 @@ export const SectionAccordion: React.FC<SectionProps> = ({
             {description && (
               <p className="text-sm text-muted-foreground mb-4">{description}</p>
             )}
+            
+            <div className="flex justify-end mb-4">
+              <Button onClick={onNewQuestion} size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Pergunta em {title}
+              </Button>
+            </div>
+            
             <Table>
               <TableHeader>
                 <TableRow>
