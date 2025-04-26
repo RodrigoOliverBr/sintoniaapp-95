@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,6 @@ interface PerguntaFormDialogProps {
   onOpenChange: (open: boolean) => void;
   currentPergunta: Question | null;
   isEditing: boolean;
-  secoes: { nome: string; count: number; }[];
-  riscos: Risk[];
   formularioId: string;
   onSuccess: () => void;
 }
@@ -26,18 +24,93 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
   onOpenChange,
   currentPergunta,
   isEditing,
-  secoes,
-  riscos,
   formularioId,
   onSuccess
 }) => {
   const [formData, setFormData] = useState({
     texto: currentPergunta?.texto || "",
-    secao: currentPergunta?.secao || (secoes[0]?.nome || ""),
+    secao: currentPergunta?.secao || "",
     risco_id: currentPergunta?.risco_id || "",
     observacao_obrigatoria: currentPergunta?.observacao_obrigatoria || false
   });
+  
   const [submitting, setSubmitting] = useState(false);
+  const [secoes, setSecoes] = useState<{ nome: string; count: number; }[]>([]);
+  const [riscos, setRiscos] = useState<Risk[]>([]);
+
+  // Carregar seções e riscos quando o diálogo for aberto
+  useEffect(() => {
+    if (open) {
+      fetchSecoes();
+      fetchRiscos();
+    }
+  }, [open, formularioId]);
+
+  // Atualizar dados do formulário quando a pergunta atual mudar
+  useEffect(() => {
+    if (currentPergunta) {
+      setFormData({
+        texto: currentPergunta.texto || "",
+        secao: currentPergunta.secao || "",
+        risco_id: currentPergunta.risco_id || "",
+        observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
+      });
+    } else {
+      setFormData({
+        texto: "",
+        secao: secoes.length > 0 ? secoes[0].nome : "",
+        risco_id: "",
+        observacao_obrigatoria: false
+      });
+    }
+  }, [currentPergunta, secoes]);
+
+  const fetchSecoes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('perguntas')
+        .select('secao, secao_descricao')
+        .eq('formulario_id', formularioId)
+        .order('secao');
+
+      if (error) throw error;
+
+      const uniqueSections = Array.from(
+        new Set((data || []).map(item => item.secao))
+      ).map(section => ({
+        nome: section,
+        count: (data || []).filter(item => item.secao === section).length
+      }));
+
+      setSecoes(uniqueSections.length > 0 ? uniqueSections : []);
+      
+      // Se não tiver seção selecionada e existir seções, seleciona a primeira
+      if (!formData.secao && uniqueSections.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          secao: uniqueSections[0].nome
+        }));
+      }
+    } catch (error) {
+      console.error("Erro ao carregar seções:", error);
+      toast.error("Erro ao carregar seções");
+    }
+  };
+
+  const fetchRiscos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('riscos')
+        .select('*')
+        .order('texto');
+        
+      if (error) throw error;
+      setRiscos(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar riscos:", error);
+      toast.error("Erro ao carregar riscos");
+    }
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -57,11 +130,13 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     try {
       if (formData.texto.trim() === "") {
         toast.error("O texto da pergunta é obrigatório");
+        setSubmitting(false);
         return;
       }
 
       if (formData.secao.trim() === "") {
         toast.error("É necessário selecionar uma seção");
+        setSubmitting(false);
         return;
       }
 

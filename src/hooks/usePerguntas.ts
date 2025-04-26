@@ -30,7 +30,28 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
 
       if (error) throw error;
 
-      setPerguntas(data);
+      // Transformar os dados para corresponder ao tipo Question
+      const transformedData = data.map((item: any) => ({
+        id: item.id,
+        texto: item.texto,
+        risco_id: item.risco_id,
+        secao: item.secao,
+        secao_descricao: item.secao_descricao,
+        ordem: item.ordem || 0,
+        formulario_id: item.formulario_id,
+        opcoes: item.opcoes 
+          ? typeof item.opcoes === 'string' 
+            ? JSON.parse(item.opcoes) 
+            : item.opcoes 
+          : undefined,
+        observacao_obrigatoria: item.observacao_obrigatoria,
+        risco: item.risco,
+        pergunta_opcoes: item.pergunta_opcoes,
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      }));
+
+      setPerguntas(transformedData);
     } catch (error) {
       console.error("Erro ao carregar perguntas:", error);
       toast.error("Erro ao carregar perguntas");

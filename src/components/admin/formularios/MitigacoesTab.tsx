@@ -12,12 +12,18 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Risk, Mitigation } from "@/types/form";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Mitigation, Risk } from "@/types/form";
 
 interface MitigacoesTabProps {
   formularioId: string;
@@ -27,7 +33,7 @@ const MitigacoesTab: React.FC<MitigacoesTabProps> = ({ formularioId }) => {
   const [mitigacoes, setMitigacoes] = useState<Mitigation[]>([]);
   const [riscos, setRiscos] = useState<Risk[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtroRisco, setFiltroRisco] = useState<string>("all");
+  const [formTitle, setFormTitle] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentMitigacao, setCurrentMitigacao] = useState<Mitigation | null>(null);
@@ -37,46 +43,34 @@ const MitigacoesTab: React.FC<MitigacoesTabProps> = ({ formularioId }) => {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchRiscos = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('riscos')
-        .select(`
-          *,
-          severidade:severidade (*)
-        `)
-        .order('texto');
-
-      if (error) throw error;
-      setRiscos(data || []);
+  useEffect(() => {
+    const fetchFormTitle = async () => {
+      const { data } = await supabase
+        .from('formularios')
+        .select('titulo')
+        .eq('id', formularioId)
+        .single();
       
-      // Se não houver risco selecionado e tivermos riscos disponíveis, selecione o primeiro
-      if (formData.risco_id === "" && data && data.length > 0) {
-        setFormData(prev => ({...prev, risco_id: data[0].id}));
+      if (data) {
+        setFormTitle(data.titulo);
       }
-    } catch (error) {
-      console.error("Erro ao carregar riscos:", error);
-      toast.error("Erro ao carregar riscos");
-    }
-  };
+    };
+
+    fetchFormTitle();
+    fetchMitigacoes();
+    fetchRiscos();
+  }, [formularioId]);
 
   const fetchMitigacoes = async () => {
     try {
       setLoading(true);
-      
-      let query = supabase
+      const { data, error } = await supabase
         .from('mitigacoes')
         .select(`
           *,
-          risco:riscos (*)
+          riscos (*)
         `)
         .order('texto');
-
-      if (filtroRisco !== "all") {
-        query = query.eq('risco_id', filtroRisco);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
       setMitigacoes(data || []);
@@ -88,19 +82,19 @@ const MitigacoesTab: React.FC<MitigacoesTabProps> = ({ formularioId }) => {
     }
   };
 
-  useEffect(() => {
-    fetchRiscos();
-  }, []);
-
-  useEffect(() => {
-    fetchMitigacoes();
-  }, [filtroRisco]);
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  const fetchRiscos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('riscos')
+        .select('*, severidade(*)')
+        .order('texto');
+        
+      if (error) throw error;
+      setRiscos(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar riscos:", error);
+      toast.error("Erro ao carregar riscos");
+    }
   };
 
   const handleEdit = (mitigacao: Mitigation) => {
@@ -116,8 +110,15 @@ const MitigacoesTab: React.FC<MitigacoesTabProps> = ({ formularioId }) => {
   const handleNew = () => {
     setIsEditing(false);
     setCurrentMitigacao(null);
-    setFormData({ texto: "", risco_id: filtroRisco !== "all" ? filtroRisco : (riscos.length > 0 ? riscos[0].id : "") });
+    setFormData({ texto: "", risco_id: "" });
     setDialogOpen(true);
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -126,73 +127,77 @@ const MitigacoesTab: React.FC<MitigacoesTabProps> = ({ formularioId }) => {
 
     try {
       if (formData.texto.trim() === "") {
-        toast.error("O texto da ação de mitigação é obrigatório");
+        toast.error("O texto da mitigação é obrigatório");
         return;
       }
 
-      if (formData.risco_id === "") {
+      if (formData.risco_id.trim() === "") {
         toast.error("É necessário selecionar um risco");
         return;
       }
 
+      const mitigacaoData = {
+        texto: formData.texto,
+        risco_id: formData.risco_id
+      };
+
       if (isEditing && currentMitigacao) {
         const { error } = await supabase
           .from('mitigacoes')
-          .update({
-            texto: formData.texto,
-            risco_id: formData.risco_id
-          })
+          .update(mitigacaoData)
           .eq('id', currentMitigacao.id);
 
         if (error) throw error;
-        toast.success("Ação de mitigação atualizada com sucesso");
+        toast.success("Mitigação atualizada com sucesso");
       } else {
         const { error } = await supabase
           .from('mitigacoes')
-          .insert({
-            texto: formData.texto,
-            risco_id: formData.risco_id
-          });
+          .insert(mitigacaoData);
 
         if (error) throw error;
-        toast.success("Ação de mitigação criada com sucesso");
+        toast.success("Mitigação criada com sucesso");
       }
 
       setDialogOpen(false);
       fetchMitigacoes();
     } catch (error) {
-      console.error("Erro ao salvar ação de mitigação:", error);
-      toast.error("Erro ao salvar ação de mitigação");
+      console.error("Erro ao salvar mitigação:", error);
+      toast.error("Erro ao salvar mitigação");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (mitigacaoId: string) => {
-    if (confirm("Tem certeza que deseja excluir esta ação de mitigação?")) {
+  const handleDelete = async (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta mitigação?")) {
       try {
         const { error } = await supabase
           .from('mitigacoes')
           .delete()
-          .eq('id', mitigacaoId);
+          .eq('id', id);
 
         if (error) throw error;
 
-        toast.success("Ação de mitigação excluída com sucesso");
+        toast.success("Mitigação excluída com sucesso");
         fetchMitigacoes();
       } catch (error) {
-        console.error("Erro ao excluir ação de mitigação:", error);
-        toast.error("Erro ao excluir ação de mitigação");
+        console.error("Erro ao excluir mitigação:", error);
+        toast.error("Erro ao excluir mitigação");
       }
     }
+  };
+
+  const getRiscoTexto = (risco_id: string) => {
+    const risco = riscos.find(r => r.id === risco_id);
+    return risco ? risco.texto : "Risco não encontrado";
   };
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Ações de Mitigação para o Formulário: {formularioId}</h2>
-          <p className="text-muted-foreground">Esta seção permite gerenciar as ações de mitigação associadas ao formulário.</p>
+          <h2 className="text-2xl font-bold">Ações de Mitigação</h2>
+          <p className="text-muted-foreground">Formulário: {formTitle}</p>
         </div>
         <Button onClick={handleNew}>
           <Plus className="mr-2 h-4 w-4" />
@@ -200,26 +205,9 @@ const MitigacoesTab: React.FC<MitigacoesTabProps> = ({ formularioId }) => {
         </Button>
       </div>
       
-      <div className="flex gap-4 items-center">
-        <Label htmlFor="filtroRisco" className="w-32">Filtrar por risco:</Label>
-        <Select value={filtroRisco} onValueChange={setFiltroRisco}>
-          <SelectTrigger className="w-[300px]">
-            <SelectValue placeholder="Selecione um risco" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os riscos</SelectItem>
-            {riscos.map(risco => (
-              <SelectItem key={risco.id} value={risco.id}>
-                {risco.texto}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
       {loading ? (
         <div className="flex justify-center py-8">
-          <p>Carregando ações de mitigação...</p>
+          <p>Carregando mitigações...</p>
         </div>
       ) : (
         <Table>
@@ -227,14 +215,13 @@ const MitigacoesTab: React.FC<MitigacoesTabProps> = ({ formularioId }) => {
             <TableRow>
               <TableHead>Texto</TableHead>
               <TableHead>Risco Associado</TableHead>
-              <TableHead>Severidade</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {mitigacoes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
+                <TableCell colSpan={3} className="text-center py-8">
                   Nenhuma ação de mitigação cadastrada. Clique em 'Nova Ação de Mitigação' para adicionar.
                 </TableCell>
               </TableRow>
@@ -242,8 +229,7 @@ const MitigacoesTab: React.FC<MitigacoesTabProps> = ({ formularioId }) => {
               mitigacoes.map((mitigacao) => (
                 <TableRow key={mitigacao.id}>
                   <TableCell className="font-medium">{mitigacao.texto}</TableCell>
-                  <TableCell>{mitigacao.risco?.texto || "-"}</TableCell>
-                  <TableCell>{mitigacao.risco?.severidade?.nivel || "-"}</TableCell>
+                  <TableCell>{getRiscoTexto(mitigacao.risco_id)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 
@@ -298,13 +284,13 @@ const MitigacoesTab: React.FC<MitigacoesTabProps> = ({ formularioId }) => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="texto">Texto da Ação de Mitigação</Label>
+                <Label htmlFor="texto">Texto da Mitigação</Label>
                 <Textarea
                   id="texto"
                   name="texto"
                   value={formData.texto}
                   onChange={handleInputChange}
-                  placeholder="Descreva a ação de mitigação"
+                  placeholder="Digite a ação de mitigação"
                   rows={3}
                 />
               </div>
