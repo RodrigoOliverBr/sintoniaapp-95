@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Question } from "@/types/form";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
@@ -10,6 +10,18 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface SectionProps {
   title: string;
@@ -26,60 +38,115 @@ export const SectionAccordion: React.FC<SectionProps> = ({
   onEditQuestion,
   onDeleteQuestion,
 }) => {
-  // Sort questions by order within the section
-  const sortedQuestions = [...questions].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+  const [sortedQuestions, setSortedQuestions] = useState([...questions].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)));
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState<Question | null>(null);
+  const [deletingQuestion, setDeletingQuestion] = useState(false);
+
+  const handleDeleteClick = (question: Question) => {
+    setQuestionToDelete(question);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!questionToDelete) return;
+    
+    setDeletingQuestion(true);
+    try {
+      const { error } = await supabase
+        .from('perguntas')
+        .delete()
+        .eq('id', questionToDelete.id);
+      
+      if (error) throw error;
+      
+      toast.success("Pergunta excluída com sucesso!");
+      onDeleteQuestion(questionToDelete);
+      setQuestionToDelete(null);
+    } catch (error) {
+      console.error("Erro ao excluir pergunta:", error);
+      toast.error("Erro ao excluir pergunta");
+    } finally {
+      setDeletingQuestion(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
 
   return (
-    <Accordion type="single" collapsible className="w-full">
-      <AccordionItem value={title} className="border-[#C8C8C9]">
-        <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-          <div className="flex items-center gap-3">
-            {title}
-            <span className="text-sm text-muted-foreground font-normal">
-              ({questions.length} {questions.length === 1 ? 'pergunta' : 'perguntas'})
-            </span>
-          </div>
-        </AccordionTrigger>
-        <AccordionContent>
-          {description && (
-            <p className="text-sm text-muted-foreground mb-4">{description}</p>
-          )}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Texto</TableHead>
-                <TableHead>Risco</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedQuestions.map((question) => (
-                <TableRow key={question.id}>
-                  <TableCell className="font-medium">{question.texto}</TableCell>
-                  <TableCell>{question.risco?.texto}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => onEditQuestion(question)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-red-500 hover:text-red-700"
-                      onClick={() => onDeleteQuestion(question)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+    <>
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value={title} className="border-[#C8C8C9]">
+          <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+            <div className="flex items-center gap-3">
+              {title}
+              <span className="text-sm text-muted-foreground font-normal">
+                ({questions.length} {questions.length === 1 ? 'pergunta' : 'perguntas'})
+              </span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            {description && (
+              <p className="text-sm text-muted-foreground mb-4">{description}</p>
+            )}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Texto</TableHead>
+                  <TableHead>Risco</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+              </TableHeader>
+              <TableBody>
+                {sortedQuestions.map((question) => (
+                  <TableRow key={question.id}>
+                    <TableCell className="font-medium">{question.texto}</TableCell>
+                    <TableCell>{question.risco?.texto}</TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => onEditQuestion(question)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleDeleteClick(question)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a pergunta "{questionToDelete?.texto}"?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingQuestion}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete} 
+              disabled={deletingQuestion}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {deletingQuestion ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

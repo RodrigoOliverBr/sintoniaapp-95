@@ -26,6 +26,10 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
     setDialogOpen(true);
   };
 
+  const handleDelete = () => {
+    refreshPerguntas();
+  };
+
   const handleNew = () => {
     setIsEditing(false);
     setCurrentPergunta(null);
@@ -79,7 +83,7 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
             description={section.description}
             questions={section.questions}
             onEditQuestion={handleEdit}
-            onDeleteQuestion={() => refreshPerguntas()}
+            onDeleteQuestion={handleDelete}
           />
         ))}
       </div>

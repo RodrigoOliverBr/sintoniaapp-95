@@ -19,7 +19,8 @@ const RiskSelectionGroup: React.FC<RiskSelectionGroupProps> = ({
 }) => {
   const sortedRisks = [...risks].sort((a, b) => {
     if (a.severidade && b.severidade) {
-      return (a.severidade.ordem || 0) - (b.severidade.ordem || 0);
+      // Usamos o operador de encadeamento opcional para acessar ordem com segurança
+      return (a.severidade?.ordem ?? 0) - (b.severidade?.ordem ?? 0);
     }
     return 0;
   });

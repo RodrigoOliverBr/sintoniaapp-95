@@ -1,4 +1,3 @@
-
 export interface FormAnswer {
   questionId: string;
   answer: boolean;
@@ -53,7 +52,7 @@ export interface Risk {
   severidade_id: string;
   categoria?: string;
   severidade?: Severity;
-  mitigations?: Mitigation[]; // Added mitigations property
+  mitigations?: Mitigation[];
 }
 
 export interface Severity {
@@ -62,6 +61,7 @@ export interface Severity {
   descricao?: string;
   cor?: string;
   peso?: number;
+  ordem?: number;
 }
 
 export interface FormSection {
@@ -76,10 +76,8 @@ export interface Mitigation {
   texto: string;
 }
 
-// Add SeverityLevel type for backward compatibility
 export type SeverityLevel = 'LEVEMENTE PREJUDICIAL' | 'PREJUDICIAL' | 'EXTREMAMENTE PREJUDICIAL';
 
-// Add FormData interface for backward compatibility with formData.ts
 export interface FormData {
   sections: {
     title: string;
