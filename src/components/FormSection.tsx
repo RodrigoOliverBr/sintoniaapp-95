@@ -22,7 +22,7 @@ const FormSection: React.FC<FormSectionProps> = ({
   onObservationChange,
   onOptionsChange,
 }) => {
-  // Ordenar as perguntas pela propriedade ordem
+  // Sort questions by the ordem property
   const orderedQuestions = [...section.questions].sort((a, b) => 
     (a.ordem || 0) - (b.ordem || 0)
   );

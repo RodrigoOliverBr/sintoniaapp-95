@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getDefaultRiskId } from "@/services/form/formService";
 
 interface Secao {
   nome: string;
@@ -170,25 +171,34 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
         if (error) throw error;
         toast.success("Seção atualizada com sucesso");
       } else {
-        // Criando uma nova seção com uma pergunta exemplo
-        const { error } = await supabase
-          .from('perguntas')
-          .insert({
-            secao: formData.nome,
-            secao_descricao: formData.descricao || null,
-            texto: "Pergunta Exemplo",
-            formulario_id: formularioId,
-            risco_id: null,
-            ordem: ordem
-          });
-
-        if (error) {
-          toast.error("Não foi possível criar a seção. Erro: " + error.message);
-          setSubmitting(false);
+        try {
+          // Obter um risco padrão para a nova pergunta
+          const defaultRiskId = await getDefaultRiskId();
+          
+          // Criando uma nova seção com uma pergunta exemplo
+          const { error } = await supabase
+            .from('perguntas')
+            .insert({
+              secao: formData.nome,
+              secao_descricao: formData.descricao || null,
+              texto: "Pergunta Exemplo",
+              formulario_id: formularioId,
+              risco_id: defaultRiskId, // Usando o risco padrão
+              ordem: ordem
+            });
+  
+          if (error) {
+            console.error("Erro detalhado ao criar seção:", error);
+            toast.error("Não foi possível criar a seção. Erro: " + error.message);
+            return;
+          }
+          
+          toast.success("Seção criada com sucesso");
+        } catch (error: any) {
+          console.error("Erro ao criar seção:", error);
+          toast.error(`Não foi possível criar a seção: ${error.message}`);
           return;
         }
-        
-        toast.success("Seção criada com sucesso");
       }
 
       setDialogOpen(false);

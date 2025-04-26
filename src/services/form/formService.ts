@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer } from '@/types/form';
 
@@ -42,8 +41,8 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
             return { label: opt, value: opt };
           } else if (typeof opt === 'object' && opt !== null) {
             return {
-              label: typeof opt.label !== 'undefined' ? String(opt.label) : typeof opt.text !== 'undefined' ? String(opt.text) : String(opt),
-              value: typeof opt.value !== 'undefined' ? String(opt.value) : typeof opt.text !== 'undefined' ? String(opt.text) : String(opt)
+              label: opt.label || opt.text || String(opt),
+              value: opt.value || opt.text || String(opt)
             };
           }
           return { label: String(opt), value: String(opt) };
@@ -160,8 +159,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
 
     const { error: respostasError } = await supabase
       .from('respostas')
-      .insert(respostasToInsert)
-      .select('id');
+      .insert(respostasToInsert);
 
     if (respostasError) {
       console.error('Erro ao salvar respostas:', respostasError);
@@ -181,7 +179,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
             const opcao = perguntaOpcoes.find(o => o.texto === opcaoTexto);
             if (opcao) {
               opcoesRespostas.push({
-                resposta_id: respostasError?.id,
+                resposta_id: respostasError ? undefined : avaliacao.id,
                 opcao_id: opcao.id,
                 texto_outro: opcaoTexto === 'Outro' ? resposta.otherText : null
               });
@@ -298,4 +296,24 @@ export async function getFormResults() {
   }
 
   return data || [];
+}
+
+export async function getDefaultRiskId(): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('riscos')
+      .select('id')
+      .limit(1)
+      .single();
+    
+    if (error) {
+      console.error("Erro ao buscar risco padrão:", error);
+      throw error;
+    }
+    
+    return data.id;
+  } catch (error) {
+    console.error("Erro ao obter risco padrão:", error);
+    throw new Error("Não foi possível obter um risco padrão para novas perguntas.");
+  }
 }
