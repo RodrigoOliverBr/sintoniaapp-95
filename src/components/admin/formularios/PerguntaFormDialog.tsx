@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -40,14 +39,12 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
   const [riscos, setRiscos] = useState<Risk[]>([]);
   const [severidades, setSeveridades] = useState<Severity[]>([]);
 
-  // Carregar seções, riscos e severidades quando o diálogo for aberto
   useEffect(() => {
     if (open) {
       fetchSecoes();
       fetchRiscos();
       fetchSeveridades();
       
-      // Se estamos editando, atualize o formData com os dados da pergunta atual
       if (isEditing && currentPergunta) {
         setFormData({
           texto: currentPergunta.texto || "",
@@ -57,7 +54,6 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
         });
       } else {
-        // Caso contrário, reset para valores vazios
         setFormData({
           texto: "",
           secao: "",
@@ -151,7 +147,6 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         return;
       }
 
-      // Get the section description if it exists
       let secao_descricao: string | null = null;
       if (formData.secao) {
         const { data } = await supabase
@@ -246,24 +241,12 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="risco_id">Risco Associado</Label>
-                <Select 
-                  name="risco_id" 
-                  value={formData.risco_id} 
-                  onValueChange={(value) => setFormData({...formData, risco_id: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um risco" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value=" ">Nenhum</SelectItem>
-                    {riscos.map((risco) => (
-                      <SelectItem key={risco.id} value={risco.id}>
-                        {risco.texto} - {risco.severidade?.nivel || 'Sem severidade'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Risco Associado</Label>
+                <RiskSelectionGroup
+                  risks={riscos}
+                  selectedRiskId={formData.risco_id}
+                  onRiskChange={(value) => setFormData({...formData, risco_id: value})}
+                />
               </div>
             </div>
             
