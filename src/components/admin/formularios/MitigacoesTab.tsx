@@ -32,7 +32,7 @@ const MitigacoesTab = () => {
   const [mitigacoes, setMitigacoes] = useState<Mitigacao[]>([]);
   const [riscos, setRiscos] = useState<Risco[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtroRisco, setFiltroRisco] = useState<string>("");
+  const [filtroRisco, setFiltroRisco] = useState<string>("all");
 
   const fetchMitigacoes = async () => {
     try {
@@ -47,7 +47,7 @@ const MitigacoesTab = () => {
           )
         `);
 
-      if (filtroRisco) {
+      if (filtroRisco !== "all") {
         query = query.eq('risco_id', filtroRisco);
       }
 
@@ -108,7 +108,7 @@ const MitigacoesTab = () => {
                 <SelectValue placeholder="Filtrar por Risco" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os Riscos</SelectItem>
+                <SelectItem value="all">Todos os Riscos</SelectItem>
                 {riscos.map((risco) => (
                   <SelectItem key={risco.id} value={risco.id}>
                     {risco.texto}
@@ -141,7 +141,7 @@ const MitigacoesTab = () => {
             {mitigacoes.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center py-8">
-                  {filtroRisco ? 
+                  {filtroRisco !== "all" ? 
                     "Nenhuma ação de mitigação encontrada para este risco." :
                     "Nenhuma ação de mitigação cadastrada. Clique em 'Nova Ação de Mitigação' para adicionar."}
                 </TableCell>

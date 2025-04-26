@@ -44,8 +44,8 @@ const PerguntasTab = () => {
   const [secoes, setSecoes] = useState<Secao[]>([]);
   const [riscos, setRiscos] = useState<Risco[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtroSecao, setFiltroSecao] = useState<string>("");
-  const [filtroRisco, setFiltroRisco] = useState<string>("");
+  const [filtroSecao, setFiltroSecao] = useState<string>("all");
+  const [filtroRisco, setFiltroRisco] = useState<string>("all");
 
   const fetchPerguntas = async () => {
     try {
@@ -60,11 +60,11 @@ const PerguntasTab = () => {
           )
         `);
 
-      if (filtroSecao) {
+      if (filtroSecao !== "all") {
         query = query.eq('secao', filtroSecao);
       }
 
-      if (filtroRisco) {
+      if (filtroRisco !== "all") {
         query = query.eq('risco_id', filtroRisco);
       }
 
@@ -133,7 +133,7 @@ const PerguntasTab = () => {
                 <SelectValue placeholder="Filtrar por Seção" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as Seções</SelectItem>
+                <SelectItem value="all">Todas as Seções</SelectItem>
                 {secoes.map((secao) => (
                   <SelectItem key={secao.nome} value={secao.nome}>
                     {secao.nome} ({secao.count})
@@ -150,7 +150,7 @@ const PerguntasTab = () => {
                 <SelectValue placeholder="Filtrar por Risco" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os Riscos</SelectItem>
+                <SelectItem value="all">Todos os Riscos</SelectItem>
                 {riscos.map((risco) => (
                   <SelectItem key={risco.id} value={risco.id}>
                     {risco.texto}
@@ -185,7 +185,7 @@ const PerguntasTab = () => {
             {perguntas.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8">
-                  {filtroSecao || filtroRisco ? 
+                  {filtroSecao !== "all" || filtroRisco !== "all" ? 
                     "Nenhuma pergunta encontrada com os filtros selecionados." :
                     "Nenhuma pergunta cadastrada. Clique em 'Nova Pergunta' para adicionar."}
                 </TableCell>
