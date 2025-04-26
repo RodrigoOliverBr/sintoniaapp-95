@@ -33,7 +33,7 @@ export interface Question {
   secao: string;
   secao_descricao?: string;
   ordem?: number;
-  formulario_id?: string;
+  formulario_id: string;
   opcoes?: { label: string; value: string; }[];
   observacao_obrigatoria?: boolean;
   risco?: Risk;

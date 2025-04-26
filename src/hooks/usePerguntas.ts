@@ -24,7 +24,8 @@ export const usePerguntas = ({ formularioId, filtroSecao, filtroRisco }: Pergunt
           risco:riscos (
             *,
             severidade:severidade (*)
-          )
+          ),
+          pergunta_opcoes(*)
         `)
         .eq('formulario_id', formularioId);
 
@@ -39,7 +40,14 @@ export const usePerguntas = ({ formularioId, filtroSecao, filtroRisco }: Pergunt
       const { data, error } = await query.order('secao');
 
       if (error) throw error;
-      setPerguntas(data || []);
+
+      // Transform the data to match our Question type
+      const transformedData: Question[] = data.map(item => ({
+        ...item,
+        opcoes: item.opcoes ? JSON.parse(item.opcoes as string) : undefined
+      }));
+
+      setPerguntas(transformedData);
     } catch (error) {
       console.error("Erro ao carregar perguntas:", error);
       toast.error("Erro ao carregar perguntas");
