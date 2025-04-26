@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer } from '@/types/form';
 
@@ -41,8 +42,8 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
             return { label: opt, value: opt };
           } else if (typeof opt === 'object' && opt !== null) {
             return {
-              label: opt.label || opt.text || String(opt),
-              value: opt.value || opt.text || String(opt)
+              label: (opt as any).label || (opt as any).text || String(opt),
+              value: (opt as any).value || (opt as any).text || String(opt)
             };
           }
           return { label: String(opt), value: String(opt) };

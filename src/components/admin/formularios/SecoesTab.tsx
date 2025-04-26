@@ -214,19 +214,43 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
   const handleDelete = async (secaoNome: string) => {
     if (confirm("Tem certeza que deseja excluir esta seção? Isso também excluirá todas as perguntas associadas.")) {
       try {
-        const { error } = await supabase
+        setLoading(true);
+        
+        console.log("Excluindo seção:", secaoNome, "do formulário:", formularioId);
+        
+        // Verificar se existem perguntas na seção
+        const { data: perguntasNaSecao, error: checkError } = await supabase
+          .from('perguntas')
+          .select('id')
+          .eq('secao', secaoNome)
+          .eq('formulario_id', formularioId);
+        
+        if (checkError) {
+          console.error("Erro ao verificar perguntas na seção:", checkError);
+          throw checkError;
+        }
+        
+        console.log("Perguntas encontradas na seção:", perguntasNaSecao?.length || 0);
+        
+        // Excluir as perguntas da seção
+        const { error: deleteError } = await supabase
           .from('perguntas')
           .delete()
           .eq('secao', secaoNome)
           .eq('formulario_id', formularioId);
 
-        if (error) throw error;
+        if (deleteError) {
+          console.error("Erro ao excluir perguntas da seção:", deleteError);
+          throw deleteError;
+        }
 
         toast.success("Seção excluída com sucesso");
-        fetchSecoes();
+        fetchSecoes(); // Atualizar a lista após a exclusão
       } catch (error) {
         console.error("Erro ao excluir seção:", error);
         toast.error("Erro ao excluir seção");
+      } finally {
+        setLoading(false);
       }
     }
   };
