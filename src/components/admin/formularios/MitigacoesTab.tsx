@@ -13,6 +13,15 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Mitigacao {
   id: string;
@@ -21,6 +30,7 @@ interface Mitigacao {
     id: string;
     texto: string;
   } | null;
+  risco_id?: string;
 }
 
 interface Risco {
@@ -33,6 +43,14 @@ const MitigacoesTab = () => {
   const [riscos, setRiscos] = useState<Risco[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroRisco, setFiltroRisco] = useState<string>("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentMitigacao, setCurrentMitigacao] = useState<Mitigacao | null>(null);
+  const [formData, setFormData] = useState({
+    texto: "",
+    risco_id: ""
+  });
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchMitigacoes = async () => {
     try {
@@ -94,6 +112,97 @@ const MitigacoesTab = () => {
     fetchMitigacoes();
   }, [filtroRisco]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleEdit = (mitigacao: Mitigacao) => {
+    setIsEditing(true);
+    setCurrentMitigacao(mitigacao);
+    setFormData({
+      texto: mitigacao.texto,
+      risco_id: mitigacao.risco_id || mitigacao.risco?.id || ""
+    });
+    setDialogOpen(true);
+  };
+
+  const handleNew = () => {
+    setIsEditing(false);
+    setCurrentMitigacao(null);
+    setFormData({ texto: "", risco_id: "" });
+    setDialogOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      if (formData.texto.trim() === "") {
+        toast.error("O texto da ação de mitigação é obrigatório");
+        return;
+      }
+
+      if (!formData.risco_id) {
+        toast.error("É necessário selecionar um risco");
+        return;
+      }
+
+      if (isEditing && currentMitigacao) {
+        // Update existing mitigação
+        const { error } = await supabase
+          .from('mitigacoes')
+          .update({
+            texto: formData.texto,
+            risco_id: formData.risco_id
+          })
+          .eq('id', currentMitigacao.id);
+
+        if (error) throw error;
+        toast.success("Ação de mitigação atualizada com sucesso");
+      } else {
+        // Create new mitigação
+        const { error } = await supabase
+          .from('mitigacoes')
+          .insert({
+            texto: formData.texto,
+            risco_id: formData.risco_id
+          });
+
+        if (error) throw error;
+        toast.success("Ação de mitigação criada com sucesso");
+      }
+
+      setDialogOpen(false);
+      fetchMitigacoes();
+    } catch (error) {
+      console.error("Erro ao salvar ação de mitigação:", error);
+      toast.error("Erro ao salvar ação de mitigação");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta ação de mitigação?")) {
+      try {
+        const { error } = await supabase
+          .from('mitigacoes')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        toast.success("Ação de mitigação excluída com sucesso");
+        fetchMitigacoes();
+      } catch (error) {
+        console.error("Erro ao excluir ação de mitigação:", error);
+        toast.error("Erro ao excluir ação de mitigação");
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -118,7 +227,7 @@ const MitigacoesTab = () => {
             </Select>
           </div>
         </div>
-        <Button>
+        <Button onClick={handleNew}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Ação de Mitigação
         </Button>
@@ -153,10 +262,19 @@ const MitigacoesTab = () => {
                   <TableCell>{mitigacao.risco?.texto || "-"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleEdit(mitigacao)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-500 hover:text-red-700">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleDelete(mitigacao.id)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -167,6 +285,55 @@ const MitigacoesTab = () => {
           </TableBody>
         </Table>
       )}
+
+      {/* Dialog para criar/editar mitigações */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? "Editar Ação de Mitigação" : "Nova Ação de Mitigação"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="texto">Texto da Ação de Mitigação</Label>
+                <Input
+                  id="texto"
+                  name="texto"
+                  value={formData.texto}
+                  onChange={handleInputChange}
+                  placeholder="Descreva a ação de mitigação"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="risco_id">Risco Associado</Label>
+                <Select 
+                  name="risco_id" 
+                  value={formData.risco_id} 
+                  onValueChange={(value) => setFormData({...formData, risco_id: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um risco" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {riscos.map((risco) => (
+                      <SelectItem key={risco.id} value={risco.id}>
+                        {risco.texto}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
