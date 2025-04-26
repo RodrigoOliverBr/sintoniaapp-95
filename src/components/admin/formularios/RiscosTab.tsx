@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -262,14 +261,18 @@ const RiscosTab: React.FC<RiscosTabProps> = ({ formularioId }) => {
             <TableRow>
               <TableHead>Texto</TableHead>
               <TableHead>Severidade</TableHead>
+              <TableHead>Mitigações</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {riscos.map((risco) => (
               <TableRow key={risco.id}>
-                <TableCell>{risco.texto}</TableCell>
+                <TableCell className="font-medium">{risco.texto}</TableCell>
                 <TableCell>{risco.severidade?.nivel}</TableCell>
+                <TableCell>
+                  {mitigations.filter(m => m.risco_id === risco.id).length}
+                </TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(risco)}>
                     <Pencil className="h-4 w-4" />
@@ -296,43 +299,44 @@ const RiscosTab: React.FC<RiscosTabProps> = ({ formularioId }) => {
           </DialogHeader>
           
           <div className="grid gap-6 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="textoRisco" className="text-right">Texto</label>
-              <Input
-                id="textoRisco"
-                value={novoTexto}
-                onChange={(e) => setNovoTexto(e.target.value)}
-                className="col-span-3"
-                placeholder="Digite o texto do risco"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="severidadeRisco" className="text-right">Severidade</label>
-              <Select
-                value={novaSeveridadeId}
-                onValueChange={setNovaSeveridadeId}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Selecione a severidade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {severidades.map((severidade) => (
-                    <SelectItem key={severidade.id} value={severidade.id}>
-                      {severidade.nivel}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="textoRisco">Texto</Label>
+                <Input
+                  id="textoRisco"
+                  value={novoTexto}
+                  onChange={(e) => setNovoTexto(e.target.value)}
+                  placeholder="Digite o texto do risco"
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="severidadeRisco">Severidade</Label>
+                <Select
+                  value={novaSeveridadeId}
+                  onValueChange={setNovaSeveridadeId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a severidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {severidades.map((severidade) => (
+                      <SelectItem key={severidade.id} value={severidade.id}>
+                        {severidade.nivel}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="col-span-4">
-              <MitigationsList
-                mitigations={mitigations}
-                onAdd={handleAddMitigation}
-                onRemove={handleRemoveMitigation}
-                onChange={handleChangeMitigation}
-              />
+              <div className="space-y-2">
+                <MitigationsList
+                  mitigations={mitigations}
+                  onAdd={handleAddMitigation}
+                  onRemove={handleRemoveMitigation}
+                  onChange={handleChangeMitigation}
+                />
+              </div>
             </div>
           </div>
           
