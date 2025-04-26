@@ -1,3 +1,4 @@
+
 export interface FormAnswer {
   questionId: string;
   answer: boolean;
@@ -117,12 +118,4 @@ export interface ClienteSistema {
   contato?: string;
   planoId?: string;
   contratoId?: string;
-}
-
-export interface Formulario {
-  id: string;
-  titulo: string;
-  descricao?: string;
-  created_at: string;
-  ativo: boolean;
 }

@@ -1,28 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer, FormSection } from '@/types/form';
-
-interface Formulario {
-  id: string;
-  titulo: string;
-  descricao?: string;
-  created_at: string;
-  ativo: boolean;
-}
-
-export async function getAvailableForms(): Promise<Formulario[]> {
-  const { data, error } = await supabase
-    .from('formularios')
-    .select('*')
-    .eq('ativo', true)
-    .order('created_at');
-
-  if (error) {
-    console.error('Error fetching forms:', error);
-    throw error;
-  }
-
-  return data || [];
-}
+import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer } from '@/types/form';
 
 export async function getFormQuestions(formId: string): Promise<Question[]> {
   const { data: questions, error } = await supabase
@@ -38,8 +15,7 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
         texto,
         ordem
       )
-    `)
-    .eq('formulario_id', formId);
+    `);
 
   if (error) {
     console.error('Error fetching questions:', error);
