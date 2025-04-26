@@ -31,9 +31,14 @@ export const SectionAccordion: React.FC<SectionProps> = ({
 
   return (
     <Accordion type="single" collapsible className="w-full">
-      <AccordionItem value={title}>
+      <AccordionItem value={title} className="border-[#C8C8C9]">
         <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-          {title}
+          <div className="flex items-center gap-3">
+            {title}
+            <span className="text-sm text-muted-foreground font-normal">
+              ({questions.length} {questions.length === 1 ? 'pergunta' : 'perguntas'})
+            </span>
+          </div>
         </AccordionTrigger>
         <AccordionContent>
           {description && (
