@@ -45,4 +45,3 @@ export interface Employee {
   updated_at: string;
   status?: string;
 }
-
