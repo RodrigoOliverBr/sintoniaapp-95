@@ -30,7 +30,11 @@ interface Secao {
   ordem: number;
 }
 
-const SecoesTab = () => {
+interface SecoesTabProps {
+  formularioId: string;
+}
+
+const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
   const [secoes, setSecoes] = useState<Secao[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -50,6 +54,7 @@ const SecoesTab = () => {
       const { data, error } = await supabase
         .from('perguntas')
         .select('secao, secao_descricao')
+        .eq('formulario_id', formularioId)
         .order('secao');
 
       if (error) {
@@ -82,7 +87,7 @@ const SecoesTab = () => {
 
   useEffect(() => {
     fetchSecoes();
-  }, []);
+  }, [formularioId]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -127,7 +132,8 @@ const SecoesTab = () => {
             secao: formData.nome,
             secao_descricao: formData.descricao || null
           })
-          .eq('secao', currentSecao.nome);
+          .eq('secao', currentSecao.nome)
+          .eq('formulario_id', formularioId);
 
         if (error) throw error;
         toast.success("Seção atualizada com sucesso");
@@ -140,12 +146,13 @@ const SecoesTab = () => {
             secao: formData.nome,
             secao_descricao: formData.descricao || null,
             texto: "Pergunta Exemplo",
+            formulario_id: formularioId,
             risco_id: null // Need to set a default risco or handle this differently
           });
 
         if (error) {
           // If creating a question fails, try a different approach
-          toast.error("Não foi possível criar a seção. Você precisa associar a uma pergunta.");
+          toast.error("Não foi possível criar a seção. Erro: " + error.message);
           return;
         }
         
@@ -169,7 +176,8 @@ const SecoesTab = () => {
         const { error } = await supabase
           .from('perguntas')
           .delete()
-          .eq('secao', secaoNome);
+          .eq('secao', secaoNome)
+          .eq('formulario_id', formularioId);
 
         if (error) throw error;
 
@@ -185,7 +193,10 @@ const SecoesTab = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Seções do Formulário</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Seções do Formulário</h2>
+          <p className="text-muted-foreground">ID do Formulário: {formularioId}</p>
+        </div>
         <Button onClick={handleNew}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Seção
