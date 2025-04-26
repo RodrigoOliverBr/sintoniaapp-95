@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
@@ -37,6 +36,7 @@ interface SecoesTabProps {
 const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
   const [secoes, setSecoes] = useState<Secao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formTitle, setFormTitle] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentSecao, setCurrentSecao] = useState<Secao | null>(null);
@@ -50,7 +50,6 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
   const fetchSecoes = async () => {
     try {
       setLoading(true);
-      // Fetch distinct sections from perguntas table
       const { data, error } = await supabase
         .from('perguntas')
         .select('secao, secao_descricao')
@@ -61,7 +60,6 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
         throw error;
       }
 
-      // Count questions per section
       const secoesCounts = data.reduce((acc: Record<string, Secao>, item) => {
         const secao = item.secao;
         if (!acc[secao]) {
@@ -69,7 +67,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
             nome: secao,
             descricao: item.secao_descricao,
             count: 0,
-            ordem: 0, // We'll need to implement a proper ordering system later
+            ordem: 0,
           };
         }
         acc[secao].count++;
@@ -86,6 +84,19 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
   };
 
   useEffect(() => {
+    const fetchFormTitle = async () => {
+      const { data } = await supabase
+        .from('formularios')
+        .select('titulo')
+        .eq('id', formularioId)
+        .single();
+      
+      if (data) {
+        setFormTitle(data.titulo);
+      }
+    };
+
+    fetchFormTitle();
     fetchSecoes();
   }, [formularioId]);
 
@@ -125,7 +136,6 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
       }
 
       if (isEditing && currentSecao) {
-        // Update existing section in all questions with this section
         const { error } = await supabase
           .from('perguntas')
           .update({
@@ -138,8 +148,6 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
         if (error) throw error;
         toast.success("Seção atualizada com sucesso");
       } else {
-        // For creating a new section, we actually need to create a question with it
-        // since sections are derived from questions
         const { error } = await supabase
           .from('perguntas')
           .insert({
@@ -147,11 +155,10 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
             secao_descricao: formData.descricao || null,
             texto: "Pergunta Exemplo",
             formulario_id: formularioId,
-            risco_id: null // Need to set a default risco or handle this differently
+            risco_id: null
           });
 
         if (error) {
-          // If creating a question fails, try a different approach
           toast.error("Não foi possível criar a seção. Erro: " + error.message);
           return;
         }
@@ -172,7 +179,6 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
   const handleDelete = async (secaoNome: string) => {
     if (confirm("Tem certeza que deseja excluir esta seção? Isso também excluirá todas as perguntas associadas.")) {
       try {
-        // Delete all questions with this section
         const { error } = await supabase
           .from('perguntas')
           .delete()
@@ -195,7 +201,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Seções do Formulário</h2>
-          <p className="text-muted-foreground">ID do Formulário: {formularioId}</p>
+          <p className="text-muted-foreground">Formulário: {formTitle}</p>
         </div>
         <Button onClick={handleNew}>
           <Plus className="mr-2 h-4 w-4" />
@@ -258,7 +264,6 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
         </Table>
       )}
 
-      {/* Dialog para criar/editar seções */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
