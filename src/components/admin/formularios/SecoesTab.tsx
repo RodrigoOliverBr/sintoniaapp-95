@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
@@ -50,9 +51,10 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
   const fetchSecoes = async () => {
     try {
       setLoading(true);
+      // Modificado para buscar também a ordem das seções
       const { data, error } = await supabase
         .from('perguntas')
-        .select('secao, secao_descricao')
+        .select('secao, secao_descricao, ordem')
         .eq('formulario_id', formularioId)
         .order('secao');
 
@@ -60,6 +62,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
         throw error;
       }
 
+      // Agrupando as perguntas por seção e pegando a ordem
       const secoesCounts = data.reduce((acc: Record<string, Secao>, item) => {
         const secao = item.secao;
         if (!acc[secao]) {
@@ -67,7 +70,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
             nome: secao,
             descricao: item.secao_descricao,
             count: 0,
-            ordem: 0,
+            ordem: item.ordem || 0,
           };
         }
         acc[secao].count++;
@@ -113,7 +116,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
     setFormData({
       nome: secao.nome,
       descricao: secao.descricao || "",
-      ordem: secao.ordem || 0
+      ordem: secao.ordem
     });
     setDialogOpen(true);
   };
@@ -135,12 +138,17 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
         return;
       }
 
+      // Certifique-se de que ordem é um número
+      const ordem = parseInt(String(formData.ordem)) || 0;
+
       if (isEditing && currentSecao) {
+        // Atualizando a seção e garantindo que ordem seja atualizada
         const { error } = await supabase
           .from('perguntas')
           .update({
             secao: formData.nome,
-            secao_descricao: formData.descricao || null
+            secao_descricao: formData.descricao || null,
+            ordem: ordem
           })
           .eq('secao', currentSecao.nome)
           .eq('formulario_id', formularioId);
@@ -148,6 +156,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
         if (error) throw error;
         toast.success("Seção atualizada com sucesso");
       } else {
+        // Criando uma nova seção com ordem especificada
         const { error } = await supabase
           .from('perguntas')
           .insert({
@@ -155,7 +164,8 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
             secao_descricao: formData.descricao || null,
             texto: "Pergunta Exemplo",
             formulario_id: formularioId,
-            risco_id: null
+            risco_id: null,
+            ordem: ordem
           });
 
         if (error) {
@@ -237,7 +247,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
                   <TableCell className="font-medium">{secao.nome}</TableCell>
                   <TableCell>{secao.descricao || "-"}</TableCell>
                   <TableCell>{secao.count}</TableCell>
-                  <TableCell>{secao.ordem || "-"}</TableCell>
+                  <TableCell>{secao.ordem}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 

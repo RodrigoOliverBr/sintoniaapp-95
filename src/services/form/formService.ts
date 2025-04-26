@@ -13,10 +13,12 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
       pergunta_opcoes (
         id,
         texto,
-        ordem
+        ordem,
+        pergunta_id
       )
     `)
     .eq('formulario_id', formId)
+    .order('secao')
     .order('ordem');
 
   if (error) {
@@ -54,7 +56,12 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
         descricao: q.risco.severidade.descricao
       } : undefined
     } : undefined,
-    pergunta_opcoes: q.pergunta_opcoes
+    pergunta_opcoes: q.pergunta_opcoes ? q.pergunta_opcoes.map(po => ({
+      id: po.id,
+      pergunta_id: po.pergunta_id,
+      texto: po.texto,
+      ordem: po.ordem
+    })) : []
   }));
 }
 
@@ -209,6 +216,30 @@ export async function getMitigationsByRiskId(riskId: string): Promise<Mitigation
   }
 
   return mitigacoes;
+}
+
+interface Company {
+  id: string;
+  name: string;
+  cpfCnpj: string;
+  telefone?: string;
+  email: string;
+  address?: string;
+  type: string;
+  status: string;
+  contact?: string;
+  zipCode?: string;
+  state?: string;
+  city?: string;
+  createdAt: string;
+  updatedAt: string;
+  departments: {
+    id: string;
+    name: string;
+    companyId: string;
+    createdAt: string;
+    updatedAt: string;
+  }[];
 }
 
 export async function getCompanies(): Promise<Company[]> {
