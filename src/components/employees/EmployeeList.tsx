@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Employee } from "@/types/cadastro";
-import { PenLine, Trash2, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { PenLine, Trash2 } from "lucide-react";
 
 interface EmployeeListProps {
   employees: Employee[];
@@ -29,17 +29,12 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
   onDelete,
   getStatusComponent,
 }) => {
-  const getRoleName = (roleId: string | undefined): string => {
-    if (!roleId) return 'N/A';
-    return roleNames[roleId] || 'Carregando...';
-  };
-
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Nome</TableHead>
-          <TableHead>CPF</TableHead>
+          <TableHead>Email</TableHead>
           <TableHead>Cargo</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="text-right">Ações</TableHead>
@@ -58,8 +53,8 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
           employees.map((employee) => (
             <TableRow key={employee.id}>
               <TableCell>{employee.name}</TableCell>
-              <TableCell>{employee.cpf}</TableCell>
-              <TableCell>{getRoleName(employee.roleId)}</TableCell>
+              <TableCell>{employee.email}</TableCell>
+              <TableCell>{employee.role || 'Não definido'}</TableCell>
               <TableCell>{getStatusComponent(employee.id)}</TableCell>
               <TableCell className="text-right">
                 <Button

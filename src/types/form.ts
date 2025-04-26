@@ -1,3 +1,4 @@
+
 export interface FormAnswer {
   questionId: string;
   answer: boolean;
@@ -18,11 +19,6 @@ export interface FormResult {
   last_updated: string;
   created_at: string;
   updated_at: string;
-  // For backwards compatibility with FormResults component
-  totalYes?: number;
-  totalNo?: number;
-  yesPerSeverity?: Record<string, number>;
-  analyistNotes?: string;
 }
 
 export interface Question {
@@ -31,7 +27,7 @@ export interface Question {
   risco_id: string;
   secao: string;
   secao_descricao?: string;
-  ordem: number;
+  ordem?: number;
   formulario_id?: string;
   opcoes?: { label: string; value: string; }[];
   observacao_obrigatoria?: boolean;
@@ -50,7 +46,7 @@ export interface Risk {
   id: string;
   texto: string;
   severidade_id: string;
-  categoria: string;
+  categoria?: string;
   severidade?: Severity;
 }
 
@@ -58,8 +54,8 @@ export interface Severity {
   id: string;
   nivel: string;
   descricao?: string;
-  cor: string;
-  peso: number;
+  cor?: string;
+  peso?: number;
 }
 
 export interface FormSection {
@@ -74,49 +70,3 @@ export interface Mitigation {
   texto: string;
 }
 
-// Add SeverityLevel type for backward compatibility
-export type SeverityLevel = 'LEVEMENTE PREJUDICIAL' | 'PREJUDICIAL' | 'EXTREMAMENTE PREJUDICIAL';
-
-// Add FormData interface for backward compatibility with formData.ts
-export interface FormData {
-  sections: {
-    title: string;
-    description?: string;
-    questions: {
-      id: number;
-      text: string;
-      severity: SeverityLevel;
-      risk?: string;
-      options?: { label: string; value: string; }[];
-      requireObservation?: boolean;
-      risco?: string;
-      mitigationActions?: string[];
-      showObservation?: boolean;
-    }[];
-  }[];
-}
-
-// Add types for admin
-export type TipoPessoa = 'juridica' | 'fisica';
-export type StatusContrato = 'ativo' | 'cancelado' | 'em-analise' | 'sem-contrato';
-export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
-export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
-
-// Update ClienteSistema interface
-export interface ClienteSistema {
-  id: string;
-  razao_social: string;
-  nome: string;
-  tipo: TipoPessoa;
-  numeroEmpregados: number;
-  dataInclusao: number;
-  situacao: ClienteStatus;
-  cnpj: string;
-  cpfCnpj?: string;
-  email: string;
-  telefone?: string;
-  responsavel?: string;
-  contato?: string;
-  planoId?: string;
-  contratoId?: string;
-}

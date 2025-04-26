@@ -1,3 +1,4 @@
+
 export interface Company {
   id: string;
   name: string;
@@ -24,10 +25,19 @@ export interface Department {
   updatedAt?: string;
 }
 
+export interface JobRole {
+  id: string;
+  name: string;
+  company_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Employee {
   id: string;
   name: string;
   email: string;
+  cpf?: string;
   role?: string;
   department_id: string;
   company_id: string;
@@ -35,3 +45,4 @@ export interface Employee {
   updated_at: string;
   status?: string;
 }
+
