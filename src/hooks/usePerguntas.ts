@@ -6,18 +6,16 @@ import { Question } from "@/types/form";
 
 interface PerguntasHookProps {
   formularioId: string;
-  filtroSecao?: string;
-  filtroRisco?: string;
 }
 
-export const usePerguntas = ({ formularioId, filtroSecao, filtroRisco }: PerguntasHookProps) => {
+export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
   const [perguntas, setPerguntas] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPerguntas = async () => {
     try {
       setLoading(true);
-      let query = supabase
+      const { data, error } = await supabase
         .from('perguntas')
         .select(`
           *,
@@ -27,27 +25,12 @@ export const usePerguntas = ({ formularioId, filtroSecao, filtroRisco }: Pergunt
           ),
           pergunta_opcoes(*)
         `)
-        .eq('formulario_id', formularioId);
-
-      if (filtroSecao && filtroSecao !== "all") {
-        query = query.eq('secao', filtroSecao);
-      }
-
-      if (filtroRisco && filtroRisco !== "all") {
-        query = query.eq('risco_id', filtroRisco);
-      }
-
-      const { data, error } = await query.order('secao');
+        .eq('formulario_id', formularioId)
+        .order('secao');
 
       if (error) throw error;
 
-      // Transform the data to match our Question type
-      const transformedData: Question[] = data.map(item => ({
-        ...item,
-        opcoes: item.opcoes ? JSON.parse(item.opcoes as string) : undefined
-      }));
-
-      setPerguntas(transformedData);
+      setPerguntas(data);
     } catch (error) {
       console.error("Erro ao carregar perguntas:", error);
       toast.error("Erro ao carregar perguntas");
@@ -58,7 +41,7 @@ export const usePerguntas = ({ formularioId, filtroSecao, filtroRisco }: Pergunt
 
   useEffect(() => {
     fetchPerguntas();
-  }, [formularioId, filtroSecao, filtroRisco]);
+  }, [formularioId]);
 
   return {
     perguntas,
