@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Question, Risk } from "@/types/form";
+import { Question, Risk, Severity } from "@/types/form";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,18 +31,21 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     texto: "",
     secao: "",
     risco_id: "",
+    ordem: 0,
     observacao_obrigatoria: false
   });
   
   const [submitting, setSubmitting] = useState(false);
   const [secoes, setSecoes] = useState<{ nome: string; count: number; }[]>([]);
   const [riscos, setRiscos] = useState<Risk[]>([]);
+  const [severidades, setSeveridades] = useState<Severity[]>([]);
 
-  // Carregar seções e riscos quando o diálogo for aberto
+  // Carregar seções, riscos e severidades quando o diálogo for aberto
   useEffect(() => {
     if (open) {
       fetchSecoes();
       fetchRiscos();
+      fetchSeveridades();
       
       // Se estamos editando, atualize o formData com os dados da pergunta atual
       if (isEditing && currentPergunta) {
@@ -50,6 +53,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           texto: currentPergunta.texto || "",
           secao: currentPergunta.secao || "",
           risco_id: currentPergunta.risco_id || "",
+          ordem: currentPergunta.ordem || 0,
           observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
         });
       } else {
@@ -58,14 +62,12 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           texto: "",
           secao: "",
           risco_id: "",
+          ordem: 0,
           observacao_obrigatoria: false
         });
       }
     }
   }, [open, isEditing, currentPergunta]);
-
-  // Não precisamos mais deste useEffect adicional já que estamos atualizando o formData no useEffect acima
-  // quando o diálogo é aberto e currentPergunta muda
 
   const fetchSecoes = async () => {
     try {
@@ -95,7 +97,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     try {
       const { data, error } = await supabase
         .from('riscos')
-        .select('*')
+        .select('*, severidade(id, nivel)')
         .order('texto');
         
       if (error) throw error;
@@ -103,6 +105,21 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     } catch (error) {
       console.error("Erro ao carregar riscos:", error);
       toast.error("Erro ao carregar riscos");
+    }
+  };
+
+  const fetchSeveridades = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('severidade')
+        .select('*')
+        .order('ordem');
+        
+      if (error) throw error;
+      setSeveridades(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar severidades:", error);
+      toast.error("Erro ao carregar severidades");
     }
   };
 
@@ -141,6 +158,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           .from('perguntas')
           .select('secao_descricao')
           .eq('secao', formData.secao)
+          .eq('formulario_id', formularioId)
           .limit(1);
           
         if (data && data.length > 0) {
@@ -153,6 +171,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         secao: formData.secao,
         secao_descricao,
         risco_id: formData.risco_id || null,
+        ordem: formData.ordem || 0,
         observacao_obrigatoria: formData.observacao_obrigatoria,
         formulario_id: formularioId
       };
@@ -240,7 +259,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
                     <SelectItem value=" ">Nenhum</SelectItem>
                     {riscos.map((risco) => (
                       <SelectItem key={risco.id} value={risco.id}>
-                        {risco.texto}
+                        {risco.texto} - {risco.severidade?.nivel || 'Sem severidade'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -248,15 +267,29 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="observacao_obrigatoria" 
-                checked={formData.observacao_obrigatoria}
-                onCheckedChange={handleCheckboxChange}
-              />
-              <Label htmlFor="observacao_obrigatoria">
-                Observação obrigatória
-              </Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="ordem">Ordem</Label>
+                <Input
+                  id="ordem"
+                  name="ordem"
+                  type="number"
+                  value={formData.ordem}
+                  onChange={handleInputChange}
+                  placeholder="Ordem de exibição"
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2 mt-6">
+                <Checkbox 
+                  id="observacao_obrigatoria" 
+                  checked={formData.observacao_obrigatoria}
+                  onCheckedChange={handleCheckboxChange}
+                />
+                <Label htmlFor="observacao_obrigatoria">
+                  Observação obrigatória
+                </Label>
+              </div>
             </div>
           </div>
           <DialogFooter>

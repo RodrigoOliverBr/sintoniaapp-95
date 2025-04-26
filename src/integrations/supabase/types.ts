@@ -567,6 +567,7 @@ export type Database = {
           id: string
           observacao_obrigatoria: boolean | null
           opcoes: Json | null
+          ordem: number | null
           risco_id: string
           secao: string
           secao_descricao: string | null
@@ -579,6 +580,7 @@ export type Database = {
           id?: string
           observacao_obrigatoria?: boolean | null
           opcoes?: Json | null
+          ordem?: number | null
           risco_id: string
           secao: string
           secao_descricao?: string | null
@@ -591,6 +593,7 @@ export type Database = {
           id?: string
           observacao_obrigatoria?: boolean | null
           opcoes?: Json | null
+          ordem?: number | null
           risco_id?: string
           secao?: string
           secao_descricao?: string | null
@@ -876,6 +879,7 @@ export type Database = {
           descricao: string | null
           id: string
           nivel: string
+          ordem: number | null
           updated_at: string
         }
         Insert: {
@@ -883,6 +887,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nivel: string
+          ordem?: number | null
           updated_at?: string
         }
         Update: {
@@ -890,6 +895,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nivel?: string
+          ordem?: number | null
           updated_at?: string
         }
         Relationships: []

@@ -15,7 +15,9 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
         texto,
         ordem
       )
-    `);
+    `)
+    .eq('formulario_id', formId)
+    .order('ordem');
 
   if (error) {
     console.error('Error fetching questions:', error);
@@ -44,7 +46,14 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
         })
       : undefined,
     observacao_obrigatoria: q.observacao_obrigatoria,
-    risco: q.risco,
+    risco: q.risco ? {
+      ...q.risco,
+      severidade: q.risco.severidade ? {
+        id: q.risco.severidade.id,
+        nivel: q.risco.severidade.nivel,
+        descricao: q.risco.severidade.descricao
+      } : undefined
+    } : undefined,
     pergunta_opcoes: q.pergunta_opcoes
   }));
 }
