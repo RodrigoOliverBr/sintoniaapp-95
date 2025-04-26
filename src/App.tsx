@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -174,14 +175,33 @@ const App = () => {
               } 
             />
             
-            <Route 
-              path="/admin/formularios" 
-              element={
-                <ProtectedRoute userType="admin">
-                  <FormulariosPage />
-                </ProtectedRoute>
-              } 
-            />
+            {/* Rotas para o gerenciamento de formulários */}
+            <Route path="/admin/formularios">
+              <Route 
+                index
+                element={
+                  <ProtectedRoute userType="admin">
+                    <FormulariosPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":formularioId"
+                element={
+                  <ProtectedRoute userType="admin">
+                    <FormulariosPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route
+                path="novo"
+                element={
+                  <ProtectedRoute userType="admin">
+                    <FormulariosPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
             
             <Route 
               path="/" 

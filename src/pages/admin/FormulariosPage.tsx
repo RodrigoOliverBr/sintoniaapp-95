@@ -21,6 +21,19 @@ const FormulariosPage = () => {
     );
   }
 
+  // Se for a rota de novo formulário, podemos implementar um form de criação
+  if (formularioId === "novo") {
+    return (
+      <AdminLayout title="Novo Formulário">
+        <div className="p-6 bg-white rounded-lg shadow">
+          <h2 className="text-2xl font-bold mb-4">Criar Novo Formulário</h2>
+          {/* Aqui virá um formulário para criação de formulários */}
+          <p className="text-gray-600">Implementação do formulário de criação pendente.</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout title="Gerenciamento de Formulários">
       <div className="space-y-6">
@@ -37,7 +50,7 @@ const FormulariosPage = () => {
           </TabsContent>
           
           <TabsContent value="riscos">
-            <RiscosTab />
+            <RiscosTab formularioId={formularioId} />
           </TabsContent>
           
           <TabsContent value="perguntas">
@@ -45,7 +58,7 @@ const FormulariosPage = () => {
           </TabsContent>
           
           <TabsContent value="mitigacoes">
-            <MitigacoesTab />
+            <MitigacoesTab formularioId={formularioId} />
           </TabsContent>
         </Tabs>
       </div>
