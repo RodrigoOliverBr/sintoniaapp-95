@@ -43,19 +43,32 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
         title: question.secao,
         description: question.secao_descricao,
         questions: [],
-        ordem: question.ordem || 0
+        ordem: 0
       };
     }
     acc[question.secao].questions.push(question);
-    // Update section order to the lowest question order in the section
-    if ((question.ordem || 0) < acc[question.secao].ordem) {
-      acc[question.secao].ordem = question.ordem || 0;
-    }
     return acc;
   }, {} as Record<string, { title: string; description?: string; questions: Question[]; ordem: number }>);
 
-  // Sort sections by order
-  const sortedSections = Object.values(questionsBySection).sort((a, b) => a.ordem - b.ordem);
+  // Sort questions within each section by ordem
+  Object.values(questionsBySection).forEach(section => {
+    section.questions.sort((a, b) => {
+      // Se ambos têm ordem 0 ou igual, não altera a ordem
+      if ((a.ordem === 0 && b.ordem === 0) || a.ordem === b.ordem) {
+        return 0;
+      }
+      // Se apenas um tem ordem 0, coloca ele por último
+      if (a.ordem === 0) return 1;
+      if (b.ordem === 0) return -1;
+      // Ordena normalmente pelos números
+      return a.ordem - b.ordem;
+    });
+  });
+
+  // Sort sections by title alphabetically
+  const sortedSections = Object.values(questionsBySection).sort((a, b) => 
+    a.title.localeCompare(b.title)
+  );
 
   if (loading) {
     return (
