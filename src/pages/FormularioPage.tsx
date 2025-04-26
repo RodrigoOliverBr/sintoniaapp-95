@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { getCompanies, getEmployeesByCompany } from "@/services"; 
+import { getCompanies, getEmployeesByCompany } from "@/services";
 import { getFormQuestions, getFormResultByEmployeeId, saveFormResult } from "@/services/form/formService";
 import { Company, Employee } from "@/types/cadastro";
 import { Question, FormAnswer, FormResult } from "@/types/form";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FormSection from "@/components/FormSection";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ProgressHeader from "@/components/form/ProgressHeader";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const FormularioPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -20,6 +21,7 @@ const FormularioPage: React.FC = () => {
   const [formResult, setFormResult] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, FormAnswer>>({});
+  const [currentSection, setCurrentSection] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -69,7 +71,6 @@ const FormularioPage: React.FC = () => {
           const formResultData = await getFormResultByEmployeeId(selectedEmployeeId);
           setFormResult(formResultData);
           
-          // Initialize answers from loaded form result if available
           if (formResultData && formResultData.answers) {
             setAnswers(formResultData.answers);
           } else {
@@ -92,26 +93,13 @@ const FormularioPage: React.FC = () => {
     loadFormResult();
   }, [selectedEmployeeId, toast]);
 
-  const handleCompanyChange = (value: string) => {
-    setSelectedCompanyId(value);
-    setSelectedEmployeeId(undefined);
-  };
-
-  const handleEmployeeChange = (value: string) => {
-    setSelectedEmployeeId(value);
-  };
-
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [formSections, setFormSections] = useState<{title: string, questions: Question[]}[]>([]);
-  
   useEffect(() => {
     const loadFormQuestions = async () => {
       try {
-        const formId = 'a3b97a26-405e-4e13-9339-557db4099351'; // ISTAS21-BR form ID
+        const formId = 'a3b97a26-405e-4e13-9339-557db4099351';
         const questionsData = await getFormQuestions(formId);
         setQuestions(questionsData);
         
-        // Group questions by section
         const sections = questionsData.reduce((acc, question) => {
           const section = acc.find(s => s.title === question.secao);
           if (section) {
@@ -136,7 +124,26 @@ const FormularioPage: React.FC = () => {
     loadFormQuestions();
   }, [toast]);
 
-  // Update handleAnswerChange to work with string IDs instead of numbers
+  const handleCompanyChange = (value: string) => {
+    setSelectedCompanyId(value);
+    setSelectedEmployeeId(undefined);
+  };
+
+  const handleEmployeeChange = (value: string) => {
+    setSelectedEmployeeId(value);
+  };
+
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [formSections, setFormSections] = useState<{title: string, questions: Question[]}[]>([]);
+  
+  const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
+
+  useEffect(() => {
+    if (formSections.length > 0 && !currentSection) {
+      setCurrentSection(formSections[0].title);
+    }
+  }, [formSections]);
+
   const handleAnswerChange = (questionId: string, answer: boolean | null) => {
     setAnswers(prev => {
       const result = { ...prev };
@@ -183,7 +190,6 @@ const FormularioPage: React.FC = () => {
       let totalYes = 0;
       let totalNo = 0;
       
-      // Count answers
       Object.values(answers).forEach(answer => {
         if (answer.answer === true) {
           totalYes++;
@@ -277,35 +283,46 @@ const FormularioPage: React.FC = () => {
 
             {selectedEmployeeId && (
               <div className="mt-6">
-                <Tabs defaultValue={formSections[0]?.title} className="w-full">
+                <ProgressHeader 
+                  employeeName={selectedEmployee?.name || ""}
+                  jobRole={selectedEmployee?.cargo || ""}
+                  currentSection={formSections.findIndex(s => s.title === currentSection) + 1}
+                  totalSections={formSections.length}
+                />
+
+                <div className="space-y-6">
                   <ScrollArea className="w-full">
-                    <TabsList className="w-full justify-start mb-6 bg-muted/40 p-1 rounded-lg flex-wrap">
+                    <ToggleGroup
+                      type="single"
+                      value={currentSection}
+                      onValueChange={(value) => value && setCurrentSection(value)}
+                      className="flex justify-start p-1 bg-muted/40 rounded-lg w-full"
+                    >
                       {formSections.map((section) => (
-                        <TabsTrigger
+                        <ToggleGroupItem
                           key={section.title}
                           value={section.title}
-                          className="px-4 py-2 text-sm"
+                          className="flex-1 whitespace-nowrap px-4"
                         >
                           {section.title}
-                        </TabsTrigger>
+                        </ToggleGroupItem>
                       ))}
-                    </TabsList>
+                    </ToggleGroup>
                   </ScrollArea>
 
-                  {formSections.map((section) => {
-                    return (
-                      <TabsContent key={section.title} value={section.title}>
-                        <FormSection
-                          section={section}
-                          answers={answers}
-                          onAnswerChange={handleAnswerChange}
-                          onObservationChange={handleObservationChange}
-                          onOptionsChange={handleOptionsChange}
-                        />
-                      </TabsContent>
-                    );
-                  })}
-                </Tabs>
+                  {formSections.map((section) => (
+                    section.title === currentSection && (
+                      <FormSection
+                        key={section.title}
+                        section={section}
+                        answers={answers}
+                        onAnswerChange={handleAnswerChange}
+                        onObservationChange={handleObservationChange}
+                        onOptionsChange={handleOptionsChange}
+                      />
+                    )
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
