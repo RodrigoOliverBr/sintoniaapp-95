@@ -16,6 +16,7 @@ import ContratosPage from "./pages/admin/ContratosPage";
 import FaturamentoPage from "./pages/admin/FaturamentoPage";
 import UserAccountPage from "./pages/UserAccountPage";
 import UsersAdminPage from "./pages/admin/UsersAdminPage";
+import FormulariosPage from "./pages/admin/FormulariosPage";
 import { useEffect, useState } from "react";
 import { ThemeProvider } from "next-themes";
 
