@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import MitigationsList from "./MitigationsList";
 import { getAllRisksWithSeverity, getAllSeverities, getMitigationsByRiskId } from "@/services/form/formService";
+import { Label } from "@/components/ui/label";
 
 interface RiscosTabProps {
   formularioId: string;
@@ -140,9 +141,7 @@ const RiscosTab: React.FC<RiscosTabProps> = ({ formularioId }) => {
         riscoId = riscoData.id;
       }
 
-      // Handle mitigations
       if (riscoId) {
-        // First, delete existing mitigations if editing
         if (isEditing) {
           await supabase
             .from('mitigacoes')
@@ -150,7 +149,6 @@ const RiscosTab: React.FC<RiscosTabProps> = ({ formularioId }) => {
             .eq('risco_id', riscoId);
         }
 
-        // Insert new mitigations
         if (mitigations.length > 0) {
           const mitigacoesData = mitigations
             .filter(m => m.texto.trim() !== '')
@@ -185,7 +183,6 @@ const RiscosTab: React.FC<RiscosTabProps> = ({ formularioId }) => {
 
     setLoading(true);
     try {
-      // Verificar se o risco está sendo usado em perguntas
       const { data: perguntasComRisco, error: checkError } = await supabase
         .from('perguntas')
         .select('id')
@@ -199,7 +196,6 @@ const RiscosTab: React.FC<RiscosTabProps> = ({ formularioId }) => {
         return;
       }
 
-      // Delete associated mitigations first
       const { error: mitigacoesError } = await supabase
         .from('mitigacoes')
         .delete()
@@ -207,7 +203,6 @@ const RiscosTab: React.FC<RiscosTabProps> = ({ formularioId }) => {
 
       if (mitigacoesError) throw mitigacoesError;
 
-      // Then delete the risk
       const { error: deleteError } = await supabase
         .from('riscos')
         .delete()
