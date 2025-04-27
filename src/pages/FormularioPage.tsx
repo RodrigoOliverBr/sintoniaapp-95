@@ -1,4 +1,3 @@
-
 import React from "react";
 import Layout from "@/components/Layout";
 import { useFormData } from "@/hooks/useFormData";
@@ -140,6 +139,26 @@ const FormularioPage: React.FC = () => {
     );
   };
 
+  const handleDeleteEvaluation = async (evaluationId: string) => {
+    try {
+      await onDeleteEvaluation(evaluationId);
+      
+      if (selectedEmployeeId) {
+        setShowResults(false);
+        setFormComplete(false);
+        setAnswers({});
+        await loadEmployeeHistory();
+      }
+    } catch (error) {
+      console.error("Erro ao excluir avaliação:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a avaliação",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Layout title="Formulário">
       <div className="container mx-auto py-6 space-y-8">
@@ -205,17 +224,7 @@ const FormularioPage: React.FC = () => {
             onShowResults={() => setShowResults(true)}
             onCompleteForm={handleSaveAndComplete}
             onSaveForm={handleSaveAndContinue}
-            onDeleteEvaluation={async (evaluationId) => {
-              try {
-                setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
-                if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
-                  setSelectedEvaluation(null);
-                  setShowResults(false);
-                }
-              } catch (error) {
-                console.error("Erro ao processar exclusão da avaliação:", error);
-              }
-            }}
+            onDeleteEvaluation={handleDeleteEvaluation}
             onEditEvaluation={(evaluation) => {
               setSelectedEvaluation(evaluation);
               setShowResults(false);

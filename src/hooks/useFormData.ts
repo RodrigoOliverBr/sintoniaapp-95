@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Question, Form, FormResult, Section } from "@/types/form";
 import { Company, Employee } from "@/types/cadastro";
@@ -211,6 +210,7 @@ export function useFormData() {
     setEvaluationHistory,
     isLoadingHistory,
     showingHistoryView,
-    setShowingHistoryView
+    setShowingHistoryView,
+    loadEmployeeHistory,
   };
 }
