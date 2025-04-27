@@ -1,4 +1,3 @@
-
 import React from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -165,21 +164,24 @@ const FormularioPage: React.FC = () => {
 
   const handleDeleteEvaluation = async (evaluationId: string) => {
     try {
-      // Call your delete service here
-      // await deleteFormResult(evaluationId);
-      toast.success("Avaliação excluída com sucesso!");
-      // Refresh the evaluation history
+      setEvaluationHistory(prev => prev.filter(eval => eval.id !== evaluationId));
+      setSelectedEvaluation(null);
+      setShowResults(false);
+      
       if (selectedEmployeeId) {
-        // Reload employee history...
-        setSelectedEvaluation(null);
-        setShowResults(false);
+        const updatedHistory = await getEmployeeFormHistory(selectedEmployeeId);
+        setEvaluationHistory(updatedHistory);
       }
     } catch (error) {
       console.error("Erro ao excluir avaliação:", error);
-      toast.error("Erro ao excluir avaliação");
+      toast({
+        title: "Erro ao excluir avaliação",
+        description: "Não foi possível excluir a avaliação. Tente novamente.",
+        variant: "destructive"
+      });
     }
   };
-  
+
   const handleEditEvaluation = (evaluation: any) => {
     setSelectedEvaluation(evaluation);
     setShowResults(false);

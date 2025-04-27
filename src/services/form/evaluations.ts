@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, FormAnswer } from '@/types/form';
 
@@ -286,6 +285,23 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
     }
   } catch (error) {
     console.error('Erro no processo de salvamento do formulário:', error);
+    throw error;
+  }
+}
+
+export async function deleteFormEvaluation(evaluationId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('avaliacoes')
+      .delete()
+      .eq('id', evaluationId);
+
+    if (error) {
+      console.error('Erro ao deletar avaliação:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Erro no processo de deleção da avaliação:', error);
     throw error;
   }
 }

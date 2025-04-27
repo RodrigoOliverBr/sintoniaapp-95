@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, ClipboardCheck, Edit, Trash2 } from "lucide-react";
 import { FormResult } from "@/types/form";
+import { deleteFormEvaluation } from "@/services/form";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -43,6 +44,7 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   const confirmDelete = async () => {
     if (evaluationToDelete && onDeleteEvaluation) {
       try {
+        await deleteFormEvaluation(evaluationToDelete.id);
         await onDeleteEvaluation(evaluationToDelete.id);
         toast({
           title: "Avaliação excluída",
