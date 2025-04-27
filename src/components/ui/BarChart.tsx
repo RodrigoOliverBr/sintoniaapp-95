@@ -40,6 +40,7 @@ export function BarChart({
           axisLine={false}
           tickLine={false}
           tickMargin={10}
+          width={30}
         />
         <Tooltip 
           formatter={(value: number) => [valueFormatter(value), ""]}
@@ -51,6 +52,7 @@ export function BarChart({
             dataKey={category}
             fill={colors[i] || "#1EAEDB"}
             radius={[4, 4, 0, 0]}
+            name={data.find(item => item[category] !== undefined)?.name || category}
           />
         ))}
       </RechartBarChart>

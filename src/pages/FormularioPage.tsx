@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import ProgressHeader from "@/components/form/ProgressHeader";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, CheckCircle } from "lucide-react";
 import FormResults from "@/components/FormResults";
 
 const FormularioPage: React.FC = () => {
@@ -32,6 +33,7 @@ const FormularioPage: React.FC = () => {
   const [formSections, setFormSections] = useState<{title: string, description?: string, ordem: number, questions: Question[]}[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [formComplete, setFormComplete] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -102,6 +104,7 @@ const FormularioPage: React.FC = () => {
           
           if (formResultData && formResultData.answers) {
             setAnswers(formResultData.answers);
+            setFormComplete(formResultData.is_complete);
             if (formResultData.is_complete) {
               setShowResults(true);
             } else {
@@ -110,6 +113,7 @@ const FormularioPage: React.FC = () => {
           } else {
             setAnswers({});
             setShowResults(false);
+            setFormComplete(false);
           }
         } catch (error) {
           console.error("Erro ao carregar resultado do formulário:", error);
@@ -123,6 +127,7 @@ const FormularioPage: React.FC = () => {
         setFormResult(null);
         setAnswers({});
         setShowResults(false);
+        setFormComplete(false);
       }
     };
 
@@ -162,7 +167,10 @@ const FormularioPage: React.FC = () => {
         const orderedSections = sectionGroups.sort((a, b) => a.ordem - b.ordem);
         setFormSections(orderedSections);
         
-        setCurrentSection("");
+        if (orderedSections.length > 0 && !currentSection) {
+          setCurrentSection(orderedSections[0].title);
+        }
+        
         setError(null);
       } catch (error) {
         console.error("Erro ao carregar perguntas:", error);
@@ -175,12 +183,13 @@ const FormularioPage: React.FC = () => {
     };
 
     loadFormQuestions();
-  }, [selectedFormId, toast]);
+  }, [selectedFormId, toast, currentSection]);
 
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value);
     setSelectedEmployeeId(undefined);
     setShowResults(false);
+    setFormComplete(false);
   };
 
   const handleEmployeeChange = (value: string) => {
@@ -193,6 +202,7 @@ const FormularioPage: React.FC = () => {
     setCurrentSection("");
     setError(null);
     setShowResults(false);
+    setFormComplete(false);
   };
   
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
@@ -253,7 +263,16 @@ const FormularioPage: React.FC = () => {
     }
   };
 
-  const handleSaveForm = async () => {
+  const moveToNextSection = () => {
+    const currentSectionIndex = formSections.findIndex(section => section.title === currentSection);
+    if (currentSectionIndex < formSections.length - 1) {
+      setCurrentSection(formSections[currentSectionIndex + 1].title);
+      return true;
+    }
+    return false;
+  };
+
+  const handleSaveForm = async (completeForm: boolean = false) => {
     if (!selectedFormId) {
       toast({
         title: "Erro",
@@ -278,7 +297,7 @@ const FormularioPage: React.FC = () => {
         }
       });
       
-      const isComplete = true;
+      const isComplete = completeForm;
       
       const formResultData: FormResult = {
         id: formResult?.id || '',
@@ -302,12 +321,15 @@ const FormularioPage: React.FC = () => {
       const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId!, selectedFormId);
       setFormResult(updatedResult);
 
-      if (isComplete) {
+      if (completeForm) {
         setShowResults(true);
+        setFormComplete(true);
       } else {
-        const currentIndex = formSections.findIndex(s => s.title === currentSection);
-        if (currentIndex < formSections.length - 1) {
-          setCurrentSection(formSections[currentIndex + 1].title);
+        // If not completing the form, try to move to the next section
+        const hasMoreSections = moveToNextSection();
+        // Only show results if we're at the last section and there are no more sections
+        if (!hasMoreSections) {
+          setFormComplete(true);
         }
       }
     } catch (error: any) {
@@ -323,12 +345,22 @@ const FormularioPage: React.FC = () => {
     }
   };
 
+  const handleCompleteForm = () => {
+    handleSaveForm(true);
+  };
+
   const handleNewEvaluation = () => {
     setShowResults(false);
+    setFormComplete(false);
     setAnswers({});
     if (formSections.length > 0) {
       setCurrentSection(formSections[0].title);
     }
+  };
+
+  const isLastSection = () => {
+    const currentSectionIndex = formSections.findIndex(section => section.title === currentSection);
+    return currentSectionIndex === formSections.length - 1;
   };
 
   const selectedFormTitle = availableForms.find(f => f.id === selectedFormId)?.titulo || "Formulário";
@@ -450,6 +482,16 @@ const FormularioPage: React.FC = () => {
                         )
                       ))}
                     </div>
+
+                    {formComplete && !showResults && (
+                      <div className="bg-green-50 border border-green-200 p-4 rounded-md mt-6 flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <div>
+                          <p className="font-medium text-green-800">Formulário completo!</p>
+                          <p className="text-sm text-green-700">Clique no botão "Verificar Resultados" para visualizar a análise.</p>
+                        </div>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <FormResults 
@@ -479,15 +521,36 @@ const FormularioPage: React.FC = () => {
                 >
                   Nova Avaliação
                 </Button>
-              ) : null}
-              
-              <Button 
-                onClick={handleSaveForm} 
-                disabled={isSubmitting}
-                className="w-full sm:w-auto"
-              >
-                {isSubmitting ? "Salvando..." : showResults ? "Atualizar Resultados" : "Salvar Formulário"}
-              </Button>
+              ) : formComplete ? (
+                <Button 
+                  onClick={() => setShowResults(true)}
+                  className="w-full sm:w-auto flex items-center gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  Verificar Resultados
+                </Button>
+              ) : (
+                <>
+                  {isLastSection() && (
+                    <Button
+                      onClick={handleCompleteForm}
+                      className="w-full sm:w-auto mr-2 bg-green-600 hover:bg-green-700"
+                      disabled={isSubmitting}
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Concluir Formulário
+                    </Button>
+                  )}
+                  <Button 
+                    onClick={() => handleSaveForm(false)} 
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto"
+                  >
+                    {isSubmitting ? "Salvando..." : (isLastSection() ? "Salvar" : "Salvar e Avançar")}
+                    {!isLastSection() && !isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </Card>
