@@ -1,7 +1,27 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer } from '@/types/form';
+import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer, Section } from '@/types/form';
 
 export async function getFormQuestions(formId: string): Promise<Question[]> {
+  // First fetch all sections for this form
+  const { data: sections, error: sectionsError } = await supabase
+    .from('secoes')
+    .select('*')
+    .eq('formulario_id', formId)
+    .order('ordem', { ascending: true });
+
+  if (sectionsError) {
+    console.error('Error fetching sections:', sectionsError);
+    throw sectionsError;
+  }
+
+  // Create a map of section IDs to section objects
+  const sectionsMap = sections.reduce((acc, section) => {
+    acc[section.id] = section;
+    return acc;
+  }, {} as Record<string, Section>);
+
+  // Now fetch the questions with their relations
   const { data: questions, error } = await supabase
     .from('perguntas')
     .select(`

@@ -136,21 +136,11 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         return;
       }
 
-      // Get section information to maintain compatibility with older code
-      const selectedSection = sections.find(s => s.id === formData.secao_id);
-      if (!selectedSection) {
-        toast.error("Seção não encontrada");
-        return;
-      }
-
       const perguntaData = {
         texto: formData.texto,
         secao_id: formData.secao_id,
-        secao: selectedSection.titulo, // For backwards compatibility
-        secao_descricao: selectedSection.descricao, // For backwards compatibility
         risco_id: formData.risco_id || null,
         ordem_pergunta: formData.ordem_pergunta,
-        ordem: selectedSection.ordem, // For backwards compatibility
         observacao_obrigatoria: formData.observacao_obrigatoria,
         formulario_id: formularioId
       };

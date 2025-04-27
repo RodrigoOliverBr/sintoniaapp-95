@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { getCompanies, getEmployeesByCompany } from "@/services";
 import { getFormQuestions, getFormResultByEmployeeId, saveFormResult } from "@/services/form/formService";
 import { Company, Employee } from "@/types/cadastro";
-import { Question, FormAnswer, FormResult } from "@/types/form";
+import { Question, FormAnswer, FormResult, Section } from "@/types/form";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +12,7 @@ import FormSection from "@/components/FormSection";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ProgressHeader from "@/components/form/ProgressHeader";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { supabase } from "@/integrations/supabase/client";
 
 const FormularioPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -97,25 +98,33 @@ const FormularioPage: React.FC = () => {
     const loadFormQuestions = async () => {
       try {
         const formId = 'a3b97a26-405e-4e13-9339-557db4099351';
+        
+        const { data: sectionsData, error: sectionsError } = await supabase
+          .from('secoes')
+          .select('*')
+          .eq('formulario_id', formId)
+          .order('ordem', { ascending: true });
+        
+        if (sectionsError) throw sectionsError;
+        
+        const sectionsMap = sectionsData.reduce((acc, section) => {
+          acc[section.id] = section;
+          return acc;
+        }, {} as Record<string, Section>);
+        
         const questionsData = await getFormQuestions(formId);
         setQuestions(questionsData);
         
-        const sectionsMap = questionsData.reduce((acc, question) => {
-          const section = acc.find(s => s.title === question.secao);
-          if (section) {
-            section.questions.push(question);
-          } else {
-            acc.push({ 
-              title: question.secao, 
-              description: question.secao_descricao,
-              ordem: question.ordem || 0,
-              questions: [question] 
-            });
-          }
-          return acc;
-        }, [] as {title: string, description?: string, ordem: number, questions: Question[]}[]);
+        const sectionGroups = sectionsData.map(section => {
+          return {
+            title: section.titulo,
+            description: section.descricao,
+            ordem: section.ordem || 0,
+            questions: questionsData.filter(q => q.secao_id === section.id)
+          };
+        });
         
-        const orderedSections = sectionsMap.sort((a, b) => a.ordem - b.ordem);
+        const orderedSections = sectionGroups.sort((a, b) => a.ordem - b.ordem);
         setFormSections(orderedSections);
       } catch (error) {
         console.error("Erro ao carregar perguntas:", error);
