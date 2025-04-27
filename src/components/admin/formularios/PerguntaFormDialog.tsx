@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -53,7 +52,6 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
         });
       } else {
-        // Use preSelectedSection if provided
         setFormData({
           texto: "",
           secao: preSelectedSection,
@@ -122,7 +120,6 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         }
       }
 
-      // Get maximum order for this section to set new questions at the end
       let nextOrder = formData.ordem;
       if (!isEditing && formData.ordem === 0) {
         const { data } = await supabase
@@ -189,9 +186,19 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label>Seção</Label>
-              <div className="w-full p-3 bg-muted rounded-md text-muted-foreground">
-                {formData.secao}
-              </div>
+              {isEditing ? (
+                <Input
+                  name="secao"
+                  value={formData.secao}
+                  onChange={handleInputChange}
+                  placeholder="Nome da seção"
+                  className="w-full"
+                />
+              ) : (
+                <div className="w-full p-3 bg-muted rounded-md text-muted-foreground">
+                  {formData.secao}
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
