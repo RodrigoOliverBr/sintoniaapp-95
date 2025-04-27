@@ -22,17 +22,17 @@ const FormSection: React.FC<FormSectionProps> = ({
   onObservationChange,
   onOptionsChange,
 }) => {
-  // Sort questions by the ordem property
+  // Sort questions by the ordem_pergunta property
   const orderedQuestions = [...section.questions].sort((a, b) => {
     // If both have order 0 or equal, don't change the order
-    if ((a.ordem === 0 && b.ordem === 0) || a.ordem === b.ordem) {
+    if ((a.ordem_pergunta === 0 && b.ordem_pergunta === 0) || a.ordem_pergunta === b.ordem_pergunta) {
       return 0;
     }
     // If only one has order 0, put it last
-    if (a.ordem === 0) return 1;
-    if (b.ordem === 0) return -1;
+    if (a.ordem_pergunta === 0) return 1;
+    if (b.ordem_pergunta === 0) return -1;
     // Sort normally by numbers
-    return (a.ordem || 0) - (b.ordem || 0);
+    return (a.ordem_pergunta || 0) - (b.ordem_pergunta || 0);
   });
 
   return (

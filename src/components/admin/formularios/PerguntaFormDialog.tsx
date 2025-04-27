@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -165,6 +166,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         nextQuestionOrder = data && data.length > 0 ? (data[0].ordem_pergunta || 0) + 1 : 1;
       }
 
+      // Extract section order from section name (e.g., "1. Section Name" => 1)
       const sectionOrderMatch = formData.secao.match(/^(\d+)\./);
       const sectionOrder = sectionOrderMatch ? parseInt(sectionOrderMatch[1], 10) : 0;
 
@@ -180,6 +182,11 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
       };
 
       if (isEditing && currentPergunta) {
+        // For editing, preserve the original ordem_pergunta if we're not changing sections
+        if (formData.secao === currentPergunta.secao) {
+          perguntaData.ordem_pergunta = currentPergunta.ordem_pergunta || 0;
+        }
+        
         const { error } = await supabase
           .from('perguntas')
           .update(perguntaData)
@@ -218,27 +225,21 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label>Seção</Label>
-              {isEditing ? (
-                <Select 
-                  value={formData.secao}
-                  onValueChange={handleSectionChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione a seção" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableSections.map((section) => (
-                      <SelectItem key={section} value={section}>
-                        {section}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="w-full p-3 bg-muted rounded-md text-muted-foreground">
-                  {formData.secao}
-                </div>
-              )}
+              <Select 
+                value={formData.secao}
+                onValueChange={handleSectionChange}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione a seção" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSections.map((section) => (
+                    <SelectItem key={section} value={section}>
+                      {section}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">

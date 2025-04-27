@@ -59,36 +59,19 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
     return acc;
   }, {} as Record<string, { title: string; description?: string; questions: Question[]; ordem: number }>);
 
-  // Sort questions within each section by ordem
+  // Sort questions within each section by ordem_pergunta
   Object.values(questionsBySection).forEach(section => {
     section.questions.sort((a, b) => {
-      // Se ambos têm ordem 0 ou igual, não altera a ordem
-      if ((a.ordem === 0 && b.ordem === 0) || a.ordem === b.ordem) {
+      // If both have order 0 or equal, don't change the order
+      if ((a.ordem_pergunta === 0 && b.ordem_pergunta === 0) || a.ordem_pergunta === b.ordem_pergunta) {
         return 0;
       }
-      // Se apenas um tem ordem 0, coloca ele por último
-      if (a.ordem === 0) return 1;
-      if (b.ordem === 0) return -1;
-      // Ordena normalmente pelos números
-      return a.ordem - b.ordem;
+      // If only one has order 0, put it last
+      if (a.ordem_pergunta === 0) return 1;
+      if (b.ordem_pergunta === 0) return -1;
+      // Sort normally by numbers
+      return a.ordem_pergunta - b.ordem_pergunta;
     });
-  });
-
-  // Get the maximum ordem value for each section
-  Object.keys(questionsBySection).forEach(sectionKey => {
-    const section = questionsBySection[sectionKey];
-    const maxOrdem = section.questions.reduce((max, question) => {
-      return question.ordem && question.ordem > max ? question.ordem : max;
-    }, 0);
-    
-    // Make sure the section ordem is set if not already
-    if (!section.ordem || section.ordem === 0) {
-      // Extract number from section name if it exists (e.g., "1. Section Name")
-      const sectionOrderMatch = section.title.match(/^(\d+)\.\s/);
-      if (sectionOrderMatch) {
-        section.ordem = parseInt(sectionOrderMatch[1], 10);
-      }
-    }
   });
 
   // Sort sections by ordem value (numerically)
