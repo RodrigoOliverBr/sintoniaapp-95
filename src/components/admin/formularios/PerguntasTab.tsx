@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Question } from "@/types/form";
+import { Question, Section } from "@/types/form";
 import { usePerguntas } from "@/hooks/usePerguntas";
 import PerguntaFormDialog from "./PerguntaFormDialog";
 import { SectionAccordion } from "./questions/SectionAccordion";
@@ -15,14 +15,18 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
   const [currentPergunta, setCurrentPergunta] = useState<Question | null>(null);
   const [selectedSection, setSelectedSection] = useState<string>("");
 
-  const { perguntas, loading, refreshPerguntas } = usePerguntas({
+  const { perguntas, sections, loading, refreshPerguntas } = usePerguntas({
     formularioId
   });
 
   const handleEdit = (pergunta: Question) => {
     setIsEditing(true);
     setCurrentPergunta(pergunta);
-    setSelectedSection(pergunta.secao);
+    
+    // Find the section title from sections
+    const section = sections.find(s => s.id === pergunta.secao_id);
+    setSelectedSection(section ? section.titulo : "");
+    
     setDialogOpen(true);
   };
 
@@ -30,34 +34,37 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
     refreshPerguntas();
   };
 
-  const handleNewInSection = (sectionName: string) => {
+  const handleNewInSection = (sectionId: string) => {
     setIsEditing(false);
     setCurrentPergunta(null);
-    setSelectedSection(sectionName);
+    
+    // Find the section title from sections
+    const section = sections.find(s => s.id === sectionId);
+    setSelectedSection(section ? section.titulo : "");
+    
     setDialogOpen(true);
   };
 
   // Group questions by section
-  const questionsBySection = perguntas.reduce((acc, question) => {
-    if (!acc[question.secao]) {
-      acc[question.secao] = {
-        title: question.secao,
-        description: question.secao_descricao,
-        questions: [],
-        ordem: question.ordem || 0
-      };
-    }
+  const questionsBySection = sections.reduce((acc, section) => {
+    // Create an entry for this section
+    acc[section.id] = {
+      id: section.id,
+      title: section.titulo,
+      description: section.descricao,
+      questions: [],
+      ordem: section.ordem || 0
+    };
     
-    // Extract the section order from the title if it exists
-    // Look for a pattern like "1. Section Name"
-    const orderMatch = question.secao.match(/^(\d+)\.\s/);
-    if (orderMatch && !acc[question.secao].ordem) {
-      acc[question.secao].ordem = parseInt(orderMatch[1], 10);
-    }
-    
-    acc[question.secao].questions.push(question);
     return acc;
-  }, {} as Record<string, { title: string; description?: string; questions: Question[]; ordem: number }>);
+  }, {} as Record<string, { id: string, title: string; description?: string; questions: Question[]; ordem: number }>);
+
+  // Assign questions to their respective sections
+  perguntas.forEach(question => {
+    if (question.secao_id && questionsBySection[question.secao_id]) {
+      questionsBySection[question.secao_id].questions.push(question);
+    }
+  });
 
   // Sort questions within each section by ordem_pergunta
   Object.values(questionsBySection).forEach(section => {
@@ -104,14 +111,15 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
       <div className="space-y-4">
         {sortedSections.map((section) => (
           <SectionAccordion
-            key={section.title}
+            key={section.id}
+            id={section.id}
             title={section.title}
             description={section.description}
             ordem={section.ordem}
             questions={section.questions}
             onEditQuestion={handleEdit}
             onDeleteQuestion={handleDelete}
-            onNewQuestion={() => handleNewInSection(section.title)}
+            onNewQuestion={() => handleNewInSection(section.id)}
             formularioId={formularioId}
           />
         ))}

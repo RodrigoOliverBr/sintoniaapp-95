@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface SectionProps {
+  id: string;
   title: string;
   description?: string;
   ordem?: number;
@@ -35,6 +36,7 @@ interface SectionProps {
 }
 
 export const SectionAccordion: React.FC<SectionProps> = ({
+  id,
   title,
   description,
   ordem,
@@ -96,7 +98,7 @@ export const SectionAccordion: React.FC<SectionProps> = ({
   return (
     <>
       <Accordion type="single" collapsible className="w-full">
-        <AccordionItem value={title} className="border-[#C8C8C9]">
+        <AccordionItem value={id} className="border-[#C8C8C9]">
           <AccordionTrigger className="text-lg font-semibold hover:no-underline">
             <div className="flex items-center gap-3">
               {formattedTitle}

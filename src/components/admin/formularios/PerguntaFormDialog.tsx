@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Question, Risk } from "@/types/form";
+import { Question, Section } from "@/types/form";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import RiskSelectionGroup from "./risk/RiskSelectionGroup";
@@ -38,7 +39,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
   });
   
   const [submitting, setSubmitting] = useState(false);
-  const [riscos, setRiscos] = useState<Risk[]>([]);
+  const [riscos, setRiscos] = useState<any[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
 
   useEffect(() => {
@@ -55,14 +56,25 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
         });
       } else {
-        const preSelectedSectionData = sections.find(s => s.titulo === preSelectedSection);
-        setFormData({
-          texto: "",
-          secao_id: preSelectedSectionData?.id || "",
-          risco_id: "",
-          ordem_pergunta: 0,
-          observacao_obrigatoria: false
-        });
+        // If not editing, find the section by title if preSelectedSection is provided
+        if (preSelectedSection && sections.length > 0) {
+          const preSelectedSectionData = sections.find(s => s.titulo === preSelectedSection);
+          setFormData({
+            texto: "",
+            secao_id: preSelectedSectionData?.id || "",
+            risco_id: "",
+            ordem_pergunta: 0,
+            observacao_obrigatoria: false
+          });
+        } else {
+          setFormData({
+            texto: "",
+            secao_id: "",
+            risco_id: "",
+            ordem_pergunta: 0,
+            observacao_obrigatoria: false
+          });
+        }
       }
     }
   }, [open, isEditing, currentPergunta, preSelectedSection, sections]);
@@ -105,10 +117,6 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSectionChange = (value: string) => {
-    setFormData(prev => ({ ...prev, secao_id: value }));
-  };
-
   const handleCheckboxChange = (checked: boolean) => {
     setFormData({ ...formData, observacao_obrigatoria: checked });
   };
@@ -128,11 +136,21 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         return;
       }
 
+      // Get section information to maintain compatibility with older code
+      const selectedSection = sections.find(s => s.id === formData.secao_id);
+      if (!selectedSection) {
+        toast.error("Seção não encontrada");
+        return;
+      }
+
       const perguntaData = {
         texto: formData.texto,
         secao_id: formData.secao_id,
+        secao: selectedSection.titulo, // For backwards compatibility
+        secao_descricao: selectedSection.descricao, // For backwards compatibility
         risco_id: formData.risco_id || null,
         ordem_pergunta: formData.ordem_pergunta,
+        ordem: selectedSection.ordem, // For backwards compatibility
         observacao_obrigatoria: formData.observacao_obrigatoria,
         formulario_id: formularioId
       };

@@ -25,7 +25,7 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
         .order('ordem');
 
       if (sectionsError) throw sectionsError;
-      setSections(sectionsData);
+      setSections(sectionsData || []);
 
       // Fetch questions with their relations
       const { data: questionsData, error: questionsError } = await supabase
@@ -47,6 +47,9 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
         texto: item.texto,
         risco_id: item.risco_id,
         secao_id: item.secao_id,
+        secao: item.secao, // Keep for backward compatibility
+        secao_descricao: item.secao_descricao, // Keep for backward compatibility
+        ordem: item.ordem || 0, // Keep for backward compatibility
         ordem_pergunta: item.ordem_pergunta || 0,
         formulario_id: item.formulario_id,
         opcoes: item.opcoes 
@@ -71,7 +74,9 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
   };
 
   useEffect(() => {
-    fetchData();
+    if (formularioId) {
+      fetchData();
+    }
   }, [formularioId]);
 
   return {

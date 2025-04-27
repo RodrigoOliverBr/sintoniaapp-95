@@ -23,27 +23,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getDefaultRiskId } from "@/services/form/formService";
-
-interface Secao {
-  nome: string;
-  descricao: string | null;
-  count: number;
-  ordem: number;
-}
+import { Section } from "@/types/form";
 
 interface SecoesTabProps {
   formularioId: string;
 }
 
 const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
-  const [secoes, setSecoes] = useState<Secao[]>([]);
+  const [secoes, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [formTitle, setFormTitle] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentSecao, setCurrentSecao] = useState<Secao | null>(null);
+  const [currentSecao, setCurrentSecao] = useState<Section | null>(null);
   const [formData, setFormData] = useState({
-    nome: "",
+    titulo: "",
     descricao: "",
     ordem: 0
   });
@@ -52,42 +46,32 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
   const fetchSecoes = async () => {
     try {
       setLoading(true);
-      // Query para buscar as seções e suas ordens
-      const { data, error } = await supabase
-        .from('perguntas')
-        .select('secao, secao_descricao, ordem')
-        .eq('formulario_id', formularioId)
-        .order('ordem', { ascending: true })
-        .order('secao');
-
-      if (error) {
-        throw error;
-      }
-
-      // Agrupar as perguntas por seção e pegar a maior ordem para cada seção
-      const secoesMap: Record<string, Secao> = {};
       
-      data.forEach(item => {
-        const secao = item.secao;
-        if (!secoesMap[secao]) {
-          secoesMap[secao] = {
-            nome: secao,
-            descricao: item.secao_descricao,
-            count: 0,
-            ordem: item.ordem || 0,
-          };
-        }
-        secoesMap[secao].count++;
+      // Fetch sections from new secoes table
+      const { data: sectionsData, error: sectionsError } = await supabase
+        .from('secoes')
+        .select('*')
+        .eq('formulario_id', formularioId)
+        .order('ordem', { ascending: true });
+      
+      if (sectionsError) throw sectionsError;
+      
+      // For each section, count how many questions are there
+      const sectionsWithCounts = await Promise.all(sectionsData.map(async (section) => {
+        const { count, error: countError } = await supabase
+          .from('perguntas')
+          .select('id', { count: 'exact', head: true })
+          .eq('secao_id', section.id);
+          
+        if (countError) throw countError;
         
-        // Se encontrarmos uma pergunta com ordem maior, atualizamos a ordem da seção
-        if ((item.ordem || 0) > secoesMap[secao].ordem) {
-          secoesMap[secao].ordem = item.ordem || 0;
-        }
-      });
-
-      // Ordenar as seções pela ordem antes de exibir
-      const secoesOrdenadas = Object.values(secoesMap).sort((a, b) => a.ordem - b.ordem);
-      setSecoes(secoesOrdenadas);
+        return {
+          ...section,
+          count: count || 0
+        };
+      }));
+      
+      setSections(sectionsWithCounts);
     } catch (error) {
       toast.error("Erro ao carregar seções");
       console.error("Erro ao carregar seções:", error);
@@ -120,11 +104,11 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleEdit = (secao: Secao) => {
+  const handleEdit = (secao: Section) => {
     setIsEditing(true);
     setCurrentSecao(secao);
     setFormData({
-      nome: secao.nome,
+      titulo: secao.titulo || "",
       descricao: secao.descricao || "",
       ordem: secao.ordem
     });
@@ -138,7 +122,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
     const nextOrder = secoes.length > 0 
       ? Math.max(...secoes.map(s => s.ordem)) + 1 
       : 1;
-    setFormData({ nome: "", descricao: "", ordem: nextOrder });
+    setFormData({ titulo: "", descricao: "", ordem: nextOrder });
     setDialogOpen(true);
   };
 
@@ -147,8 +131,8 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
     setSubmitting(true);
 
     try {
-      if (formData.nome.trim() === "") {
-        toast.error("O nome da seção é obrigatório");
+      if (formData.titulo.trim() === "") {
+        toast.error("O título da seção é obrigatório");
         setSubmitting(false);
         return;
       }
@@ -157,48 +141,74 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
       const ordem = parseInt(String(formData.ordem)) || 0;
 
       if (isEditing && currentSecao) {
-        // Atualizando todas as perguntas desta seção com a nova ordem e descrição
-        const { error } = await supabase
+        // Update section in secoes table
+        const { error: updateSectionError } = await supabase
+          .from('secoes')
+          .update({
+            titulo: formData.titulo,
+            descricao: formData.descricao || null,
+            ordem: ordem
+          })
+          .eq('id', currentSecao.id);
+
+        if (updateSectionError) throw updateSectionError;
+          
+        // Also update secao and secao_descricao in perguntas table for backwards compatibility
+        const { error: updatePerguntasError } = await supabase
           .from('perguntas')
           .update({
-            secao: formData.nome,
+            secao: formData.titulo,
             secao_descricao: formData.descricao || null,
             ordem: ordem
           })
-          .eq('secao', currentSecao.nome)
-          .eq('formulario_id', formularioId);
+          .eq('secao_id', currentSecao.id);
+          
+        if (updatePerguntasError) throw updatePerguntasError;
 
-        if (error) throw error;
         toast.success("Seção atualizada com sucesso");
       } else {
+        // Insert new section into secoes table
+        const { data: newSection, error: insertSectionError } = await supabase
+          .from('secoes')
+          .insert({
+            titulo: formData.titulo,
+            descricao: formData.descricao || null,
+            ordem: ordem,
+            formulario_id: formularioId
+          })
+          .select()
+          .single();
+
+        if (insertSectionError) throw insertSectionError;
+        
+        // Create a sample question for this section
         try {
-          // Obter um risco padrão para a nova pergunta
           const defaultRiskId = await getDefaultRiskId();
           
-          // Criando uma nova seção com uma pergunta exemplo
-          const { error } = await supabase
+          const { error: insertPerguntaError } = await supabase
             .from('perguntas')
             .insert({
-              secao: formData.nome,
-              secao_descricao: formData.descricao || null,
               texto: "Pergunta Exemplo",
-              formulario_id: formularioId,
-              risco_id: defaultRiskId, // Usando o risco padrão
-              ordem: ordem
+              secao_id: newSection.id,
+              secao: formData.titulo, // For backwards compatibility
+              secao_descricao: formData.descricao || null, // For backwards compatibility
+              ordem: ordem, // For backwards compatibility
+              risco_id: defaultRiskId,
+              formulario_id: formularioId
             });
   
-          if (error) {
-            console.error("Erro detalhado ao criar seção:", error);
-            toast.error("Não foi possível criar a seção. Erro: " + error.message);
+          if (insertPerguntaError) {
+            console.error("Erro detalhado ao criar pergunta de exemplo:", insertPerguntaError);
+            toast.error("Criada a seção, mas não foi possível criar uma pergunta de exemplo");
             return;
           }
-          
-          toast.success("Seção criada com sucesso");
         } catch (error: any) {
-          console.error("Erro ao criar seção:", error);
-          toast.error(`Não foi possível criar a seção: ${error.message}`);
+          console.error("Erro ao criar pergunta de exemplo:", error);
+          toast.error(`Criada a seção, mas não foi possível criar uma pergunta de exemplo: ${error.message}`);
           return;
         }
+
+        toast.success("Seção criada com sucesso");
       }
 
       setDialogOpen(false);
@@ -211,19 +221,18 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
     }
   };
 
-  const handleDelete = async (secaoNome: string) => {
+  const handleDelete = async (secaoId: string) => {
     if (confirm("Tem certeza que deseja excluir esta seção? Isso também excluirá todas as perguntas associadas.")) {
       try {
         setLoading(true);
         
-        console.log("Excluindo seção:", secaoNome, "do formulário:", formularioId);
+        console.log("Excluindo seção:", secaoId, "do formulário:", formularioId);
         
-        // Verificar se existem perguntas na seção
+        // Check if there are questions in this section
         const { data: perguntasNaSecao, error: checkError } = await supabase
           .from('perguntas')
           .select('id')
-          .eq('secao', secaoNome)
-          .eq('formulario_id', formularioId);
+          .eq('secao_id', secaoId);
         
         if (checkError) {
           console.error("Erro ao verificar perguntas na seção:", checkError);
@@ -232,16 +241,28 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
         
         console.log("Perguntas encontradas na seção:", perguntasNaSecao?.length || 0);
         
-        // Excluir as perguntas da seção
-        const { error: deleteError } = await supabase
-          .from('perguntas')
+        // Delete questions first (cascade should handle this, but just to be safe)
+        if (perguntasNaSecao && perguntasNaSecao.length > 0) {
+          const { error: deleteQuestionsError } = await supabase
+            .from('perguntas')
+            .delete()
+            .eq('secao_id', secaoId);
+            
+          if (deleteQuestionsError) {
+            console.error("Erro ao excluir perguntas da seção:", deleteQuestionsError);
+            throw deleteQuestionsError;
+          }
+        }
+        
+        // Then delete the section
+        const { error: deleteSectionError } = await supabase
+          .from('secoes')
           .delete()
-          .eq('secao', secaoNome)
-          .eq('formulario_id', formularioId);
-
-        if (deleteError) {
-          console.error("Erro ao excluir perguntas da seção:", deleteError);
-          throw deleteError;
+          .eq('id', secaoId);
+          
+        if (deleteSectionError) {
+          console.error("Erro ao excluir seção:", deleteSectionError);
+          throw deleteSectionError;
         }
 
         toast.success("Seção excluída com sucesso");
@@ -292,8 +313,8 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
               </TableRow>
             ) : (
               secoes.map((secao) => (
-                <TableRow key={secao.nome}>
-                  <TableCell className="font-medium">{secao.nome}</TableCell>
+                <TableRow key={secao.id}>
+                  <TableCell className="font-medium">{secao.titulo}</TableCell>
                   <TableCell>{secao.descricao || "-"}</TableCell>
                   <TableCell>{secao.count}</TableCell>
                   <TableCell>{secao.ordem}</TableCell>
@@ -310,7 +331,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
                         variant="outline" 
                         size="sm" 
                         className="text-red-500 hover:text-red-700"
-                        onClick={() => handleDelete(secao.nome)}
+                        onClick={() => handleDelete(secao.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -333,11 +354,11 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome da Seção</Label>
+                <Label htmlFor="titulo">Nome da Seção</Label>
                 <Input
-                  id="nome"
-                  name="nome"
-                  value={formData.nome}
+                  id="titulo"
+                  name="titulo"
+                  value={formData.titulo}
                   onChange={handleInputChange}
                   placeholder="Digite o nome da seção"
                 />
