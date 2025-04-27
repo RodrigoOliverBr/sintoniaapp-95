@@ -1,10 +1,12 @@
+
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { getFormQuestions, getEmployeeFormHistory, getAllForms } from "@/services/form/formService";
+import { getFormQuestions, getAllForms } from "@/services/form";
+import { getEmployeeFormHistory, getFormResultByEmployeeId, saveFormResult } from "@/services/form/evaluations";
 import { getCompanies, getEmployeesByCompany } from "@/services";
 import { Company, Employee } from "@/types/cadastro";
-import { Question, FormAnswer, FormResult, Form } from "@/types/form";
+import { Question, FormAnswer, FormResult, Form, Section } from "@/types/form";
 import { useToast } from "@/hooks/use-toast";
 import FormSection from "@/components/FormSection";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,7 +16,8 @@ import FormResults from "@/components/FormResults";
 import FormSelector from "@/components/form/FormSelector";
 import FormActions from "@/components/form/FormActions";
 import EmployeeFormHistory from "@/components/form/EmployeeFormHistory";
-import { toast } from "sonner";
+import { toast as sonnerToast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const FormularioPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -54,7 +57,7 @@ const FormularioPage: React.FC = () => {
 
     loadCompanies();
     loadAvailableForms();
-  }, [toast]);
+  }, []);
 
   const loadAvailableForms = async () => {
     try {
@@ -94,46 +97,52 @@ const FormularioPage: React.FC = () => {
     };
 
     loadEmployees();
-  }, [selectedCompanyId, toast]);
+  }, [selectedCompanyId]);
 
   useEffect(() => {
-    const loadFormResult = async () => {
-      if (selectedEmployeeId && selectedFormId) {
+    // Quando um funcionário é selecionado, carregamos o histórico de avaliações
+    // mas não mostramos automaticamente os resultados
+    const loadEmployeeHistory = async () => {
+      if (selectedEmployeeId) {
+        setIsLoadingHistory(true);
         try {
-          const formResultData = await getFormResultByEmployeeId(selectedEmployeeId, selectedFormId);
-          setFormResult(formResultData);
+          const history = await getEmployeeFormHistory(selectedEmployeeId);
+          setEvaluationHistory(history);
+          // Reset any previous evaluation selection
+          setSelectedEvaluation(null);
+          // Reset the showResults flag - don't show results automatically
+          setShowResults(false);
+          // Reset form completion status
+          setFormComplete(false);
+          // Reset answers
+          setAnswers({});
           
-          if (formResultData && formResultData.answers) {
-            setAnswers(formResultData.answers);
-            setFormComplete(formResultData.is_complete);
-            if (formResultData.is_complete) {
-              setShowResults(true);
-            } else {
-              setShowResults(false);
-            }
-          } else {
-            setAnswers({});
-            setShowResults(false);
-            setFormComplete(false);
+          // If the employee has completed evaluations, we'll show the history
+          // If not, we'll show the form to complete
+          if (history.length > 0) {
+            // Just load the history, but don't auto-select an evaluation
+            console.log("Histórico de avaliações carregado:", history.length);
           }
         } catch (error) {
-          console.error("Erro ao carregar resultado do formulário:", error);
+          console.error("Erro ao carregar histórico:", error);
           toast({
             title: "Erro",
-            description: "Não foi possível carregar o resultado do formulário",
+            description: "Não foi possível carregar o histórico de avaliações",
             variant: "destructive",
           });
+        } finally {
+          setIsLoadingHistory(false);
         }
-      } else {
-        setFormResult(null);
-        setAnswers({});
-        setShowResults(false);
-        setFormComplete(false);
       }
     };
 
-    loadFormResult();
-  }, [selectedEmployeeId, selectedFormId, toast]);
+    loadEmployeeHistory();
+
+    // Reset form data when employee changes
+    setCurrentSection("");
+    setFormResult(null);
+
+  }, [selectedEmployeeId]);
 
   useEffect(() => {
     const loadFormQuestions = async () => {
@@ -184,33 +193,7 @@ const FormularioPage: React.FC = () => {
     };
 
     loadFormQuestions();
-  }, [selectedFormId, toast, currentSection]);
-
-  useEffect(() => {
-    const loadEmployeeHistory = async () => {
-      if (selectedEmployeeId) {
-        setIsLoadingHistory(true);
-        try {
-          const history = await getEmployeeFormHistory(selectedEmployeeId);
-          setEvaluationHistory(history);
-          if (history.length > 0) {
-            setSelectedEvaluation(history[0]);
-            setShowResults(true);
-          } else {
-            setSelectedEvaluation(null);
-            setShowResults(false);
-          }
-        } catch (error) {
-          console.error("Erro ao carregar histórico:", error);
-          toast.error("Não foi possível carregar o histórico de avaliações");
-        } finally {
-          setIsLoadingHistory(false);
-        }
-      }
-    };
-
-    loadEmployeeHistory();
-  }, [selectedEmployeeId]);
+  }, [selectedFormId, currentSection]);
 
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value);
@@ -221,6 +204,11 @@ const FormularioPage: React.FC = () => {
 
   const handleEmployeeChange = (value: string) => {
     setSelectedEmployeeId(value);
+    // Reset states when employee changes
+    setShowResults(false);
+    setSelectedEvaluation(null);
+    setFormComplete(false);
+    setAnswers({});
   };
 
   const handleFormChange = (value: string) => {
@@ -238,7 +226,7 @@ const FormularioPage: React.FC = () => {
     if (formSections.length > 0 && !currentSection) {
       setCurrentSection(formSections[0].title);
     }
-  }, [formSections, currentSection]);
+  }, [formSections]);
 
   const handleAnswerChange = (questionId: string, answer: boolean | null) => {
     setAnswers(prev => {
@@ -348,9 +336,14 @@ const FormularioPage: React.FC = () => {
       const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId!, selectedFormId);
       setFormResult(updatedResult);
 
+      // Reload evaluation history after saving
+      const history = await getEmployeeFormHistory(selectedEmployeeId!);
+      setEvaluationHistory(history);
+
       if (completeForm) {
         setShowResults(true);
         setFormComplete(true);
+        setSelectedEvaluation(updatedResult);
       } else {
         const hasMoreSections = moveToNextSection();
         if (!hasMoreSections) {
