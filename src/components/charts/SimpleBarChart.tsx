@@ -28,18 +28,22 @@ export function SimpleBarChart({ data, height = 200 }: SimpleBarChartProps) {
             tick={{ fontSize: 12 }}
           />
           <Tooltip
-            formatter={(value: number) => [`${value}`, '']}
+            formatter={(value: number, name: string) => [value, '']}
+            cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
           />
-          {data.map((entry, index) => (
-            <Bar
-              key={entry.name}
-              dataKey="value"
-              fill={entry.color}
-              radius={[4, 4, 0, 0]}
-            />
-          ))}
+          <Bar
+            dataKey="value"
+            fill="#1EAEDB"
+            radius={[4, 4, 0, 0]}
+            isAnimationActive={false}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>
   );
 }
+
