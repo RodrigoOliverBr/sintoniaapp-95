@@ -105,7 +105,7 @@ export default function RelatoriosPage() {
               
               <TabsContent value="diagnostico">
                 <DiagnosticoIndividual
-                  companyId={selectedCompanyId}
+                  employeeId={selectedCompanyId}
                 />
               </TabsContent>
               

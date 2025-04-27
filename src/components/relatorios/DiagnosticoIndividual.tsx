@@ -7,12 +7,12 @@ import SeverityBadge from '../SeverityBadge';
 import { Skeleton } from '../ui/skeleton';
 
 interface DiagnosticoIndividualProps {
-  questions: Question[];
+  questions?: Question[];
   employeeId?: string;
 }
 
 const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
-  questions,
+  questions = [],
   employeeId
 }) => {
   const [answers, setAnswers] = useState<Record<string, FormAnswer>>({});

@@ -47,7 +47,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   // Update the result with calculated severity counts
   result.yesPerSeverity = severityCounts;
   
-  // Dados para o gráfico de respostas
+  // Dados para o gráfico de respostas - simplificados para evitar duplicações
   const chartData = [
     {
       name: "Sim",
@@ -59,7 +59,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     },
   ];
 
-  // Dados para o gráfico de severidade
+  // Dados para o gráfico de severidade - simplificados para evitar duplicações
   const severityChartData = [
     {
       name: "Lev. Prejud.",
