@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -68,19 +69,23 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
 
   const fetchAvailableSections = async () => {
     try {
+      // Using selectDistinct here instead of .distinct() which is not available
       const { data, error } = await supabase
         .from('perguntas')
         .select('secao')
-        .eq('formulario_id', formularioId)
-        .distinct();
+        .eq('formulario_id', formularioId);
         
       if (error) throw error;
       
-      const sections = data.map(item => item.secao);
-      if (!sections.includes(preSelectedSection) && preSelectedSection) {
-        sections.push(preSelectedSection);
+      // Extract unique section names
+      const uniqueSections = Array.from(new Set(data.map(item => item.secao)));
+      
+      // Add preSelectedSection if it exists and isn't already included
+      if (preSelectedSection && !uniqueSections.includes(preSelectedSection)) {
+        uniqueSections.push(preSelectedSection);
       }
-      setAvailableSections(sections.sort());
+      
+      setAvailableSections(uniqueSections.sort());
     } catch (error) {
       console.error("Erro ao carregar seções:", error);
       toast.error("Erro ao carregar seções");
