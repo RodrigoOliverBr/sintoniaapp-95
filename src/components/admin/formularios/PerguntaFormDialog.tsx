@@ -155,6 +155,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
 
       let nextOrder = formData.ordem;
       if (!isEditing && formData.ordem === 0) {
+        // For new questions, find the highest order within this section
         const { data } = await supabase
           .from('perguntas')
           .select('ordem')
@@ -168,6 +169,21 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         } else {
           nextOrder = 1; // First question in section
         }
+      } else if (isEditing && currentPergunta && formData.secao !== currentPergunta.secao) {
+        // If changing a question's section, find the next order in the new section
+        const { data } = await supabase
+          .from('perguntas')
+          .select('ordem')
+          .eq('secao', formData.secao)
+          .eq('formulario_id', formularioId)
+          .order('ordem', { ascending: false })
+          .limit(1);
+
+        if (data && data.length > 0) {
+          nextOrder = (data[0].ordem || 0) + 1;
+        } else {
+          nextOrder = 1; // First question in new section
+        }
       }
 
       const perguntaData = {
@@ -175,7 +191,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         secao: formData.secao,
         secao_descricao,
         risco_id: formData.risco_id || null,
-        ordem: isEditing ? formData.ordem : nextOrder,
+        ordem: nextOrder, // Use the calculated order
         observacao_obrigatoria: formData.observacao_obrigatoria,
         formulario_id: formularioId
       };
@@ -266,14 +282,14 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="ordem">Ordem</Label>
+                <Label htmlFor="ordem">Ordem na Seção</Label>
                 <Input
                   id="ordem"
                   name="ordem"
                   type="number"
                   value={formData.ordem}
                   onChange={handleInputChange}
-                  placeholder="Ordem de exibição"
+                  placeholder="Ordem de exibição dentro da seção"
                 />
               </div>
               
