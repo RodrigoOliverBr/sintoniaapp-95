@@ -1,4 +1,3 @@
-
 import React from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,7 +8,7 @@ import FormActions from "@/components/form/FormActions";
 import { useFormData } from "@/hooks/useFormData";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { useToast } from "@/hooks/use-toast";
-import { getEmployeeFormHistory } from "@/services/form";
+import { deleteFormEvaluation, getEmployeeFormHistory } from "@/services/form";
 
 const FormularioPage: React.FC = () => {
   const {
@@ -168,18 +167,21 @@ const FormularioPage: React.FC = () => {
 
   const handleDeleteEvaluation = async (evaluationId: string) => {
     try {
-      // Filtrar as avaliações localmente primeiro para atualização imediata da UI
-      setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
-      setSelectedEvaluation(null);
-      setShowResults(false);
+      console.log("Handling delete for evaluation ID:", evaluationId);
       
-      if (selectedEmployeeId) {
-        // Recarregar o histórico atualizado do servidor
-        const updatedHistory = await getEmployeeFormHistory(selectedEmployeeId);
-        setEvaluationHistory(updatedHistory);
+      setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
+      
+      if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
+        setSelectedEvaluation(null);
+        setShowResults(false);
       }
+      
+      toast({
+        title: "Avaliação excluída",
+        description: "A avaliação foi removida com sucesso.",
+      });
     } catch (error) {
-      console.error("Erro ao excluir avaliação:", error);
+      console.error("Erro ao processar exclusão da avaliação:", error);
       toast({
         title: "Erro ao excluir avaliação",
         description: "Não foi possível excluir a avaliação. Tente novamente.",

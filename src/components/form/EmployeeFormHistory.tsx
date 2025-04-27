@@ -34,30 +34,41 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [evaluationToDelete, setEvaluationToDelete] = React.useState<FormResult | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const { toast } = useToast();
 
-  const handleDelete = async (evaluation: FormResult) => {
+  const handleDelete = (evaluation: FormResult) => {
     setEvaluationToDelete(evaluation);
     setShowDeleteDialog(true);
   };
 
   const confirmDelete = async () => {
-    if (evaluationToDelete && onDeleteEvaluation) {
+    if (evaluationToDelete) {
       try {
+        setIsDeleting(true);
+        console.log("Deletando avaliação:", evaluationToDelete.id);
+        
+        // Call the service to delete from database
         await deleteFormEvaluation(evaluationToDelete.id);
-        await onDeleteEvaluation(evaluationToDelete.id);
+        
+        // Call the parent component method to update UI
+        if (onDeleteEvaluation) {
+          await onDeleteEvaluation(evaluationToDelete.id);
+        }
+        
         toast({
           title: "Avaliação excluída",
-          description: "A avaliação foi excluída com sucesso.",
+          description: "A avaliação foi excluída com sucesso."
         });
       } catch (error) {
-        console.error("Error deleting evaluation:", error);
+        console.error("Erro ao excluir avaliação:", error);
         toast({
           title: "Erro",
           description: "Não foi possível excluir a avaliação.",
           variant: "destructive",
         });
       } finally {
+        setIsDeleting(false);
         setShowDeleteDialog(false);
         setEvaluationToDelete(null);
       }
@@ -136,16 +147,14 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
                         Editar
                       </Button>
                     )}
-                    {onDeleteEvaluation && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleDelete(evaluation)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
-                      </Button>
-                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDelete(evaluation)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
                     <Button
                       onClick={() => onShowResults(evaluation)}
                       size="sm"
@@ -176,11 +185,19 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Excluir
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
