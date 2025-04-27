@@ -1,9 +1,12 @@
+
 import React from "react";
 import Layout from "@/components/Layout";
 import { useFormData } from "@/hooks/useFormData";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import FormSelectionSection from "@/components/form/FormSelectionSection";
 import FormContentSection from "@/components/form/FormContentSection";
+import { useToast } from "@/hooks/use-toast";
+import { deleteFormEvaluation } from "@/services/form";
 
 const FormularioPage: React.FC = () => {
   const {
@@ -34,9 +37,11 @@ const FormularioPage: React.FC = () => {
     setEvaluationHistory,
     isLoadingHistory,
     showingHistoryView,
-    setShowingHistoryView
+    setShowingHistoryView,
+    loadEmployeeHistory
   } = useFormData();
 
+  const { toast } = useToast();
   const { isSubmitting, handleSaveForm } = useFormSubmission();
 
   const handleCompanyChange = (value: string) => {
@@ -141,19 +146,33 @@ const FormularioPage: React.FC = () => {
 
   const handleDeleteEvaluation = async (evaluationId: string) => {
     try {
-      await onDeleteEvaluation(evaluationId);
+      // Chamar o serviço para excluir a avaliação no banco de dados
+      await deleteFormEvaluation(evaluationId);
       
-      if (selectedEmployeeId) {
+      // Atualizar o estado local para refletir a exclusão
+      setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
+      
+      // Limpar o estado se a avaliação selecionada foi excluída
+      if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
+        setSelectedEvaluation(null);
         setShowResults(false);
-        setFormComplete(false);
-        setAnswers({});
+      }
+      
+      // Recarregar o histórico para garantir sincronização com o banco de dados
+      if (selectedEmployeeId) {
         await loadEmployeeHistory();
       }
+      
+      toast({
+        title: "Sucesso",
+        description: "Avaliação excluída com sucesso.",
+        variant: "default",
+      });
     } catch (error) {
       console.error("Erro ao excluir avaliação:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível excluir a avaliação",
+        description: "Não foi possível excluir a avaliação.",
         variant: "destructive",
       });
     }

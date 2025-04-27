@@ -1,4 +1,3 @@
-
 import React from "react";
 import FormContent from "@/components/form/FormContent";
 import EmployeeFormHistory from "@/components/form/EmployeeFormHistory";
@@ -31,8 +30,8 @@ interface FormContentSectionProps {
   onShowResults: () => void;
   onCompleteForm: () => void;
   onSaveForm: () => void;
-  onDeleteEvaluation: (id: string) => void;
-  onEditEvaluation: (evaluation: FormResult) => void;
+  onDeleteEvaluation: (evaluationId: string) => Promise<void>;
+  onEditEvaluation?: (evaluation: FormResult) => void;
 }
 
 const FormContentSection: React.FC<FormContentSectionProps> = ({
