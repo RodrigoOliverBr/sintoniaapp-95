@@ -4,20 +4,64 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, ClipboardCheck } from "lucide-react";
+import { FileText, ClipboardCheck, Edit, Trash2 } from "lucide-react";
 import { FormResult } from "@/types/form";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmployeeFormHistoryProps {
   evaluations: FormResult[];
   onShowResults: (evaluation: FormResult) => void;
   onNewEvaluation: () => void;
+  onDeleteEvaluation?: (evaluationId: string) => Promise<void>;
+  onEditEvaluation?: (evaluation: FormResult) => void;
 }
 
 const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   evaluations,
   onShowResults,
   onNewEvaluation,
+  onDeleteEvaluation,
+  onEditEvaluation,
 }) => {
+  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+  const [evaluationToDelete, setEvaluationToDelete] = React.useState<FormResult | null>(null);
+  const { toast } = useToast();
+
+  const handleDelete = async (evaluation: FormResult) => {
+    setEvaluationToDelete(evaluation);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (evaluationToDelete && onDeleteEvaluation) {
+      try {
+        await onDeleteEvaluation(evaluationToDelete.id);
+        toast({
+          title: "Avaliação excluída",
+          description: "A avaliação foi excluída com sucesso.",
+        });
+      } catch (error) {
+        console.error("Error deleting evaluation:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível excluir a avaliação.",
+          variant: "destructive",
+        });
+      } finally {
+        setShowDeleteDialog(false);
+        setEvaluationToDelete(null);
+      }
+    }
+  };
+
   if (evaluations.length === 0) {
     return (
       <Card>
@@ -59,42 +103,89 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold mb-4">Histórico de Avaliações</h3>
-      <div className="grid gap-4">
-        {evaluations.map((evaluation) => {
-          const { level, color } = getRiskLevel(evaluation);
-          return (
-            <Card key={evaluation.id}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    Avaliação {format(new Date(evaluation.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                  </p>
-                  <p className={`${color} font-medium`}>
-                    Nível de Risco: {level}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Última atualização: {format(new Date(evaluation.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </p>
-                </div>
-                <Button onClick={() => onShowResults(evaluation)} className="ml-4">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Ver Resultados
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
+    <>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold mb-4">Histórico de Avaliações</h3>
+        <div className="grid gap-4">
+          {evaluations.map((evaluation) => {
+            const { level, color } = getRiskLevel(evaluation);
+            return (
+              <Card key={evaluation.id}>
+                <CardContent className="flex items-center justify-between p-4">
+                  <div className="space-y-1 flex-1">
+                    <p className="font-medium">
+                      Avaliação {format(new Date(evaluation.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                    </p>
+                    <p className={`${color} font-medium`}>
+                      Nível de Risco: {level}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Última atualização: {format(new Date(evaluation.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {onEditEvaluation && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => onEditEvaluation(evaluation)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
+                    )}
+                    {onDeleteEvaluation && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDelete(evaluation)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => onShowResults(evaluation)}
+                      size="sm"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Ver Resultados
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        <div className="flex justify-end mt-6">
+          <Button onClick={onNewEvaluation} variant="outline">
+            <ClipboardCheck className="h-4 w-4 mr-2" />
+            Nova Avaliação
+          </Button>
+        </div>
       </div>
-      <div className="flex justify-end mt-6">
-        <Button onClick={onNewEvaluation} variant="outline">
-          <ClipboardCheck className="h-4 w-4 mr-2" />
-          Nova Avaliação
-        </Button>
-      </div>
-    </div>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Avaliação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Excluir
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
 export default EmployeeFormHistory;
+
