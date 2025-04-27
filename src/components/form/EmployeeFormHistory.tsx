@@ -190,4 +190,3 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
 };
 
 export default EmployeeFormHistory;
-

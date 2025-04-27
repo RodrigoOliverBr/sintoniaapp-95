@@ -1,3 +1,4 @@
+
 import React from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,7 +8,8 @@ import FormContent from "@/components/form/FormContent";
 import FormActions from "@/components/form/FormActions";
 import { useFormData } from "@/hooks/useFormData";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
+import { getEmployeeFormHistory } from "@/services/form";
 
 const FormularioPage: React.FC = () => {
   const {
@@ -35,12 +37,14 @@ const FormularioPage: React.FC = () => {
     selectedEvaluation,
     setSelectedEvaluation,
     evaluationHistory,
+    setEvaluationHistory,
     isLoadingHistory,
     showingHistoryView,
     setShowingHistoryView
   } = useFormData();
 
   const { isSubmitting, handleSaveForm } = useFormSubmission();
+  const { toast } = useToast();
 
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value);
@@ -164,11 +168,13 @@ const FormularioPage: React.FC = () => {
 
   const handleDeleteEvaluation = async (evaluationId: string) => {
     try {
+      // Filtrar as avaliações localmente primeiro para atualização imediata da UI
       setEvaluationHistory(prev => prev.filter(eval => eval.id !== evaluationId));
       setSelectedEvaluation(null);
       setShowResults(false);
       
       if (selectedEmployeeId) {
+        // Recarregar o histórico atualizado do servidor
         const updatedHistory = await getEmployeeFormHistory(selectedEmployeeId);
         setEvaluationHistory(updatedHistory);
       }

@@ -208,6 +208,7 @@ export function useFormData() {
     selectedEvaluation,
     setSelectedEvaluation,
     evaluationHistory,
+    setEvaluationHistory,
     isLoadingHistory,
     showingHistoryView,
     setShowingHistoryView
