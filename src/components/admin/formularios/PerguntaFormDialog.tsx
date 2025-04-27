@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Question } from "@/types/form";
+import { Question, Risk } from "@/types/form";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import RiskSelectionGroup from "./risk/RiskSelectionGroup";
@@ -188,7 +189,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label>Seção</Label>
-              <div className="p-3 bg-muted rounded-md text-muted-foreground">
+              <div className="w-full p-3 bg-muted rounded-md text-muted-foreground">
                 {formData.secao}
               </div>
             </div>
@@ -206,11 +207,13 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
             
             <div className="space-y-2">
               <Label>Risco Associado</Label>
-              <RiskSelectionGroup
-                risks={riscos}
-                selectedRiskId={formData.risco_id}
-                onRiskChange={(value) => setFormData({...formData, risco_id: value})}
-              />
+              <div className="w-full">
+                <RiskSelectionGroup
+                  risks={riscos}
+                  selectedRiskId={formData.risco_id}
+                  onRiskChange={(value) => setFormData({...formData, risco_id: value})}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

@@ -47,6 +47,14 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
         ordem: question.ordem || 0
       };
     }
+    
+    // Extract the section order from the title if it exists
+    // Look for a pattern like "1. Section Name"
+    const orderMatch = question.secao.match(/^(\d+)\.\s/);
+    if (orderMatch && !acc[question.secao].ordem) {
+      acc[question.secao].ordem = parseInt(orderMatch[1], 10);
+    }
+    
     acc[question.secao].questions.push(question);
     return acc;
   }, {} as Record<string, { title: string; description?: string; questions: Question[]; ordem: number }>);
@@ -73,8 +81,14 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
       return question.ordem && question.ordem > max ? question.ordem : max;
     }, 0);
     
-    // Store the maximum ordem value for the section
-    section.ordem = maxOrdem;
+    // Make sure the section ordem is set if not already
+    if (!section.ordem || section.ordem === 0) {
+      // Extract number from section name if it exists (e.g., "1. Section Name")
+      const sectionOrderMatch = section.title.match(/^(\d+)\.\s/);
+      if (sectionOrderMatch) {
+        section.ordem = parseInt(sectionOrderMatch[1], 10);
+      }
+    }
   });
 
   // Sort sections by ordem value (numerically)

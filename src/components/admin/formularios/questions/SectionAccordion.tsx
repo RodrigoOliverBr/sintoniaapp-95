@@ -79,7 +79,7 @@ export const SectionAccordion: React.FC<SectionProps> = ({
   };
 
   // Format title with order if available
-  const formattedTitle = ordem && ordem > 0 ? `${ordem}. ${title}` : title;
+  const formattedTitle = ordem && ordem > 0 ? `${ordem}. ${title.replace(/^\d+\.\s/, '')}` : title;
   
   return (
     <>
@@ -101,7 +101,7 @@ export const SectionAccordion: React.FC<SectionProps> = ({
             <div className="flex justify-end mb-4">
               <Button onClick={onNewQuestion} size="sm">
                 <Plus className="mr-2 h-4 w-4" />
-                Nova Pergunta em {title}
+                Nova Pergunta em {title.replace(/^\d+\.\s/, '')}
               </Button>
             </div>
             
