@@ -567,11 +567,8 @@ export type Database = {
           id: string
           observacao_obrigatoria: boolean | null
           opcoes: Json | null
-          ordem: number | null
           ordem_pergunta: number | null
           risco_id: string
-          secao: string
-          secao_descricao: string | null
           secao_id: string
           texto: string
           updated_at: string
@@ -582,11 +579,8 @@ export type Database = {
           id?: string
           observacao_obrigatoria?: boolean | null
           opcoes?: Json | null
-          ordem?: number | null
           ordem_pergunta?: number | null
           risco_id: string
-          secao: string
-          secao_descricao?: string | null
           secao_id: string
           texto: string
           updated_at?: string
@@ -597,11 +591,8 @@ export type Database = {
           id?: string
           observacao_obrigatoria?: boolean | null
           opcoes?: Json | null
-          ordem?: number | null
           ordem_pergunta?: number | null
           risco_id?: string
-          secao?: string
-          secao_descricao?: string | null
           secao_id?: string
           texto?: string
           updated_at?: string

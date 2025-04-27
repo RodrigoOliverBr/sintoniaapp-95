@@ -25,7 +25,23 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
         .order('ordem');
 
       if (sectionsError) throw sectionsError;
-      setSections(sectionsData || []);
+
+      // For each section, count how many questions are there
+      const sectionsWithCounts = await Promise.all(sectionsData.map(async (section) => {
+        const { count, error: countError } = await supabase
+          .from('perguntas')
+          .select('id', { count: 'exact', head: true })
+          .eq('secao_id', section.id);
+          
+        if (countError) throw countError;
+        
+        return {
+          ...section,
+          count: count || 0
+        };
+      }));
+      
+      setSections(sectionsWithCounts);
 
       // Fetch questions with their relations
       const { data: questionsData, error: questionsError } = await supabase
@@ -47,9 +63,6 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
         texto: item.texto,
         risco_id: item.risco_id,
         secao_id: item.secao_id,
-        secao: item.secao, // Keep for backward compatibility
-        secao_descricao: item.secao_descricao, // Keep for backward compatibility
-        ordem: item.ordem || 0, // Keep for backward compatibility
         ordem_pergunta: item.ordem_pergunta || 0,
         formulario_id: item.formulario_id,
         opcoes: item.opcoes 
@@ -60,8 +73,6 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
         observacao_obrigatoria: item.observacao_obrigatoria,
         risco: item.risco,
         pergunta_opcoes: item.pergunta_opcoes,
-        created_at: item.created_at,
-        updated_at: item.updated_at
       }));
 
       setPerguntas(transformedData);

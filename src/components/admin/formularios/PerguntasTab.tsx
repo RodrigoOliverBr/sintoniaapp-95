@@ -47,7 +47,6 @@ const PerguntasTab: React.FC<PerguntasTabProps> = ({ formularioId }) => {
 
   // Group questions by section
   const questionsBySection = sections.reduce((acc, section) => {
-    // Create an entry for this section
     acc[section.id] = {
       id: section.id,
       title: section.titulo,

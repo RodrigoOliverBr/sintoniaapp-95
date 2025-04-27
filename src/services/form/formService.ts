@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer } from '@/types/form';
 
@@ -19,9 +18,7 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
       )
     `)
     .eq('formulario_id', formId)
-    .order('ordem', { ascending: true })
-    .order('secao')
-    .order('id');
+    .order('ordem_pergunta', { ascending: true });
 
   if (error) {
     console.error('Error fetching questions:', error);
@@ -32,9 +29,8 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
     id: q.id,
     texto: q.texto,
     risco_id: q.risco_id,
-    secao: q.secao,
-    secao_descricao: q.secao_descricao,
-    ordem: q.ordem || 0,
+    secao_id: q.secao_id,
+    ordem_pergunta: q.ordem_pergunta || 0,
     formulario_id: formId,
     opcoes: Array.isArray(q.opcoes) 
       ? q.opcoes.map(opt => {
