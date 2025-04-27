@@ -1,6 +1,16 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, FormAnswer } from '@/types/form';
+
+export function getFormStatusByEmployeeId(employeeId: string): 'completed' | 'pending' | 'error' {
+  try {
+    if (!employeeId) return 'error';
+    
+    return 'pending';
+  } catch (error) {
+    console.error('Error in getFormStatusByEmployeeId:', error);
+    return 'error';
+  }
+}
 
 export async function getFormResultByEmployeeId(employeeId: string, formId?: string): Promise<FormResult | null> {
   try {
@@ -250,4 +260,3 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
     throw error;
   }
 }
-

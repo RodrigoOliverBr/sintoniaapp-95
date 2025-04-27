@@ -10,9 +10,10 @@ export {
   saveFormResult,
   getMitigationsByRiskId,
   getFormStatusByEmployeeId,
-  getFormResults,
+  getEmployeeFormHistory,
   getAllForms,
   getDefaultRiskId,
   getAllRisksWithSeverity,
   getAllSeverities
-} from './form/formService';
+} from './form';
+
