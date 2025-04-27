@@ -15,7 +15,7 @@ export const ResultsSeverityChart: React.FC<ResultsSeverityChartProps> = ({
 }) => {
   const severityChartData = [
     {
-      name: "Lev. Prejud.",
+      name: "Lev. Prej.",
       total: severityCounts["LEVEMENTE PREJUDICIAL"] || 0,
     },
     {
