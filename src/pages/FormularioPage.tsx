@@ -2,13 +2,10 @@
 import React from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import FormSection from "@/components/FormSection";
-import FormResults from "@/components/FormResults";
 import FormSelector from "@/components/form/FormSelector";
-import FormActions from "@/components/form/FormActions";
 import EmployeeFormHistory from "@/components/form/EmployeeFormHistory";
-import ProgressHeader from "@/components/form/ProgressHeader";
-import FormNavigation from "@/components/form/FormNavigation";
+import FormContent from "@/components/form/FormContent";
+import FormActions from "@/components/form/FormActions";
 import { useFormData } from "@/hooks/useFormData";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 
@@ -165,13 +162,6 @@ const FormularioPage: React.FC = () => {
     }
   };
 
-  const handleShowResults = () => setShowResults(true);
-  const handleShowEvaluation = (evaluation: FormResult) => {
-    setSelectedEvaluation(evaluation);
-    setShowResults(true);
-    setShowingHistoryView(true);
-  };
-
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
   const selectedFormTitle = availableForms.find(f => f.id === selectedFormId)?.titulo || "Formulário";
   const isLastSection = formSections.findIndex(section => section.title === currentSection) === formSections.length - 1;
@@ -206,48 +196,30 @@ const FormularioPage: React.FC = () => {
 
             {selectedEmployeeId && selectedEmployee && selectedFormId && (
               <div className="mt-6">
-                {!showResults ? (
-                  showingHistoryView ? (
-                    <EmployeeFormHistory
-                      evaluations={evaluationHistory}
-                      onShowResults={handleShowEvaluation}
-                      onNewEvaluation={handleNewEvaluation}
-                    />
-                  ) : (
-                    <>
-                      <ProgressHeader 
-                        employeeName={selectedEmployee.name}
-                        jobRole={selectedEmployee.role || ""}
-                        currentSection={formSections.findIndex(s => s.title === currentSection) + 1}
-                        totalSections={formSections.length}
-                        formTitle={selectedFormTitle}
-                      />
-
-                      <div className="space-y-6">
-                        <FormNavigation
-                          sections={formSections}
-                          currentSection={currentSection}
-                          onSectionChange={setCurrentSection}
-                        />
-
-                        {formSections.map((section) => (
-                          section.title === currentSection && (
-                            <FormSection
-                              key={section.title}
-                              section={section}
-                              answers={answers}
-                              onAnswerChange={handleAnswerChange}
-                              onObservationChange={handleObservationChange}
-                              onOptionsChange={handleOptionsChange}
-                            />
-                          )
-                        ))}
-                      </div>
-                    </>
-                  )
+                {!showResults && showingHistoryView ? (
+                  <EmployeeFormHistory
+                    evaluations={evaluationHistory}
+                    onShowResults={(evaluation) => {
+                      setSelectedEvaluation(evaluation);
+                      setShowResults(true);
+                      setShowingHistoryView(true);
+                    }}
+                    onNewEvaluation={handleNewEvaluation}
+                  />
                 ) : (
-                  <FormResults 
-                    result={selectedEvaluation || formResult!}
+                  <FormContent 
+                    showResults={showResults}
+                    showingHistoryView={showingHistoryView}
+                    selectedEmployee={selectedEmployee}
+                    selectedFormTitle={selectedFormTitle}
+                    currentSection={currentSection}
+                    formSections={formSections}
+                    answers={answers}
+                    onAnswerChange={handleAnswerChange}
+                    onObservationChange={handleObservationChange}
+                    onOptionsChange={handleOptionsChange}
+                    selectedEvaluation={selectedEvaluation}
+                    formResult={formResult}
                     questions={questions}
                     onNotesChange={handleAnalystNotesChange}
                   />
@@ -264,7 +236,7 @@ const FormularioPage: React.FC = () => {
               isLastSection={isLastSection}
               showingHistory={showingHistoryView && !showResults}
               onNewEvaluation={handleNewEvaluation}
-              onShowResults={handleShowResults}
+              onShowResults={() => setShowResults(true)}
               onCompleteForm={handleSaveAndComplete}
               onSaveForm={handleSaveAndContinue}
             />
