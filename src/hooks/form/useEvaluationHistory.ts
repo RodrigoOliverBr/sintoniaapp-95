@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { FormResult } from "@/types/form";
-import { getEmployeeFormHistory } from "@/services/form";
+import { getEmployeeFormHistory, deleteFormEvaluation } from "@/services/form";
 import { useToast } from "@/hooks/use-toast";
 
 export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
@@ -14,6 +14,10 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
   useEffect(() => {
     if (selectedEmployeeId) {
       loadEmployeeHistory();
+    } else {
+      // Limpar o histórico quando nenhum funcionário estiver selecionado
+      setEvaluationHistory([]);
+      setShowingHistoryView(false);
     }
   }, [selectedEmployeeId]);
 
@@ -51,6 +55,45 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
     }
   };
 
+  const handleDeleteEvaluation = async (evaluationId: string) => {
+    try {
+      setIsLoadingHistory(true);
+      console.log(`Iniciando exclusão da avaliação: ${evaluationId}`);
+      
+      // Chamar o serviço para excluir a avaliação no banco de dados
+      await deleteFormEvaluation(evaluationId);
+      
+      // Atualizar o estado local para remover a avaliação excluída
+      setEvaluationHistory(prev => prev.filter(eval => eval.id !== evaluationId));
+      
+      // Limpar a avaliação selecionada se for a mesma que foi excluída
+      if (selectedEvaluation?.id === evaluationId) {
+        setSelectedEvaluation(null);
+      }
+      
+      // Exibir toast de sucesso
+      toast({
+        title: "Sucesso",
+        description: "Avaliação excluída com sucesso.",
+      });
+
+      // Verificar se precisamos desativar a visualização de histórico
+      if (evaluationHistory.length <= 1) {
+        setShowingHistoryView(false);
+      }
+      
+    } catch (error) {
+      console.error("Erro ao excluir avaliação:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a avaliação.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
   return {
     selectedEvaluation,
     setSelectedEvaluation,
@@ -60,5 +103,6 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
     showingHistoryView,
     setShowingHistoryView,
     loadEmployeeHistory,
+    handleDeleteEvaluation
   };
 }

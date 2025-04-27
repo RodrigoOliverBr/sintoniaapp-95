@@ -1,4 +1,3 @@
-
 import React from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -50,17 +49,9 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
         // Chamar a função de deleção do componente pai
         await onDeleteEvaluation(evaluationToDelete.id);
         
-        toast({
-          title: "Avaliação excluída",
-          description: "A avaliação foi excluída com sucesso."
-        });
+        // O toast e atualização do estado são agora responsabilidade do hook useEvaluationHistory
       } catch (error) {
         console.error("Erro ao excluir avaliação:", error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível excluir a avaliação.",
-          variant: "destructive",
-        });
       } finally {
         setIsDeleting(false);
         setShowDeleteDialog(false);
