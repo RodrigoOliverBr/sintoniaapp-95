@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
 import { AlertTriangle } from "lucide-react";
+import FormResults from "@/components/FormResults";
 
 const FormularioPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -31,6 +31,7 @@ const FormularioPage: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [formSections, setFormSections] = useState<{title: string, description?: string, ordem: number, questions: Question[]}[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -101,8 +102,14 @@ const FormularioPage: React.FC = () => {
           
           if (formResultData && formResultData.answers) {
             setAnswers(formResultData.answers);
+            if (formResultData.is_complete) {
+              setShowResults(true);
+            } else {
+              setShowResults(false);
+            }
           } else {
             setAnswers({});
+            setShowResults(false);
           }
         } catch (error) {
           console.error("Erro ao carregar resultado do formulário:", error);
@@ -115,6 +122,7 @@ const FormularioPage: React.FC = () => {
       } else {
         setFormResult(null);
         setAnswers({});
+        setShowResults(false);
       }
     };
 
@@ -154,9 +162,7 @@ const FormularioPage: React.FC = () => {
         const orderedSections = sectionGroups.sort((a, b) => a.ordem - b.ordem);
         setFormSections(orderedSections);
         
-        // Reset current section when loading new form
         setCurrentSection("");
-        // Reset any previous errors
         setError(null);
       } catch (error) {
         console.error("Erro ao carregar perguntas:", error);
@@ -174,6 +180,7 @@ const FormularioPage: React.FC = () => {
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value);
     setSelectedEmployeeId(undefined);
+    setShowResults(false);
   };
 
   const handleEmployeeChange = (value: string) => {
@@ -185,6 +192,7 @@ const FormularioPage: React.FC = () => {
     setAnswers({});
     setCurrentSection("");
     setError(null);
+    setShowResults(false);
   };
   
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
@@ -235,6 +243,16 @@ const FormularioPage: React.FC = () => {
     });
   };
 
+  const handleAnalystNotesChange = (notes: string) => {
+    if (formResult) {
+      setFormResult({
+        ...formResult,
+        notas_analista: notes,
+        analyistNotes: notes
+      });
+    }
+  };
+
   const handleSaveForm = async () => {
     if (!selectedFormId) {
       toast({
@@ -260,6 +278,8 @@ const FormularioPage: React.FC = () => {
         }
       });
       
+      const isComplete = true;
+      
       const formResultData: FormResult = {
         id: formResult?.id || '',
         employeeId: selectedEmployeeId!,
@@ -268,7 +288,8 @@ const FormularioPage: React.FC = () => {
         answers,
         total_sim: totalYes,
         total_nao: totalNo,
-        is_complete: true,
+        notas_analista: formResult?.notas_analista || '',
+        is_complete: isComplete,
         last_updated: new Date().toISOString(),
         created_at: formResult?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -278,19 +299,16 @@ const FormularioPage: React.FC = () => {
       
       sonnerToast.success("Formulário salvo com sucesso!");
       
-      // Reload the form result to get updated data
       const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId!, selectedFormId);
       setFormResult(updatedResult);
 
-      const currentIndex = formSections.findIndex(s => s.title === currentSection);
-      if (currentIndex < formSections.length - 1) {
-        setCurrentSection(formSections[currentIndex + 1].title);
+      if (isComplete) {
+        setShowResults(true);
       } else {
-        toast({
-          title: "Parabéns!",
-          description: "Você completou todas as seções do formulário!",
-          variant: "default",
-        });
+        const currentIndex = formSections.findIndex(s => s.title === currentSection);
+        if (currentIndex < formSections.length - 1) {
+          setCurrentSection(formSections[currentIndex + 1].title);
+        }
       }
     } catch (error: any) {
       console.error("Erro ao salvar o formulário:", error);
@@ -305,6 +323,14 @@ const FormularioPage: React.FC = () => {
     }
   };
 
+  const handleNewEvaluation = () => {
+    setShowResults(false);
+    setAnswers({});
+    if (formSections.length > 0) {
+      setCurrentSection(formSections[0].title);
+    }
+  };
+
   const selectedFormTitle = availableForms.find(f => f.id === selectedFormId)?.titulo || "Formulário";
   
   return (
@@ -312,9 +338,13 @@ const FormularioPage: React.FC = () => {
       <div className="container mx-auto py-6 space-y-8">
         <Card className="shadow-lg">
           <CardHeader className="border-b bg-muted/40">
-            <CardTitle className="text-2xl text-primary">Preenchimento do Formulário</CardTitle>
+            <CardTitle className="text-2xl text-primary">
+              {showResults ? "Resultado da Avaliação" : "Preenchimento do Formulário"}
+            </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Selecione a empresa, o funcionário e o formulário para preencher.
+              {showResults 
+                ? "Visualize os resultados da avaliação e adicione suas observações." 
+                : "Selecione a empresa, o funcionário e o formulário para preencher."}
             </CardDescription>
           </CardHeader>
           
@@ -377,66 +407,86 @@ const FormularioPage: React.FC = () => {
 
             {selectedEmployeeId && selectedEmployee && selectedFormId && (
               <div className="mt-6">
-                <ProgressHeader 
-                  employeeName={selectedEmployee.name}
-                  jobRole={selectedEmployee.role || ""}
-                  currentSection={formSections.findIndex(s => s.title === currentSection) + 1}
-                  totalSections={formSections.length}
-                  formTitle={selectedFormTitle}
-                />
+                {!showResults ? (
+                  <>
+                    <ProgressHeader 
+                      employeeName={selectedEmployee.name}
+                      jobRole={selectedEmployee.role || ""}
+                      currentSection={formSections.findIndex(s => s.title === currentSection) + 1}
+                      totalSections={formSections.length}
+                      formTitle={selectedFormTitle}
+                    />
 
-                <div className="space-y-6">
-                  <ScrollArea className="w-full">
-                    <ToggleGroup
-                      type="single"
-                      value={currentSection}
-                      onValueChange={(value) => value && setCurrentSection(value)}
-                      className="flex justify-start p-1 bg-muted/40 rounded-lg w-full"
-                    >
-                      {formSections.map((section) => (
-                        <ToggleGroupItem
-                          key={section.title}
-                          value={section.title}
-                          className="flex-1 whitespace-nowrap px-4"
+                    <div className="space-y-6">
+                      <ScrollArea className="w-full">
+                        <ToggleGroup
+                          type="single"
+                          value={currentSection}
+                          onValueChange={(value) => value && setCurrentSection(value)}
+                          className="flex justify-start p-1 bg-muted/40 rounded-lg w-full"
                         >
-                          {section.title}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                  </ScrollArea>
+                          {formSections.map((section) => (
+                            <ToggleGroupItem
+                              key={section.title}
+                              value={section.title}
+                              className="flex-1 whitespace-nowrap px-4"
+                            >
+                              {section.title}
+                            </ToggleGroupItem>
+                          ))}
+                        </ToggleGroup>
+                      </ScrollArea>
 
-                  {formSections.map((section) => (
-                    section.title === currentSection && (
-                      <FormSection
-                        key={section.title}
-                        section={section}
-                        answers={answers}
-                        onAnswerChange={handleAnswerChange}
-                        onObservationChange={handleObservationChange}
-                        onOptionsChange={handleOptionsChange}
-                      />
-                    )
-                  ))}
-                  
-                  {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-md flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-red-500" />
-                      <p>{error}</p>
+                      {formSections.map((section) => (
+                        section.title === currentSection && (
+                          <FormSection
+                            key={section.title}
+                            section={section}
+                            answers={answers}
+                            onAnswerChange={handleAnswerChange}
+                            onObservationChange={handleObservationChange}
+                            onOptionsChange={handleOptionsChange}
+                          />
+                        )
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </>
+                ) : (
+                  <FormResults 
+                    result={formResult!} 
+                    questions={questions}
+                    onNotesChange={handleAnalystNotesChange} 
+                  />
+                )}
+                
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-md flex items-center gap-2 mt-6">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    <p>{error}</p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
 
           {selectedEmployeeId && selectedFormId && (
             <div className="flex justify-end p-6 bg-muted/40 border-t">
+              {showResults ? (
+                <Button 
+                  onClick={handleNewEvaluation}
+                  variant="outline"
+                  className="w-full sm:w-auto mr-2"
+                >
+                  Nova Avaliação
+                </Button>
+              ) : null}
+              
               <Button 
                 onClick={handleSaveForm} 
                 disabled={isSubmitting}
                 className="w-full sm:w-auto"
               >
-                {isSubmitting ? "Salvando..." : "Salvar Formulário"}
+                {isSubmitting ? "Salvando..." : showResults ? "Atualizar Resultados" : "Salvar Formulário"}
               </Button>
             </div>
           )}

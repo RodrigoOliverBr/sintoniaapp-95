@@ -1,19 +1,20 @@
 
 import React from "react";
-import { FormResult } from "@/types/form";
+import { FormResult, Question } from "@/types/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { BarChart } from "@/components/ui/BarChart";
 import { Button } from "@/components/ui/button";
 import { Download, Printer } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface FormResultsProps {
   result: FormResult;
+  questions?: Question[];
   onNotesChange: (notes: string) => void;
 }
 
-const FormResults: React.FC<FormResultsProps> = ({ result, onNotesChange }) => {
+const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNotesChange }) => {
   const { toast } = useToast();
   
   // Map database fields to component expected fields if not already set
@@ -21,13 +22,26 @@ const FormResults: React.FC<FormResultsProps> = ({ result, onNotesChange }) => {
   if (!result.totalNo) result.totalNo = result.total_nao;
   if (!result.analyistNotes) result.analyistNotes = result.notas_analista || '';
   
-  // Initialize yesPerSeverity if not defined
+  // Calculate severity counts based on questions and answers
   if (!result.yesPerSeverity) {
     result.yesPerSeverity = {
       "LEVEMENTE PREJUDICIAL": 0,
       "PREJUDICIAL": 0,
       "EXTREMAMENTE PREJUDICIAL": 0
     };
+    
+    // If we have questions, calculate the severity counts
+    if (questions.length > 0) {
+      Object.entries(result.answers).forEach(([questionId, answer]) => {
+        if (answer.answer) {
+          const question = questions.find(q => q.id === questionId);
+          if (question?.risco?.severidade?.nivel) {
+            const severityLevel = question.risco.severidade.nivel;
+            result.yesPerSeverity![severityLevel] = (result.yesPerSeverity![severityLevel] || 0) + 1;
+          }
+        }
+      });
+    }
   }
   
   // Dados para o gráfico
@@ -69,7 +83,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, onNotesChange }) => {
   };
 
   // Calcular a pontuação de risco total
-  const riskScore = calculateRiskScore(result);
+  const riskScore = calculateRiskScore(result, questions);
 
   return (
     <div className="space-y-6 print:pt-0">
@@ -215,17 +229,37 @@ const RiskIndicator: React.FC<{ score: number }> = ({ score }) => {
   );
 };
 
-function calculateRiskScore(result: FormResult): number {
-  if (!result.total_sim && !result.totalYes) return 0;
+function calculateRiskScore(result: FormResult, questions: Question[]): number {
+  if ((!result.total_sim && !result.totalYes) || questions.length === 0) return 0;
   
-  // Simple calculation based on percentage of "yes" answers
-  const totalAnswers = (result.total_sim || result.totalYes || 0) + 
-                      (result.total_nao || result.totalNo || 0);
+  // Calculate using the formula provided
+  // Score = Σ(respostas Sim × peso) / (total de perguntas × 3) × 100
   
-  if (totalAnswers === 0) return 0;
+  let weightedSum = 0;
+  let totalQuestions = questions.length;
   
-  const yesAnswers = result.total_sim || result.totalYes || 0;
-  return (yesAnswers / totalAnswers) * 100;
+  // Count answers by severity
+  Object.entries(result.answers || {}).forEach(([questionId, answer]) => {
+    if (answer.answer === true) {
+      const question = questions.find(q => q.id === questionId);
+      if (question?.risco?.severidade?.nivel) {
+        const severityLevel = question.risco.severidade.nivel;
+        let weight = 1; // Default weight
+        
+        if (severityLevel === "PREJUDICIAL") {
+          weight = 2;
+        } else if (severityLevel === "EXTREMAMENTE PREJUDICIAL") {
+          weight = 3;
+        }
+        
+        weightedSum += weight;
+      }
+    }
+  });
+  
+  // Calculate the risk score as a percentage
+  // (weightedSum / (totalQuestions * 3)) * 100
+  return (weightedSum / (totalQuestions * 3)) * 100;
 }
 
 export default FormResults;

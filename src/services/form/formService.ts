@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer, Section, Form } from '@/types/form';
 
@@ -146,6 +147,8 @@ export async function getFormResultByEmployeeId(employeeId: string, formId?: str
       "EXTREMAMENTE PREJUDICIAL": 0
     };
 
+    // We'll calculate detailed severity counts when we display the results
+
     return {
       id: avaliacoes.id,
       employeeId: avaliacoes.funcionario_id,
@@ -181,7 +184,7 @@ export function getFormStatusByEmployeeId(employeeId: string): 'completed' | 'pe
 }
 
 export async function saveFormResult(formData: FormResult): Promise<void> {
-  const { employeeId, answers, total_sim, total_nao, is_complete, empresa_id, formulario_id, id } = formData;
+  const { employeeId, answers, total_sim, total_nao, is_complete, empresa_id, formulario_id, id, notas_analista } = formData;
 
   try {
     let avaliacaoId = id;
@@ -195,6 +198,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
         total_sim,
         total_nao,
         is_complete,
+        notas_analista,
         last_updated: new Date().toISOString()
       };
       
@@ -222,6 +226,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
         total_sim,
         total_nao,
         is_complete,
+        notas_analista,
         last_updated: new Date().toISOString()
       };
 
