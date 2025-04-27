@@ -1,6 +1,6 @@
 
 import React from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 interface SimpleBarChartProps {
   data: Array<{
@@ -46,4 +46,3 @@ export function SimpleBarChart({ data, height = 200 }: SimpleBarChartProps) {
     </div>
   );
 }
-
