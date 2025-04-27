@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -24,9 +25,7 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
           ),
           pergunta_opcoes(*)
         `)
-        .eq('formulario_id', formularioId)
-        .order('secao')
-        .order('ordem');
+        .eq('formulario_id', formularioId);
 
       if (error) throw error;
 
@@ -38,6 +37,7 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
         secao: item.secao,
         secao_descricao: item.secao_descricao,
         ordem: item.ordem || 0,
+        ordem_pergunta: item.ordem_pergunta || 0,
         formulario_id: item.formulario_id,
         opcoes: item.opcoes 
           ? typeof item.opcoes === 'string' 
@@ -51,6 +51,7 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
         updated_at: item.updated_at
       }));
 
+      console.log("Fetched questions:", transformedData);
       setPerguntas(transformedData);
     } catch (error) {
       console.error("Erro ao carregar perguntas:", error);

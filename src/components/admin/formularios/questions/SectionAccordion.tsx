@@ -44,10 +44,22 @@ export const SectionAccordion: React.FC<SectionProps> = ({
   onNewQuestion,
   formularioId,
 }) => {
-  const [sortedQuestions, setSortedQuestions] = useState([...questions].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)));
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<Question | null>(null);
   const [deletingQuestion, setDeletingQuestion] = useState(false);
+  
+  // Sort questions by ordem_pergunta
+  const sortedQuestions = [...questions].sort((a, b) => {
+    // If both have order 0 or equal, don't change the order
+    if ((a.ordem_pergunta === 0 && b.ordem_pergunta === 0) || a.ordem_pergunta === b.ordem_pergunta) {
+      return 0;
+    }
+    // If only one has order 0, put it last
+    if (a.ordem_pergunta === 0) return 1;
+    if (b.ordem_pergunta === 0) return -1;
+    // Sort normally by numbers
+    return a.ordem_pergunta - b.ordem_pergunta;
+  });
 
   const handleDeleteClick = (question: Question) => {
     setQuestionToDelete(question);
@@ -117,7 +129,7 @@ export const SectionAccordion: React.FC<SectionProps> = ({
               <TableBody>
                 {sortedQuestions.map((question) => (
                   <TableRow key={question.id}>
-                    <TableCell>{question.ordem || "-"}</TableCell>
+                    <TableCell>{question.ordem_pergunta || "-"}</TableCell>
                     <TableCell className="font-medium">{question.texto}</TableCell>
                     <TableCell>{question.risco?.texto}</TableCell>
                     <TableCell className="text-right space-x-2">

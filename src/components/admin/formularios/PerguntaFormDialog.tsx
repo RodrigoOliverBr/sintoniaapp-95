@@ -140,7 +140,11 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
       }
 
       let secao_descricao: string | null = null;
-      if (formData.secao) {
+      // When editing, we should preserve the current section description
+      if (isEditing && currentPergunta && formData.secao === currentPergunta.secao) {
+        secao_descricao = currentPergunta.secao_descricao || null;
+      } else if (formData.secao) {
+        // Only fetch section description if we're changing sections or creating new
         const { data } = await supabase
           .from('perguntas')
           .select('secao_descricao')
@@ -153,6 +157,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         }
       }
 
+      // Handle question order within section
       let nextQuestionOrder = formData.ordem_pergunta;
       if (!isEditing || (isEditing && currentPergunta && formData.secao !== currentPergunta.secao)) {
         const { data } = await supabase
@@ -184,8 +189,15 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
       if (isEditing && currentPergunta) {
         // For editing, preserve the original ordem_pergunta if we're not changing sections
         if (formData.secao === currentPergunta.secao) {
-          perguntaData.ordem_pergunta = currentPergunta.ordem_pergunta || 0;
+          // If user has explicitly set a question order, use that
+          if (formData.ordem_pergunta !== currentPergunta.ordem_pergunta) {
+            perguntaData.ordem_pergunta = formData.ordem_pergunta;
+          } else {
+            perguntaData.ordem_pergunta = currentPergunta.ordem_pergunta || 0;
+          }
         }
+        
+        console.log("Updating pergunta with data:", perguntaData);
         
         const { error } = await supabase
           .from('perguntas')
@@ -195,6 +207,13 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         if (error) throw error;
         toast.success("Pergunta atualizada com sucesso");
       } else {
+        // For new questions, use the next order or the explicitly provided one
+        if (formData.ordem_pergunta > 0) {
+          perguntaData.ordem_pergunta = formData.ordem_pergunta;
+        }
+        
+        console.log("Creating pergunta with data:", perguntaData);
+        
         const { error } = await supabase
           .from('perguntas')
           .insert(perguntaData);
@@ -228,6 +247,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
               <Select 
                 value={formData.secao}
                 onValueChange={handleSectionChange}
+                defaultValue={formData.secao}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione a seção" />
