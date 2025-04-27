@@ -148,6 +148,8 @@ const FormularioPage: React.FC = () => {
         
         if (sectionsError) throw sectionsError;
         
+        console.log('Fetched sections:', sectionsData.length, sectionsData);
+        
         const sectionsMap = sectionsData.reduce((acc, section) => {
           acc[section.id] = section;
           return acc;
@@ -156,16 +158,23 @@ const FormularioPage: React.FC = () => {
         const questionsData = await getFormQuestions(selectedFormId);
         setQuestions(questionsData);
         
+        console.log('Fetched questions:', questionsData.length);
+        
         const sectionGroups = sectionsData.map(section => {
+          const sectionQuestions = questionsData.filter(q => q.secao_id === section.id);
+          console.log(`Section ${section.titulo} has ${sectionQuestions.length} questions`);
+          
           return {
             title: section.titulo,
             description: section.descricao,
             ordem: section.ordem || 0,
-            questions: questionsData.filter(q => q.secao_id === section.id)
+            questions: sectionQuestions
           };
         });
         
         const orderedSections = sectionGroups.sort((a, b) => a.ordem - b.ordem);
+        console.log('Ordered sections:', orderedSections.length, orderedSections.map(s => s.title));
+        
         setFormSections(orderedSections);
         
         if (orderedSections.length > 0 && !currentSection) {
@@ -184,7 +193,7 @@ const FormularioPage: React.FC = () => {
     };
 
     loadFormQuestions();
-  }, [selectedFormId, currentSection]);
+  }, [selectedFormId]);
 
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value);
@@ -430,12 +439,12 @@ const FormularioPage: React.FC = () => {
                       />
 
                       <div className="space-y-6">
-                        <ScrollArea className="w-full">
+                        <ScrollArea className="w-full overflow-auto">
                           <ToggleGroup
                             type="single"
                             value={currentSection}
                             onValueChange={(value) => value && setCurrentSection(value)}
-                            className="flex justify-start p-1 bg-muted/40 rounded-lg w-full"
+                            className="flex justify-start p-1 bg-muted/40 rounded-lg w-full min-w-max"
                           >
                             {formSections.map((section) => (
                               <ToggleGroupItem

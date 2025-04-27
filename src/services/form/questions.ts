@@ -37,8 +37,7 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
         pergunta_id
       )
     `)
-    .eq('formulario_id', formId)
-    .order('ordem_pergunta', { ascending: true });
+    .eq('formulario_id', formId);
 
   if (error) {
     console.error('Error fetching questions:', error);
@@ -82,4 +81,3 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
     })) : []
   }));
 }
-

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, FormAnswer } from '@/types/form';
 
@@ -13,7 +12,6 @@ export function getFormStatusByEmployeeId(employeeId: string): 'completed' | 'pe
   }
 }
 
-// Add the missing getFormResults function
 export async function getFormResults(companyId?: string): Promise<any[]> {
   try {
     let query = supabase
@@ -153,14 +151,14 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
       }, {}),
       total_sim: avaliacao.total_sim || 0,
       total_nao: avaliacao.total_nao || 0,
-      notas_analista: avaliacao.notas_analista || '',
+      notas_analista: avaliacoes.notas_analista || '',
       is_complete: avaliacao.is_complete || false,
       last_updated: avaliacao.last_updated,
       created_at: avaliacao.created_at,
       updated_at: avaliacao.updated_at,
       totalYes: avaliacao.total_sim || 0,
       totalNo: avaliacao.total_nao || 0,
-      analyistNotes: avaliacao.notas_analista || '',
+      analyistNotes: avaliacoes.notas_analista || '',
       yesPerSeverity: {
         "LEVEMENTE PREJUDICIAL": 0,
         "PREJUDICIAL": 0,
