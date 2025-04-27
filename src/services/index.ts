@@ -11,5 +11,8 @@ export {
   getMitigationsByRiskId,
   getFormStatusByEmployeeId,
   getFormResults,
-  getAllForms
+  getAllForms,
+  getDefaultRiskId,
+  getAllRisksWithSeverity,
+  getAllSeverities
 } from './form/formService';

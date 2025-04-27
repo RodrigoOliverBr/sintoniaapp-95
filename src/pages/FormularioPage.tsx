@@ -14,6 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import ProgressHeader from "@/components/form/ProgressHeader";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
+import { toast as sonnerToast } from "sonner";
+import { AlertTriangle } from "lucide-react";
 
 const FormularioPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -28,6 +30,7 @@ const FormularioPage: React.FC = () => {
   const [selectedFormId, setSelectedFormId] = useState<string>("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [formSections, setFormSections] = useState<{title: string, description?: string, ordem: number, questions: Question[]}[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -153,6 +156,8 @@ const FormularioPage: React.FC = () => {
         
         // Reset current section when loading new form
         setCurrentSection("");
+        // Reset any previous errors
+        setError(null);
       } catch (error) {
         console.error("Erro ao carregar perguntas:", error);
         toast({
@@ -179,6 +184,7 @@ const FormularioPage: React.FC = () => {
     setSelectedFormId(value);
     setAnswers({});
     setCurrentSection("");
+    setError(null);
   };
   
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
@@ -240,6 +246,8 @@ const FormularioPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    setError(null);
+    
     try {
       let totalYes = 0;
       let totalNo = 0;
@@ -268,10 +276,7 @@ const FormularioPage: React.FC = () => {
       
       await saveFormResult(formResultData);
       
-      toast({
-        title: "Sucesso",
-        description: "Formulário salvo com sucesso!",
-      });
+      sonnerToast.success("Formulário salvo com sucesso!");
       
       // Reload the form result to get updated data
       const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId!, selectedFormId);
@@ -287,8 +292,9 @@ const FormularioPage: React.FC = () => {
           variant: "default",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao salvar o formulário:", error);
+      setError(error?.message || "Não foi possível salvar o formulário");
       toast({
         title: "Erro",
         description: "Não foi possível salvar o formulário",
@@ -366,7 +372,6 @@ const FormularioPage: React.FC = () => {
                     </ScrollArea>
                   </SelectContent>
                 </Select>
-                {/* Removed the blue alert message as requested */}
               </div>
             </div>
 
@@ -412,6 +417,13 @@ const FormularioPage: React.FC = () => {
                       />
                     )
                   ))}
+                  
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-md flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                      <p>{error}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

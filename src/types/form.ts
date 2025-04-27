@@ -37,6 +37,7 @@ export interface Risk {
   created_at?: string;
   updated_at?: string;
   severidade?: Severity;
+  mitigations?: Mitigation[]; // Add this for compatibility with RiskTable
 }
 
 export interface Severity {
@@ -74,7 +75,7 @@ export interface FormResult {
   last_updated: string;
   created_at: string;
   updated_at: string;
-  formulario_id: string; // Making this required since it's essential
+  formulario_id?: string; // Make this optional since it might not exist in older records
   
   // These properties are used by the FormResults component
   totalYes?: number;
