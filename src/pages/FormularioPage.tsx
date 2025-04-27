@@ -1,14 +1,10 @@
+
 import React from "react";
 import Layout from "@/components/Layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import FormSelector from "@/components/form/FormSelector";
-import EmployeeFormHistory from "@/components/form/EmployeeFormHistory";
-import FormContent from "@/components/form/FormContent";
-import FormActions from "@/components/form/FormActions";
 import { useFormData } from "@/hooks/useFormData";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
-import { useToast } from "@/hooks/use-toast";
-import { deleteFormEvaluation, getEmployeeFormHistory } from "@/services/form";
+import FormSelectionSection from "@/components/form/FormSelectionSection";
+import FormContentSection from "@/components/form/FormContentSection";
 
 const FormularioPage: React.FC = () => {
   const {
@@ -43,7 +39,6 @@ const FormularioPage: React.FC = () => {
   } = useFormData();
 
   const { isSubmitting, handleSaveForm } = useFormSubmission();
-  const { toast } = useToast();
 
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value);
@@ -70,45 +65,20 @@ const FormularioPage: React.FC = () => {
     setFormComplete(false);
   };
 
-  const handleAnswerChange = (questionId: string, answer: boolean | null) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: { ...prev[questionId], questionId, answer: answer === null ? false : answer }
-    }));
-  };
-
-  const handleObservationChange = (questionId: string, observation: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: { ...prev[questionId], questionId, observation }
-    }));
-  };
-
-  const handleOptionsChange = (questionId: string, selectedOptions: string[]) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: { ...prev[questionId], questionId, selectedOptions }
-    }));
-  };
-
-  const handleAnalystNotesChange = (notes: string) => {
-    if (formResult) {
-      setFormResult({
-        ...formResult,
-        notas_analista: notes,
-        analyistNotes: notes
-      });
+  const handleNewEvaluation = () => {
+    setSelectedEvaluation(null);
+    setShowResults(false);
+    setFormComplete(false);
+    setAnswers({});
+    setShowingHistoryView(false);
+    if (formSections.length > 0) {
+      setCurrentSection(formSections[0].title);
     }
   };
 
-  const moveToNextSection = () => {
-    const currentSectionIndex = formSections.findIndex(section => section.title === currentSection);
-    if (currentSectionIndex < formSections.length - 1) {
-      setCurrentSection(formSections[currentSectionIndex + 1].title);
-      return true;
-    }
-    return false;
-  };
+  const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
+  const selectedFormTitle = availableForms.find(f => f.id === selectedFormId)?.titulo || "Formulário";
+  const isLastSection = formSections.findIndex(section => section.title === currentSection) === formSections.length - 1;
 
   const handleSaveAndComplete = () => {
     handleSaveForm(
@@ -127,7 +97,14 @@ const FormularioPage: React.FC = () => {
           setFormComplete(true);
           setSelectedEvaluation(updatedResult);
         },
-        moveToNextSection
+        moveToNextSection: () => {
+          const currentIndex = formSections.findIndex(s => s.title === currentSection);
+          if (currentIndex < formSections.length - 1) {
+            setCurrentSection(formSections[currentIndex + 1].title);
+            return true;
+          }
+          return false;
+        }
       }
     );
   };
@@ -144,145 +121,112 @@ const FormularioPage: React.FC = () => {
       {
         onSuccess: (updatedResult) => {
           setFormResult(updatedResult);
-          const hasMoreSections = moveToNextSection();
-          if (!hasMoreSections) {
+          const currentIndex = formSections.findIndex(s => s.title === currentSection);
+          if (currentIndex < formSections.length - 1) {
+            setCurrentSection(formSections[currentIndex + 1].title);
+          } else {
             setFormComplete(true);
           }
         },
-        moveToNextSection
+        moveToNextSection: () => {
+          const currentIndex = formSections.findIndex(s => s.title === currentSection);
+          if (currentIndex < formSections.length - 1) {
+            setCurrentSection(formSections[currentIndex + 1].title);
+            return true;
+          }
+          return false;
+        }
       }
     );
   };
 
-  const handleNewEvaluation = () => {
-    setSelectedEvaluation(null);
-    setShowResults(false);
-    setFormComplete(false);
-    setAnswers({});
-    setShowingHistoryView(false);
-    if (formSections.length > 0) {
-      setCurrentSection(formSections[0].title);
-    }
-  };
-
-  const handleDeleteEvaluation = async (evaluationId: string) => {
-    try {
-      console.log("Handling delete for evaluation ID:", evaluationId);
-      
-      setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
-      
-      if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
-        setSelectedEvaluation(null);
-        setShowResults(false);
-      }
-      
-      toast({
-        title: "Avaliação excluída",
-        description: "A avaliação foi removida com sucesso.",
-      });
-    } catch (error) {
-      console.error("Erro ao processar exclusão da avaliação:", error);
-      toast({
-        title: "Erro ao excluir avaliação",
-        description: "Não foi possível excluir a avaliação. Tente novamente.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleEditEvaluation = (evaluation: any) => {
-    setSelectedEvaluation(evaluation);
-    setShowResults(false);
-    setAnswers(evaluation.answers || {});
-    if (formSections.length > 0) {
-      setCurrentSection(formSections[0].title);
-    }
-    setShowingHistoryView(false);
-  };
-
-  const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
-  const selectedFormTitle = availableForms.find(f => f.id === selectedFormId)?.titulo || "Formulário";
-  const isLastSection = formSections.findIndex(section => section.title === currentSection) === formSections.length - 1;
-
   return (
     <Layout title="Formulário">
       <div className="container mx-auto py-6 space-y-8">
-        <Card className="shadow-lg">
-          <CardHeader className="border-b bg-muted/40">
-            <CardTitle className="text-2xl text-primary">
-              {showResults ? "Resultado da Avaliação" : "Preenchimento do Formulário"}
-            </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              {showResults 
-                ? "Visualize os resultados da avaliação e adicione suas observações." 
-                : "Selecione a empresa, o funcionário e o formulário para preencher."}
-            </CardDescription>
-          </CardHeader>
-          
-          <CardContent className="pt-6">
-            <FormSelector
-              companies={companies}
-              employees={employees}
-              availableForms={availableForms}
-              selectedCompanyId={selectedCompanyId}
-              selectedEmployeeId={selectedEmployeeId}
-              selectedFormId={selectedFormId}
-              onCompanyChange={handleCompanyChange}
-              onEmployeeChange={handleEmployeeChange}
-              onFormChange={handleFormChange}
-            />
+        <FormSelectionSection
+          companies={companies}
+          employees={employees}
+          availableForms={availableForms}
+          selectedCompanyId={selectedCompanyId}
+          selectedEmployeeId={selectedEmployeeId}
+          selectedFormId={selectedFormId}
+          onCompanyChange={handleCompanyChange}
+          onEmployeeChange={handleEmployeeChange}
+          onFormChange={handleFormChange}
+          isLoadingHistory={isLoadingHistory}
+        />
 
-            {selectedEmployeeId && selectedEmployee && selectedFormId && (
-              <div className="mt-6">
-                {!showResults && showingHistoryView ? (
-                  <EmployeeFormHistory
-                    evaluations={evaluationHistory}
-                    onShowResults={(evaluation) => {
-                      setSelectedEvaluation(evaluation);
-                      setShowResults(true);
-                      setShowingHistoryView(true);
-                    }}
-                    onNewEvaluation={handleNewEvaluation}
-                    onDeleteEvaluation={handleDeleteEvaluation}
-                    onEditEvaluation={handleEditEvaluation}
-                  />
-                ) : (
-                  <FormContent 
-                    showResults={showResults}
-                    showingHistoryView={showingHistoryView}
-                    selectedEmployee={selectedEmployee}
-                    selectedFormTitle={selectedFormTitle}
-                    currentSection={currentSection}
-                    formSections={formSections}
-                    answers={answers}
-                    onAnswerChange={handleAnswerChange}
-                    onObservationChange={handleObservationChange}
-                    onOptionsChange={handleOptionsChange}
-                    selectedEvaluation={selectedEvaluation}
-                    formResult={formResult}
-                    questions={questions}
-                    onNotesChange={handleAnalystNotesChange}
-                    onSectionChange={setCurrentSection}
-                  />
-                )}
-              </div>
-            )}
-          </CardContent>
-
-          {selectedEmployeeId && selectedFormId && !isLoadingHistory && (
-            <FormActions
-              showResults={showResults}
-              formComplete={formComplete}
-              isSubmitting={isSubmitting}
-              isLastSection={isLastSection}
-              showingHistory={showingHistoryView && !showResults}
-              onNewEvaluation={handleNewEvaluation}
-              onShowResults={() => setShowResults(true)}
-              onCompleteForm={handleSaveAndComplete}
-              onSaveForm={handleSaveAndContinue}
-            />
-          )}
-        </Card>
+        {selectedEmployeeId && selectedEmployee && selectedFormId && (
+          <FormContentSection
+            selectedEmployee={selectedEmployee}
+            selectedFormId={selectedFormId}
+            showResults={showResults}
+            showingHistoryView={showingHistoryView}
+            selectedFormTitle={selectedFormTitle}
+            currentSection={currentSection}
+            formSections={formSections}
+            answers={answers}
+            onAnswerChange={(questionId, answer) => {
+              setAnswers(prev => ({
+                ...prev,
+                [questionId]: { ...prev[questionId], questionId, answer: answer === null ? false : answer }
+              }));
+            }}
+            onObservationChange={(questionId, observation) => {
+              setAnswers(prev => ({
+                ...prev,
+                [questionId]: { ...prev[questionId], questionId, observation }
+              }));
+            }}
+            onOptionsChange={(questionId, selectedOptions) => {
+              setAnswers(prev => ({
+                ...prev,
+                [questionId]: { ...prev[questionId], questionId, selectedOptions }
+              }));
+            }}
+            selectedEvaluation={selectedEvaluation}
+            formResult={formResult}
+            questions={questions}
+            onNotesChange={(notes) => {
+              if (formResult) {
+                setFormResult({
+                  ...formResult,
+                  notas_analista: notes,
+                  analyistNotes: notes
+                });
+              }
+            }}
+            onSectionChange={setCurrentSection}
+            evaluationHistory={evaluationHistory}
+            formComplete={formComplete}
+            isSubmitting={isSubmitting}
+            isLastSection={isLastSection}
+            onNewEvaluation={handleNewEvaluation}
+            onShowResults={() => setShowResults(true)}
+            onCompleteForm={handleSaveAndComplete}
+            onSaveForm={handleSaveAndContinue}
+            onDeleteEvaluation={async (evaluationId) => {
+              try {
+                setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
+                if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
+                  setSelectedEvaluation(null);
+                  setShowResults(false);
+                }
+              } catch (error) {
+                console.error("Erro ao processar exclusão da avaliação:", error);
+              }
+            }}
+            onEditEvaluation={(evaluation) => {
+              setSelectedEvaluation(evaluation);
+              setShowResults(false);
+              setAnswers(evaluation.answers || {});
+              if (formSections.length > 0) {
+                setCurrentSection(formSections[0].title);
+              }
+              setShowingHistoryView(false);
+            }}
+          />
+        )}
       </div>
     </Layout>
   );
