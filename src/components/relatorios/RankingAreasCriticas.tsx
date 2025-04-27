@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart } from "@/components/ui/BarChart";
-import { getFormResults } from "@/services/form/formService";
+import { getFormResults } from "@/services/form";
 import { formSections } from "@/data/formData";
 
 interface RankingAreasCriticasProps {
@@ -18,7 +18,7 @@ const RankingAreasCriticas: React.FC<RankingAreasCriticasProps> = ({ companyId }
       setIsLoading(true);
       try {
         // In a real implementation, you would filter by company ID
-        const results = await getFormResults();
+        const results = await getFormResults(companyId);
         
         // Process the results to calculate the ranking data
         const areaScores: Record<string, number> = {};

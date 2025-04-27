@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, FormAnswer } from '@/types/form';
 
@@ -9,6 +10,41 @@ export function getFormStatusByEmployeeId(employeeId: string): 'completed' | 'pe
   } catch (error) {
     console.error('Error in getFormStatusByEmployeeId:', error);
     return 'error';
+  }
+}
+
+// Add the missing getFormResults function
+export async function getFormResults(companyId?: string): Promise<any[]> {
+  try {
+    let query = supabase
+      .from('avaliacoes')
+      .select(`
+        *,
+        respostas:respostas (
+          pergunta_id,
+          resposta,
+          observacao,
+          opcoes_selecionadas
+        ),
+        funcionario:funcionarios (*)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (companyId) {
+      query = query.eq('empresa_id', companyId);
+    }
+    
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching form results:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getFormResults:', error);
+    return [];
   }
 }
 

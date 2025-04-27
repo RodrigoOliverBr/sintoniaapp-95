@@ -14,6 +14,6 @@ export {
   getAllForms,
   getDefaultRiskId,
   getAllRisksWithSeverity,
-  getAllSeverities
+  getAllSeverities,
+  getFormResults
 } from './form';
-
