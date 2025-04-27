@@ -169,7 +169,7 @@ const FormularioPage: React.FC = () => {
   const handleDeleteEvaluation = async (evaluationId: string) => {
     try {
       // Filtrar as avaliações localmente primeiro para atualização imediata da UI
-      setEvaluationHistory(prev => prev.filter(eval => eval.id !== evaluationId));
+      setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
       setSelectedEvaluation(null);
       setShowResults(false);
       
