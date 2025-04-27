@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Question, Risk } from "@/types/form";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,10 +39,12 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
   
   const [submitting, setSubmitting] = useState(false);
   const [riscos, setRiscos] = useState<Risk[]>([]);
+  const [availableSections, setAvailableSections] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
       fetchRiscos();
+      fetchAvailableSections();
       
       if (isEditing && currentPergunta) {
         setFormData({
@@ -63,6 +66,27 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     }
   }, [open, isEditing, currentPergunta, preSelectedSection]);
 
+  const fetchAvailableSections = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('perguntas')
+        .select('secao')
+        .eq('formulario_id', formularioId)
+        .distinct();
+        
+      if (error) throw error;
+      
+      const sections = data.map(item => item.secao);
+      if (!sections.includes(preSelectedSection) && preSelectedSection) {
+        sections.push(preSelectedSection);
+      }
+      setAvailableSections(sections.sort());
+    } catch (error) {
+      console.error("Erro ao carregar seções:", error);
+      toast.error("Erro ao carregar seções");
+    }
+  };
+
   const fetchRiscos = async () => {
     try {
       const { data, error } = await supabase
@@ -83,6 +107,10 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
   ) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSectionChange = (value: string) => {
+    setFormData(prev => ({ ...prev, secao: value }));
   };
 
   const handleCheckboxChange = (checked: boolean) => {
@@ -187,13 +215,21 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
             <div className="space-y-2">
               <Label>Seção</Label>
               {isEditing ? (
-                <Input
-                  name="secao"
+                <Select 
                   value={formData.secao}
-                  onChange={handleInputChange}
-                  placeholder="Nome da seção"
-                  className="w-full"
-                />
+                  onValueChange={handleSectionChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione a seção" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSections.map((section) => (
+                      <SelectItem key={section} value={section}>
+                        {section}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
                 <div className="w-full p-3 bg-muted rounded-md text-muted-foreground">
                   {formData.secao}
