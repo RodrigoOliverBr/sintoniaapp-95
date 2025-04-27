@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, FormAnswer } from '@/types/form';
 
@@ -94,7 +95,7 @@ export async function getFormResultByEmployeeId(employeeId: string, formId?: str
       id: avaliacoes.id,
       employeeId: avaliacoes.funcionario_id,
       empresa_id: avaliacoes.empresa_id,
-      formulario_id: formId || avaliacoes.formulario_id || "",
+      formulario_id: formId || "",
       answers,
       total_sim: avaliacoes.total_sim || 0,
       total_nao: avaliacoes.total_nao || 0,
@@ -139,7 +140,7 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
       id: avaliacao.id,
       employeeId: avaliacao.funcionario_id,
       empresa_id: avaliacao.empresa_id,
-      formulario_id: avaliacao.formulario_id || "",
+      formulario_id: "", // This field doesn't exist in database yet
       answers: avaliacao.respostas?.reduce((acc: Record<string, any>, resposta: any) => {
         acc[resposta.pergunta_id] = {
           questionId: resposta.pergunta_id,
@@ -151,14 +152,14 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
       }, {}),
       total_sim: avaliacao.total_sim || 0,
       total_nao: avaliacao.total_nao || 0,
-      notas_analista: avaliacoes.notas_analista || '',
+      notas_analista: avaliacao.notas_analista || '',
       is_complete: avaliacao.is_complete || false,
       last_updated: avaliacao.last_updated,
       created_at: avaliacao.created_at,
       updated_at: avaliacao.updated_at,
       totalYes: avaliacao.total_sim || 0,
       totalNo: avaliacao.total_nao || 0,
-      analyistNotes: avaliacoes.notas_analista || '',
+      analyistNotes: avaliacao.notas_analista || '',
       yesPerSeverity: {
         "LEVEMENTE PREJUDICIAL": 0,
         "PREJUDICIAL": 0,
@@ -178,6 +179,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
     let avaliacaoId = id;
     
     if (!avaliacaoId || avaliacaoId.trim() === '') {
+      // For INSERT operation, do not try to include formulario_id if it's not in the table schema
       const insertData: any = {
         funcionario_id: employeeId,
         empresa_id: empresa_id,
@@ -187,10 +189,6 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
         notas_analista,
         last_updated: new Date().toISOString()
       };
-      
-      if (formulario_id) {
-        insertData.formulario_id = formulario_id;
-      }
       
       const { data: avaliacao, error: avaliacaoError } = await supabase
         .from('avaliacoes')
@@ -205,6 +203,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
       
       avaliacaoId = avaliacao.id;
     } else {
+      // For UPDATE operation, do not try to update formulario_id if it's not in the table schema
       const updateData: any = {
         total_sim,
         total_nao,
@@ -212,10 +211,6 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
         notas_analista,
         last_updated: new Date().toISOString()
       };
-
-      if (formulario_id) {
-        updateData.formulario_id = formulario_id;
-      }
       
       const { error: updateError } = await supabase
         .from('avaliacoes')

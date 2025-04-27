@@ -1,4 +1,3 @@
-
 export interface Question {
   id: string;
   texto: string;
@@ -75,7 +74,7 @@ export interface FormResult {
   last_updated: string;
   created_at: string;
   updated_at: string;
-  formulario_id?: string; // Make this optional since it might not exist in older records
+  formulario_id: string; // Make this required since we need it
   
   // These properties are used by the FormResults component
   totalYes?: number;
