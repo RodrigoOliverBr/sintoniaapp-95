@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getFormQuestions, getAllForms } from "@/services/form";
-import { getEmployeeFormHistory, getFormResultByEmployeeId, saveFormResult } from "@/services/form/evaluations";
+import { getEmployeeFormHistory, getFormResultByEmployeeId, saveFormResult } from "@/services/form";
 import { getCompanies, getEmployeesByCompany } from "@/services";
 import { Company, Employee } from "@/types/cadastro";
 import { Question, FormAnswer, FormResult, Form, Section } from "@/types/form";
@@ -38,6 +37,7 @@ const FormularioPage: React.FC = () => {
   const [selectedEvaluation, setSelectedEvaluation] = useState<FormResult | null>(null);
   const [evaluationHistory, setEvaluationHistory] = useState<FormResult[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [showingHistoryView, setShowingHistoryView] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -100,28 +100,21 @@ const FormularioPage: React.FC = () => {
   }, [selectedCompanyId]);
 
   useEffect(() => {
-    // Quando um funcionário é selecionado, carregamos o histórico de avaliações
-    // mas não mostramos automaticamente os resultados
     const loadEmployeeHistory = async () => {
       if (selectedEmployeeId) {
         setIsLoadingHistory(true);
         try {
           const history = await getEmployeeFormHistory(selectedEmployeeId);
           setEvaluationHistory(history);
-          // Reset any previous evaluation selection
           setSelectedEvaluation(null);
-          // Reset the showResults flag - don't show results automatically
           setShowResults(false);
-          // Reset form completion status
           setFormComplete(false);
-          // Reset answers
           setAnswers({});
           
-          // If the employee has completed evaluations, we'll show the history
-          // If not, we'll show the form to complete
           if (history.length > 0) {
-            // Just load the history, but don't auto-select an evaluation
-            console.log("Histórico de avaliações carregado:", history.length);
+            setShowingHistoryView(true);
+          } else {
+            setShowingHistoryView(false);
           }
         } catch (error) {
           console.error("Erro ao carregar histórico:", error);
@@ -138,10 +131,8 @@ const FormularioPage: React.FC = () => {
 
     loadEmployeeHistory();
 
-    // Reset form data when employee changes
     setCurrentSection("");
     setFormResult(null);
-
   }, [selectedEmployeeId]);
 
   useEffect(() => {
@@ -200,15 +191,16 @@ const FormularioPage: React.FC = () => {
     setSelectedEmployeeId(undefined);
     setShowResults(false);
     setFormComplete(false);
+    setShowingHistoryView(false);
   };
 
   const handleEmployeeChange = (value: string) => {
     setSelectedEmployeeId(value);
-    // Reset states when employee changes
     setShowResults(false);
     setSelectedEvaluation(null);
     setFormComplete(false);
     setAnswers({});
+    setShowingHistoryView(false);
   };
 
   const handleFormChange = (value: string) => {
@@ -336,7 +328,6 @@ const FormularioPage: React.FC = () => {
       const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId!, selectedFormId);
       setFormResult(updatedResult);
 
-      // Reload evaluation history after saving
       const history = await getEmployeeFormHistory(selectedEmployeeId!);
       setEvaluationHistory(history);
 
@@ -370,6 +361,7 @@ const FormularioPage: React.FC = () => {
   const handleShowResults = (evaluation: FormResult) => {
     setSelectedEvaluation(evaluation);
     setShowResults(true);
+    setShowingHistoryView(true);
   };
 
   const handleNewEvaluation = () => {
@@ -377,6 +369,7 @@ const FormularioPage: React.FC = () => {
     setShowResults(false);
     setFormComplete(false);
     setAnswers({});
+    setShowingHistoryView(false);
     if (formSections.length > 0) {
       setCurrentSection(formSections[0].title);
     }
@@ -420,7 +413,7 @@ const FormularioPage: React.FC = () => {
             {selectedEmployeeId && selectedEmployee && selectedFormId && (
               <div className="mt-6">
                 {!showResults ? (
-                  evaluationHistory.length > 0 ? (
+                  showingHistoryView ? (
                     <EmployeeFormHistory
                       evaluations={evaluationHistory}
                       onShowResults={handleShowResults}
@@ -488,6 +481,7 @@ const FormularioPage: React.FC = () => {
               formComplete={formComplete}
               isSubmitting={isSubmitting}
               isLastSection={isLastSection()}
+              showingHistory={showingHistoryView && !showResults}
               onNewEvaluation={handleNewEvaluation}
               onShowResults={() => setShowResults(true)}
               onCompleteForm={handleCompleteForm}

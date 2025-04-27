@@ -96,7 +96,7 @@ export async function getFormResultByEmployeeId(employeeId: string, formId?: str
       id: avaliacoes.id,
       employeeId: avaliacoes.funcionario_id,
       empresa_id: avaliacoes.empresa_id,
-      formulario_id: formId,
+      formulario_id: formId || avaliacoes.formulario_id || "",
       answers,
       total_sim: avaliacoes.total_sim || 0,
       total_nao: avaliacoes.total_nao || 0,
@@ -141,7 +141,7 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
       id: avaliacao.id,
       employeeId: avaliacao.funcionario_id,
       empresa_id: avaliacao.empresa_id,
-      formulario_id: avaliacao.formulario_id,
+      formulario_id: avaliacao.formulario_id || "",
       answers: avaliacao.respostas?.reduce((acc: Record<string, any>, resposta: any) => {
         acc[resposta.pergunta_id] = {
           questionId: resposta.pergunta_id,

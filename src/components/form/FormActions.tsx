@@ -1,13 +1,14 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, ClipboardCheck } from "lucide-react";
 
 interface FormActionsProps {
   showResults: boolean;
   formComplete: boolean;
   isSubmitting: boolean;
   isLastSection: boolean;
+  showingHistory: boolean; // New prop to determine if we're showing the history view
   onNewEvaluation: () => void;
   onShowResults: () => void;
   onCompleteForm: () => void;
@@ -19,6 +20,7 @@ const FormActions: React.FC<FormActionsProps> = ({
   formComplete,
   isSubmitting,
   isLastSection,
+  showingHistory, // New prop
   onNewEvaluation,
   onShowResults,
   onCompleteForm,
@@ -32,6 +34,7 @@ const FormActions: React.FC<FormActionsProps> = ({
           variant="outline"
           className="w-full sm:w-auto mr-2"
         >
+          <ClipboardCheck className="h-4 w-4 mr-2" />
           Nova Avaliação
         </Button>
       ) : formComplete ? (
@@ -44,7 +47,7 @@ const FormActions: React.FC<FormActionsProps> = ({
         </Button>
       ) : (
         <>
-          {isLastSection && (
+          {isLastSection && !showingHistory && (
             <Button
               onClick={onCompleteForm}
               className="w-full sm:w-auto mr-2 bg-green-600 hover:bg-green-700"
@@ -54,14 +57,17 @@ const FormActions: React.FC<FormActionsProps> = ({
               Concluir Formulário
             </Button>
           )}
-          <Button 
-            onClick={onSaveForm} 
-            disabled={isSubmitting}
-            className="w-full sm:w-auto"
-          >
-            {isSubmitting ? "Salvando..." : (isLastSection ? "Salvar" : "Salvar e Avançar")}
-            {!isLastSection && !isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
-          </Button>
+          {/* Only show Save button if we're not in history view */}
+          {!showingHistory && (
+            <Button 
+              onClick={onSaveForm} 
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
+              {isSubmitting ? "Salvando..." : (isLastSection ? "Salvar" : "Salvar e Avançar")}
+              {!isLastSection && !isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+          )}
         </>
       )}
     </div>
