@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -35,6 +34,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     secao: "",
     risco_id: "",
     ordem: 0,
+    ordem_pergunta: 0,
     observacao_obrigatoria: false
   });
   
@@ -53,6 +53,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           secao: currentPergunta.secao || "",
           risco_id: currentPergunta.risco_id || "",
           ordem: currentPergunta.ordem || 0,
+          ordem_pergunta: currentPergunta.ordem_pergunta || 0,
           observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
         });
       } else {
@@ -61,6 +62,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           secao: preSelectedSection,
           risco_id: "",
           ordem: 0,
+          ordem_pergunta: 0,
           observacao_obrigatoria: false
         });
       }
@@ -69,7 +71,6 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
 
   const fetchAvailableSections = async () => {
     try {
-      // Using selectDistinct here instead of .distinct() which is not available
       const { data, error } = await supabase
         .from('perguntas')
         .select('secao')
@@ -77,10 +78,8 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         
       if (error) throw error;
       
-      // Extract unique section names
       const uniqueSections = Array.from(new Set(data.map(item => item.secao)));
       
-      // Add preSelectedSection if it exists and isn't already included
       if (preSelectedSection && !uniqueSections.includes(preSelectedSection)) {
         uniqueSections.push(preSelectedSection);
       }
@@ -153,45 +152,29 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         }
       }
 
-      let nextOrder = formData.ordem;
-      if (!isEditing && formData.ordem === 0) {
-        // For new questions, find the highest order within this section
+      let nextQuestionOrder = formData.ordem_pergunta;
+      if (!isEditing || (isEditing && currentPergunta && formData.secao !== currentPergunta.secao)) {
         const { data } = await supabase
           .from('perguntas')
-          .select('ordem')
+          .select('ordem_pergunta')
           .eq('secao', formData.secao)
           .eq('formulario_id', formularioId)
-          .order('ordem', { ascending: false })
+          .order('ordem_pergunta', { ascending: false })
           .limit(1);
 
-        if (data && data.length > 0) {
-          nextOrder = (data[0].ordem || 0) + 1;
-        } else {
-          nextOrder = 1; // First question in section
-        }
-      } else if (isEditing && currentPergunta && formData.secao !== currentPergunta.secao) {
-        // If changing a question's section, find the next order in the new section
-        const { data } = await supabase
-          .from('perguntas')
-          .select('ordem')
-          .eq('secao', formData.secao)
-          .eq('formulario_id', formularioId)
-          .order('ordem', { ascending: false })
-          .limit(1);
-
-        if (data && data.length > 0) {
-          nextOrder = (data[0].ordem || 0) + 1;
-        } else {
-          nextOrder = 1; // First question in new section
-        }
+        nextQuestionOrder = data && data.length > 0 ? (data[0].ordem_pergunta || 0) + 1 : 1;
       }
+
+      const sectionOrderMatch = formData.secao.match(/^(\d+)\./);
+      const sectionOrder = sectionOrderMatch ? parseInt(sectionOrderMatch[1], 10) : 0;
 
       const perguntaData = {
         texto: formData.texto,
         secao: formData.secao,
         secao_descricao,
         risco_id: formData.risco_id || null,
-        ordem: nextOrder, // Use the calculated order
+        ordem: sectionOrder,
+        ordem_pergunta: nextQuestionOrder,
         observacao_obrigatoria: formData.observacao_obrigatoria,
         formulario_id: formularioId
       };
@@ -282,12 +265,12 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="ordem">Ordem na Seção</Label>
+                <Label htmlFor="ordem_pergunta">Ordem da Pergunta na Seção</Label>
                 <Input
-                  id="ordem"
-                  name="ordem"
+                  id="ordem_pergunta"
+                  name="ordem_pergunta"
                   type="number"
-                  value={formData.ordem}
+                  value={formData.ordem_pergunta}
                   onChange={handleInputChange}
                   placeholder="Ordem de exibição dentro da seção"
                 />

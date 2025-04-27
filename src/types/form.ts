@@ -32,6 +32,7 @@ export interface Question {
   secao: string;
   secao_descricao?: string;
   ordem?: number;
+  ordem_pergunta?: number;
   formulario_id: string;
   opcoes?: { label: string; value: string; }[];
   observacao_obrigatoria?: boolean;
