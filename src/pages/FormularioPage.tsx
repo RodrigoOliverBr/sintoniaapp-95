@@ -1,22 +1,20 @@
-
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getCompanies, getEmployeesByCompany } from "@/services";
 import { getFormQuestions, getFormResultByEmployeeId, saveFormResult, getAllForms } from "@/services/form/formService";
 import { Company, Employee } from "@/types/cadastro";
-import { Question, FormAnswer, FormResult, Section, Form } from "@/types/form";
+import { Question, FormAnswer, FormResult, Form } from "@/types/form";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FormSection from "@/components/FormSection";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ProgressHeader from "@/components/form/ProgressHeader";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
-import { toast as sonnerToast } from "sonner";
-import { AlertTriangle, ArrowRight, Check, CheckCircle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import FormResults from "@/components/FormResults";
+import FormSelector from "@/components/form/FormSelector";
+import FormActions from "@/components/form/FormActions";
 
 const FormularioPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -325,9 +323,7 @@ const FormularioPage: React.FC = () => {
         setShowResults(true);
         setFormComplete(true);
       } else {
-        // If not completing the form, try to move to the next section
         const hasMoreSections = moveToNextSection();
-        // Only show results if we're at the last section and there are no more sections
         if (!hasMoreSections) {
           setFormComplete(true);
         }
@@ -381,61 +377,17 @@ const FormularioPage: React.FC = () => {
           </CardHeader>
           
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Empresa</label>
-                <Select onValueChange={handleCompanyChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione a empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <ScrollArea className="max-h-[200px]">
-                      {companies.map((company) => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </ScrollArea>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Funcionário</label>
-                <Select onValueChange={handleEmployeeChange} value={selectedEmployeeId}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o funcionário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <ScrollArea className="max-h-[200px]">
-                      {employees.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id}>
-                          {employee.name}
-                        </SelectItem>
-                      ))}
-                    </ScrollArea>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Formulário</label>
-                <Select onValueChange={handleFormChange} value={selectedFormId} disabled={availableForms.length <= 1}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o formulário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <ScrollArea className="max-h-[200px]">
-                      {availableForms.map((form) => (
-                        <SelectItem key={form.id} value={form.id}>
-                          {form.titulo}
-                        </SelectItem>
-                      ))}
-                    </ScrollArea>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <FormSelector
+              companies={companies}
+              employees={employees}
+              availableForms={availableForms}
+              selectedCompanyId={selectedCompanyId}
+              selectedEmployeeId={selectedEmployeeId}
+              selectedFormId={selectedFormId}
+              onCompanyChange={handleCompanyChange}
+              onEmployeeChange={handleEmployeeChange}
+              onFormChange={handleFormChange}
+            />
 
             {selectedEmployeeId && selectedEmployee && selectedFormId && (
               <div className="mt-6">
@@ -485,7 +437,7 @@ const FormularioPage: React.FC = () => {
 
                     {formComplete && !showResults && (
                       <div className="bg-green-50 border border-green-200 p-4 rounded-md mt-6 flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <Check className="h-5 w-5 text-green-500" />
                         <div>
                           <p className="font-medium text-green-800">Formulário completo!</p>
                           <p className="text-sm text-green-700">Clique no botão "Verificar Resultados" para visualizar a análise.</p>
@@ -512,46 +464,16 @@ const FormularioPage: React.FC = () => {
           </CardContent>
 
           {selectedEmployeeId && selectedFormId && (
-            <div className="flex justify-end p-6 bg-muted/40 border-t">
-              {showResults ? (
-                <Button 
-                  onClick={handleNewEvaluation}
-                  variant="outline"
-                  className="w-full sm:w-auto mr-2"
-                >
-                  Nova Avaliação
-                </Button>
-              ) : formComplete ? (
-                <Button 
-                  onClick={() => setShowResults(true)}
-                  className="w-full sm:w-auto flex items-center gap-2"
-                >
-                  <Check className="h-4 w-4" />
-                  Verificar Resultados
-                </Button>
-              ) : (
-                <>
-                  {isLastSection() && (
-                    <Button
-                      onClick={handleCompleteForm}
-                      className="w-full sm:w-auto mr-2 bg-green-600 hover:bg-green-700"
-                      disabled={isSubmitting}
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      Concluir Formulário
-                    </Button>
-                  )}
-                  <Button 
-                    onClick={() => handleSaveForm(false)} 
-                    disabled={isSubmitting}
-                    className="w-full sm:w-auto"
-                  >
-                    {isSubmitting ? "Salvando..." : (isLastSection() ? "Salvar" : "Salvar e Avançar")}
-                    {!isLastSection() && !isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
-                  </Button>
-                </>
-              )}
-            </div>
+            <FormActions
+              showResults={showResults}
+              formComplete={formComplete}
+              isSubmitting={isSubmitting}
+              isLastSection={isLastSection()}
+              onNewEvaluation={handleNewEvaluation}
+              onShowResults={() => setShowResults(true)}
+              onCompleteForm={handleCompleteForm}
+              onSaveForm={() => handleSaveForm(false)}
+            />
           )}
         </Card>
       </div>
