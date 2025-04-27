@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { getFormQuestions, getEmployeeFormHistory, getAllForms } from "@/services/form/formService";
 import { getCompanies, getEmployeesByCompany } from "@/services";
-import { getFormQuestions, getFormResultByEmployeeId, saveFormResult, getAllForms } from "@/services/form/formService";
 import { Company, Employee } from "@/types/cadastro";
 import { Question, FormAnswer, FormResult, Form } from "@/types/form";
 import { useToast } from "@/hooks/use-toast";
@@ -10,11 +10,11 @@ import FormSection from "@/components/FormSection";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ProgressHeader from "@/components/form/ProgressHeader";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { supabase } from "@/integrations/supabase/client";
-import { AlertTriangle } from "lucide-react";
 import FormResults from "@/components/FormResults";
 import FormSelector from "@/components/form/FormSelector";
 import FormActions from "@/components/form/FormActions";
+import EmployeeFormHistory from "@/components/form/EmployeeFormHistory";
+import { toast } from "sonner";
 
 const FormularioPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -32,6 +32,9 @@ const FormularioPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [formComplete, setFormComplete] = useState(false);
+  const [selectedEvaluation, setSelectedEvaluation] = useState<FormResult | null>(null);
+  const [evaluationHistory, setEvaluationHistory] = useState<FormResult[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -182,6 +185,32 @@ const FormularioPage: React.FC = () => {
 
     loadFormQuestions();
   }, [selectedFormId, toast, currentSection]);
+
+  useEffect(() => {
+    const loadEmployeeHistory = async () => {
+      if (selectedEmployeeId) {
+        setIsLoadingHistory(true);
+        try {
+          const history = await getEmployeeFormHistory(selectedEmployeeId);
+          setEvaluationHistory(history);
+          if (history.length > 0) {
+            setSelectedEvaluation(history[0]);
+            setShowResults(true);
+          } else {
+            setSelectedEvaluation(null);
+            setShowResults(false);
+          }
+        } catch (error) {
+          console.error("Erro ao carregar histórico:", error);
+          toast.error("Não foi possível carregar o histórico de avaliações");
+        } finally {
+          setIsLoadingHistory(false);
+        }
+      }
+    };
+
+    loadEmployeeHistory();
+  }, [selectedEmployeeId]);
 
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value);
@@ -345,7 +374,13 @@ const FormularioPage: React.FC = () => {
     handleSaveForm(true);
   };
 
+  const handleShowResults = (evaluation: FormResult) => {
+    setSelectedEvaluation(evaluation);
+    setShowResults(true);
+  };
+
   const handleNewEvaluation = () => {
+    setSelectedEvaluation(null);
     setShowResults(false);
     setFormComplete(false);
     setAnswers({});
@@ -392,78 +427,69 @@ const FormularioPage: React.FC = () => {
             {selectedEmployeeId && selectedEmployee && selectedFormId && (
               <div className="mt-6">
                 {!showResults ? (
-                  <>
-                    <ProgressHeader 
-                      employeeName={selectedEmployee.name}
-                      jobRole={selectedEmployee.role || ""}
-                      currentSection={formSections.findIndex(s => s.title === currentSection) + 1}
-                      totalSections={formSections.length}
-                      formTitle={selectedFormTitle}
+                  evaluationHistory.length > 0 ? (
+                    <EmployeeFormHistory
+                      evaluations={evaluationHistory}
+                      onShowResults={handleShowResults}
+                      onNewEvaluation={handleNewEvaluation}
                     />
+                  ) : (
+                    <>
+                      <ProgressHeader 
+                        employeeName={selectedEmployee.name}
+                        jobRole={selectedEmployee.role || ""}
+                        currentSection={formSections.findIndex(s => s.title === currentSection) + 1}
+                        totalSections={formSections.length}
+                        formTitle={selectedFormTitle}
+                      />
 
-                    <div className="space-y-6">
-                      <ScrollArea className="w-full">
-                        <ToggleGroup
-                          type="single"
-                          value={currentSection}
-                          onValueChange={(value) => value && setCurrentSection(value)}
-                          className="flex justify-start p-1 bg-muted/40 rounded-lg w-full"
-                        >
-                          {formSections.map((section) => (
-                            <ToggleGroupItem
+                      <div className="space-y-6">
+                        <ScrollArea className="w-full">
+                          <ToggleGroup
+                            type="single"
+                            value={currentSection}
+                            onValueChange={(value) => value && setCurrentSection(value)}
+                            className="flex justify-start p-1 bg-muted/40 rounded-lg w-full"
+                          >
+                            {formSections.map((section) => (
+                              <ToggleGroupItem
+                                key={section.title}
+                                value={section.title}
+                                className="flex-1 whitespace-nowrap px-4"
+                              >
+                                {section.title}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                        </ScrollArea>
+
+                        {formSections.map((section) => (
+                          section.title === currentSection && (
+                            <FormSection
                               key={section.title}
-                              value={section.title}
-                              className="flex-1 whitespace-nowrap px-4"
-                            >
-                              {section.title}
-                            </ToggleGroupItem>
-                          ))}
-                        </ToggleGroup>
-                      </ScrollArea>
-
-                      {formSections.map((section) => (
-                        section.title === currentSection && (
-                          <FormSection
-                            key={section.title}
-                            section={section}
-                            answers={answers}
-                            onAnswerChange={handleAnswerChange}
-                            onObservationChange={handleObservationChange}
-                            onOptionsChange={handleOptionsChange}
-                          />
-                        )
-                      ))}
-                    </div>
-
-                    {formComplete && !showResults && (
-                      <div className="bg-green-50 border border-green-200 p-4 rounded-md mt-6 flex items-center gap-2">
-                        <Check className="h-5 w-5 text-green-500" />
-                        <div>
-                          <p className="font-medium text-green-800">Formulário completo!</p>
-                          <p className="text-sm text-green-700">Clique no botão "Verificar Resultados" para visualizar a análise.</p>
-                        </div>
+                              section={section}
+                              answers={answers}
+                              onAnswerChange={handleAnswerChange}
+                              onObservationChange={handleObservationChange}
+                              onOptionsChange={handleOptionsChange}
+                            />
+                          )
+                        ))}
                       </div>
-                    )}
-                  </>
+                    </>
+                  )
                 ) : (
                   <FormResults 
-                    result={formResult!} 
+                    result={selectedEvaluation || formResult!}
                     questions={questions}
-                    onNotesChange={handleAnalystNotesChange} 
+                    onNotesChange={handleAnalystNotesChange}
                   />
-                )}
-                
-                {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-md flex items-center gap-2 mt-6">
-                    <AlertTriangle className="h-5 w-5 text-red-500" />
-                    <p>{error}</p>
-                  </div>
                 )}
               </div>
             )}
           </CardContent>
 
-          {selectedEmployeeId && selectedFormId && (
+          {selectedEmployeeId && selectedFormId && !isLoadingHistory && (
             <FormActions
               showResults={showResults}
               formComplete={formComplete}

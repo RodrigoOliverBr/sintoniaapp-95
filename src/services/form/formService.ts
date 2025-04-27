@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer, Section, Form } from '@/types/form';
 
@@ -445,4 +444,61 @@ export async function getCompanies(): Promise<any[]> {
       updatedAt: dept.updated_at
     })) : []
   }));
+}
+
+export async function getEmployeeFormHistory(employeeId: string): Promise<FormResult[]> {
+  try {
+    const { data: avaliacoes, error } = await supabase
+      .from('avaliacoes')
+      .select(`
+        *,
+        respostas:respostas (
+          pergunta_id,
+          resposta,
+          observacao,
+          opcoes_selecionadas
+        )
+      `)
+      .eq('funcionario_id', employeeId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching form history:', error);
+      throw error;
+    }
+
+    return avaliacoes.map(avaliacao => ({
+      id: avaliacao.id,
+      employeeId: avaliacao.funcionario_id,
+      empresa_id: avaliacao.empresa_id,
+      formulario_id: avaliacao.formulario_id,
+      answers: avaliacao.respostas?.reduce((acc: Record<string, any>, resposta: any) => {
+        acc[resposta.pergunta_id] = {
+          questionId: resposta.pergunta_id,
+          answer: resposta.resposta,
+          observation: resposta.observacao,
+          selectedOptions: resposta.opcoes_selecionadas
+        };
+        return acc;
+      }, {}),
+      total_sim: avaliacao.total_sim || 0,
+      total_nao: avaliacao.total_nao || 0,
+      notas_analista: avaliacao.notas_analista || '',
+      is_complete: avaliacao.is_complete || false,
+      last_updated: avaliacao.last_updated,
+      created_at: avaliacao.created_at,
+      updated_at: avaliacao.updated_at,
+      totalYes: avaliacao.total_sim || 0,
+      totalNo: avaliacao.total_nao || 0,
+      analyistNotes: avaliacao.notas_analista || '',
+      yesPerSeverity: {
+        "LEVEMENTE PREJUDICIAL": 0,
+        "PREJUDICIAL": 0,
+        "EXTREMAMENTE PREJUDICIAL": 0
+      }
+    }));
+  } catch (error) {
+    console.error('Error in getEmployeeFormHistory:', error);
+    throw error;
+  }
 }
