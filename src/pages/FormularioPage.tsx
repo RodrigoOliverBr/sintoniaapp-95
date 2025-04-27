@@ -439,23 +439,26 @@ const FormularioPage: React.FC = () => {
                       />
 
                       <div className="space-y-6">
-                        <ScrollArea className="w-full overflow-auto">
-                          <ToggleGroup
-                            type="single"
-                            value={currentSection}
-                            onValueChange={(value) => value && setCurrentSection(value)}
-                            className="flex justify-start p-1 bg-muted/40 rounded-lg w-full min-w-max"
-                          >
-                            {formSections.map((section) => (
-                              <ToggleGroupItem
-                                key={section.title}
-                                value={section.title}
-                                className="flex-1 whitespace-nowrap px-4"
-                              >
-                                {section.title}
-                              </ToggleGroupItem>
-                            ))}
-                          </ToggleGroup>
+                        <ScrollArea className="w-full">
+                          <div className="flex justify-start overflow-x-auto p-1">
+                            <ToggleGroup
+                              type="single"
+                              value={currentSection}
+                              onValueChange={(value) => value && setCurrentSection(value)}
+                              className="inline-flex space-x-1 p-1 bg-muted/40 rounded-lg"
+                            >
+                              {formSections.map((section) => (
+                                <ToggleGroupItem
+                                  key={section.title}
+                                  value={section.title}
+                                  aria-label={section.title}
+                                  className="px-4 py-2 whitespace-nowrap text-sm"
+                                >
+                                  {section.title}
+                                </ToggleGroupItem>
+                              ))}
+                            </ToggleGroup>
+                          </div>
                         </ScrollArea>
 
                         {formSections.map((section) => (
