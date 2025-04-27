@@ -74,7 +74,7 @@ export interface FormResult {
   last_updated: string;
   created_at: string;
   updated_at: string;
-  formulario_id?: string; // Add this field to link to the selected form
+  formulario_id: string; // Making this required since it's essential
   
   // These properties are used by the FormResults component
   totalYes?: number;

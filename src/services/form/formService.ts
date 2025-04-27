@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer, Section, Form } from '@/types/form';
 
@@ -101,64 +100,76 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
 }
 
 export async function getFormResultByEmployeeId(employeeId: string, formId?: string): Promise<FormResult | null> {
-  let query = supabase
-    .from('avaliacoes')
-    .select(`
-      *,
-      respostas:respostas (
-        pergunta_id,
-        resposta,
-        observacao,
-        opcoes_selecionadas
-      )
-    `)
-    .eq('funcionario_id', employeeId)
-    .order('created_at', { ascending: false });
-  
-  if (formId) {
-    query = query.eq('formulario_id', formId);
-  }
+  try {
+    let query = supabase
+      .from('avaliacoes')
+      .select(`
+        *,
+        respostas:respostas (
+          pergunta_id,
+          resposta,
+          observacao,
+          opcoes_selecionadas
+        )
+      `)
+      .eq('funcionario_id', employeeId)
+      .order('created_at', { ascending: false });
+    
+    if (formId) {
+      query = query.eq('formulario_id', formId);
+    }
 
-  const { data: avaliacoes, error } = await query.limit(1).maybeSingle();
+    const { data: avaliacoes, error } = await query.limit(1).maybeSingle();
 
-  if (error) {
-    console.error('Error fetching form result:', error);
-    throw error;
-  }
+    if (error) {
+      console.error('Error fetching form result:', error);
+      throw error;
+    }
 
-  if (!avaliacoes) return null;
+    if (!avaliacoes) return null;
 
-  const answers: Record<string, FormAnswer> = {};
-  avaliacoes.respostas?.forEach((resposta: any) => {
-    answers[resposta.pergunta_id] = {
-      questionId: resposta.pergunta_id,
-      answer: resposta.resposta,
-      observation: resposta.observacao,
-      selectedOptions: resposta.opcoes_selecionadas
+    const answers: Record<string, FormAnswer> = {};
+    if (avaliacoes.respostas && Array.isArray(avaliacoes.respostas)) {
+      avaliacoes.respostas.forEach((resposta: any) => {
+        answers[resposta.pergunta_id] = {
+          questionId: resposta.pergunta_id,
+          answer: resposta.resposta,
+          observation: resposta.observacao,
+          selectedOptions: resposta.opcoes_selecionadas
+        };
+      });
+    }
+
+    // Calculate severity counts for the FormResults component
+    const yesPerSeverity: Record<string, number> = {
+      "LEVEMENTE PREJUDICIAL": 0,
+      "PREJUDICIAL": 0,
+      "EXTREMAMENTE PREJUDICIAL": 0
     };
-  });
 
-  const result = {
-    id: avaliacoes.id,
-    employeeId: avaliacoes.funcionario_id,
-    empresa_id: avaliacoes.empresa_id,
-    formulario_id: avaliacoes.formulario_id,
-    answers,
-    total_sim: avaliacoes.total_sim,
-    total_nao: avaliacoes.total_nao,
-    notas_analista: avaliacoes.notas_analista,
-    is_complete: avaliacoes.is_complete,
-    last_updated: avaliacoes.last_updated,
-    created_at: avaliacoes.created_at,
-    updated_at: avaliacoes.updated_at,
-    // Add these fields for the FormResults component compatibility
-    totalYes: avaliacoes.total_sim,
-    totalNo: avaliacoes.total_nao,
-    analyistNotes: avaliacoes.notas_analista,
-    yesPerSeverity: {} // This would need to be calculated if needed
-  };
-
-  return result;
+    return {
+      id: avaliacoes.id,
+      employeeId: avaliacoes.funcionario_id,
+      empresa_id: avaliacoes.empresa_id,
+      formulario_id: avaliacoes.formulario_id || formId,
+      answers,
+      total_sim: avaliacoes.total_sim || 0,
+      total_nao: avaliacoes.total_nao || 0,
+      notas_analista: avaliacoes.notas_analista || '',
+      is_complete: avaliacoes.is_complete || false,
+      last_updated: avaliacoes.last_updated || new Date().toISOString(),
+      created_at: avaliacoes.created_at,
+      updated_at: avaliacoes.updated_at,
+      // Fields for FormResults component compatibility
+      totalYes: avaliacoes.total_sim || 0,
+      totalNo: avaliacoes.total_nao || 0,
+      analyistNotes: avaliacoes.notas_analista || '',
+      yesPerSeverity
+    };
+  } catch (error) {
+    console.error('Error in getFormResultByEmployeeId:', error);
+    return null;
+  }
 }
 
 export function getFormStatusByEmployeeId(employeeId: string): 'completed' | 'pending' | 'error' {
@@ -176,7 +187,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
   try {
     let avaliacaoId = id;
     
-    if (!avaliacaoId) {
+    if (!avaliacaoId || avaliacaoId.trim() === '') {
       // Create new evaluation record
       const { data: avaliacao, error: avaliacaoError } = await supabase
         .from('avaliacoes')
@@ -206,7 +217,8 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
           total_sim,
           total_nao,
           is_complete,
-          last_updated: new Date().toISOString()
+          last_updated: new Date().toISOString(),
+          formulario_id // Ensure formulario_id is updated
         })
         .eq('id', id);
         
@@ -300,69 +312,6 @@ export async function getMitigationsByRiskId(riskId: string): Promise<Mitigation
   return mitigacoes;
 }
 
-interface Company {
-  id: string;
-  name: string;
-  cpfCnpj: string;
-  telefone?: string;
-  email: string;
-  address?: string;
-  type: string;
-  status: string;
-  contact?: string;
-  zipCode?: string;
-  state?: string;
-  city?: string;
-  createdAt: string;
-  updatedAt: string;
-  departments: {
-    id: string;
-    name: string;
-    companyId: string;
-    createdAt: string;
-    updatedAt: string;
-  }[];
-}
-
-export async function getCompanies(): Promise<Company[]> {
-  const { data: companies, error } = await supabase
-    .from('empresas')
-    .select(`
-      *,
-      departments:setores (*)
-    `)
-    .order('nome');
-
-  if (error) {
-    console.error('Error fetching companies:', error);
-    throw error;
-  }
-
-  return companies.map(company => ({
-    id: company.id,
-    name: company.nome,
-    cpfCnpj: company.cpf_cnpj,
-    telefone: company.telefone,
-    email: company.email,
-    address: company.endereco,
-    type: company.tipo,
-    status: company.situacao,
-    contact: company.contato,
-    zipCode: company.cep,
-    state: company.estado,
-    city: company.cidade,
-    createdAt: company.created_at,
-    updatedAt: company.updated_at,
-    departments: company.departments ? company.departments.map((dept: any) => ({
-      id: dept.id,
-      name: dept.nome,
-      companyId: dept.empresa_id,
-      createdAt: dept.created_at,
-      updatedAt: dept.updated_at
-    })) : []
-  }));
-}
-
 export async function getFormResults() {
   const { data, error } = await supabase
     .from('avaliacoes')
@@ -439,4 +388,43 @@ export async function getAllSeverities(): Promise<Severity[]> {
     console.error("Erro ao obter severidades:", error);
     throw error;
   }
+}
+
+export async function getCompanies(): Promise<any[]> {
+  const { data: companies, error } = await supabase
+    .from('empresas')
+    .select(`
+      *,
+      departments:setores (*)
+    `)
+    .order('nome');
+
+  if (error) {
+    console.error('Error fetching companies:', error);
+    throw error;
+  }
+
+  return companies.map(company => ({
+    id: company.id,
+    name: company.nome,
+    cpfCnpj: company.cpf_cnpj,
+    telefone: company.telefone,
+    email: company.email,
+    address: company.endereco,
+    type: company.tipo,
+    status: company.situacao,
+    contact: company.contato,
+    zipCode: company.cep,
+    state: company.estado,
+    city: company.cidade,
+    createdAt: company.created_at,
+    updatedAt: company.updated_at,
+    departments: company.departments ? company.departments.map((dept: any) => ({
+      id: dept.id,
+      name: dept.nome,
+      companyId: dept.empresa_id,
+      createdAt: dept.created_at,
+      updatedAt: dept.updated_at
+    })) : []
+  }));
 }

@@ -14,15 +14,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import ProgressHeader from "@/components/form/ProgressHeader";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
 
 const FormularioPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | undefined>("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | undefined>("");
-  const [formResult, setFormResult] = useState<any>(null);
+  const [formResult, setFormResult] = useState<FormResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, FormAnswer>>({});
   const [currentSection, setCurrentSection] = useState<string>("");
@@ -275,7 +273,9 @@ const FormularioPage: React.FC = () => {
         description: "Formulário salvo com sucesso!",
       });
       
-      setFormResult(formResultData);
+      // Reload the form result to get updated data
+      const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId!, selectedFormId);
+      setFormResult(updatedResult);
 
       const currentIndex = formSections.findIndex(s => s.title === currentSection);
       if (currentIndex < formSections.length - 1) {
@@ -366,14 +366,7 @@ const FormularioPage: React.FC = () => {
                     </ScrollArea>
                   </SelectContent>
                 </Select>
-                {availableForms.length <= 1 && (
-                  <Alert variant="default" className="bg-blue-50 mt-2">
-                    <Info className="h-4 w-4 text-blue-500" />
-                    <AlertDescription className="text-xs text-blue-600">
-                      Apenas um formulário disponível no momento.
-                    </AlertDescription>
-                  </Alert>
-                )}
+                {/* Removed the blue alert message as requested */}
               </div>
             </div>
 
