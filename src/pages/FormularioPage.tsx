@@ -1,4 +1,3 @@
-
 import React from "react";
 import Layout from "@/components/Layout";
 import { useFormData } from "@/hooks/useFormData";
@@ -146,11 +145,18 @@ const FormularioPage: React.FC = () => {
 
   const handleDeleteEvaluation = async (evaluationId: string) => {
     try {
+      console.log(`Iniciando exclusão da avaliação: ${evaluationId}`);
+      
       // Chamar o serviço para excluir a avaliação no banco de dados
       await deleteFormEvaluation(evaluationId);
       
-      // Atualizar o estado local para refletir a exclusão
-      setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
+      // Atualizar o estado local para refletir a exclusão imediatamente
+      setEvaluationHistory(prev => {
+        console.log(`Avaliações antes da exclusão: ${prev.length}`);
+        const updated = prev.filter(evaluation => evaluation.id !== evaluationId);
+        console.log(`Avaliações após a exclusão: ${updated.length}`);
+        return updated;
+      });
       
       // Limpar o estado se a avaliação selecionada foi excluída
       if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
@@ -158,16 +164,22 @@ const FormularioPage: React.FC = () => {
         setShowResults(false);
       }
       
-      // Recarregar o histórico para garantir sincronização com o banco de dados
-      if (selectedEmployeeId) {
-        await loadEmployeeHistory();
-      }
-      
+      // Exibir toast de sucesso
       toast({
         title: "Sucesso",
         description: "Avaliação excluída com sucesso.",
         variant: "default",
       });
+      
+      // Forçar atualização do histórico completo após um breve delay
+      // para garantir que as operações do banco de dados foram concluídas
+      setTimeout(async () => {
+        if (selectedEmployeeId) {
+          console.log("Recarregando histórico do servidor...");
+          await loadEmployeeHistory();
+        }
+      }, 500);
+      
     } catch (error) {
       console.error("Erro ao excluir avaliação:", error);
       toast({

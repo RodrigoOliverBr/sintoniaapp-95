@@ -1,3 +1,4 @@
+
 import React from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -5,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, ClipboardCheck, Edit, Trash2 } from "lucide-react";
 import { FormResult } from "@/types/form";
-import { deleteFormEvaluation } from "@/services/form";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -42,18 +42,13 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   };
 
   const confirmDelete = async () => {
-    if (evaluationToDelete) {
+    if (evaluationToDelete && onDeleteEvaluation) {
       try {
         setIsDeleting(true);
         console.log("Deletando avaliação:", evaluationToDelete.id);
         
-        // Call the service to delete from database
-        await deleteFormEvaluation(evaluationToDelete.id);
-        
-        // Call the parent component method to update UI
-        if (onDeleteEvaluation) {
-          await onDeleteEvaluation(evaluationToDelete.id);
-        }
+        // Chamar a função de deleção do componente pai
+        await onDeleteEvaluation(evaluationToDelete.id);
         
         toast({
           title: "Avaliação excluída",
@@ -203,6 +198,28 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
       </AlertDialog>
     </>
   );
+};
+
+// Função auxiliar para calcular o nível de risco
+const getRiskLevel = (evaluation: FormResult) => {
+  const score = calculateRiskScore(evaluation);
+  if (score < 20) return { level: "Baixo", color: "text-green-600" };
+  if (score < 40) return { level: "Moderado", color: "text-yellow-600" };
+  if (score < 60) return { level: "Considerável", color: "text-orange-600" };
+  if (score < 80) return { level: "Alto", color: "text-red-600" };
+  return { level: "Extremo", color: "text-red-800" };
+};
+
+const calculateRiskScore = (evaluation: FormResult): number => {
+  if (!evaluation.total_sim && !evaluation.totalYes) return 0;
+  
+  const totalYes = evaluation.total_sim || evaluation.totalYes || 0;
+  const totalQuestions = 
+    (evaluation.total_sim || 0) + (evaluation.total_nao || 0) || 
+    (evaluation.totalYes || 0) + (evaluation.totalNo || 0);
+  
+  if (totalQuestions === 0) return 0;
+  return (totalYes / totalQuestions) * 100;
 };
 
 export default EmployeeFormHistory;

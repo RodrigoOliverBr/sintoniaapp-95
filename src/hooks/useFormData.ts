@@ -111,16 +111,24 @@ export function useFormData() {
 
     setIsLoadingHistory(true);
     try {
+      console.log(`Carregando histórico para o funcionário: ${selectedEmployeeId}`);
       const history = await getEmployeeFormHistory(selectedEmployeeId);
+      console.log(`Histórico carregado: ${history.length} avaliações`);
+      
+      // Atualizar estado com o histórico atualizado do servidor
       setEvaluationHistory(history);
-      setSelectedEvaluation(null);
-      setShowResults(false);
-      setFormComplete(false);
-      setAnswers({});
       
       if (history.length > 0) {
-        setShowingHistoryView(true);
+        // Manter a visualização de histórico ativa
+        if (showingHistoryView) {
+          console.log("Mantendo visualização de histórico");
+        } else {
+          console.log("Ativando visualização de histórico");
+          setShowingHistoryView(true);
+        }
       } else {
+        // Se não houver histórico, desativar a visualização de histórico
+        console.log("Desativando visualização de histórico - sem avaliações");
         setShowingHistoryView(false);
       }
     } catch (error) {

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, FormAnswer } from '@/types/form';
 
@@ -292,7 +291,9 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
 
 export async function deleteFormEvaluation(evaluationId: string): Promise<void> {
   try {
-    // First delete all responses linked to this evaluation
+    console.log(`Iniciando exclusão da avaliação: ${evaluationId}`);
+    
+    // Primeiro exclua as respostas associadas à avaliação
     const { error: responsesError } = await supabase
       .from('respostas')
       .delete()
@@ -303,7 +304,9 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
       throw responsesError;
     }
 
-    // Then delete the evaluation itself
+    console.log(`Respostas da avaliação ${evaluationId} excluídas com sucesso`);
+    
+    // Em seguida, exclua a avaliação
     const { error: evaluationError } = await supabase
       .from('avaliacoes')
       .delete()
