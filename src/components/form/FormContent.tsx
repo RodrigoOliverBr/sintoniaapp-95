@@ -21,6 +21,7 @@ interface FormContentProps {
   formResult: FormResult | null;
   questions: any[];
   onNotesChange: (notes: string) => void;
+  onSectionChange: (sectionTitle: string) => void;
 }
 
 const FormContent: React.FC<FormContentProps> = ({
@@ -38,6 +39,7 @@ const FormContent: React.FC<FormContentProps> = ({
   formResult,
   questions,
   onNotesChange,
+  onSectionChange,
 }) => {
   if (!showResults) {
     return (
@@ -54,7 +56,7 @@ const FormContent: React.FC<FormContentProps> = ({
           <FormNavigation
             sections={formSections}
             currentSection={currentSection}
-            onSectionChange={(value) => setCurrentSection(value)}
+            onSectionChange={onSectionChange}
           />
 
           {formSections.map((section) => (

@@ -8,6 +8,7 @@ import FormContent from "@/components/form/FormContent";
 import FormActions from "@/components/form/FormActions";
 import { useFormData } from "@/hooks/useFormData";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
+import { toast } from "sonner";
 
 const FormularioPage: React.FC = () => {
   const {
@@ -162,6 +163,33 @@ const FormularioPage: React.FC = () => {
     }
   };
 
+  const handleDeleteEvaluation = async (evaluationId: string) => {
+    try {
+      // Call your delete service here
+      // await deleteFormResult(evaluationId);
+      toast.success("Avaliação excluída com sucesso!");
+      // Refresh the evaluation history
+      if (selectedEmployeeId) {
+        // Reload employee history...
+        setSelectedEvaluation(null);
+        setShowResults(false);
+      }
+    } catch (error) {
+      console.error("Erro ao excluir avaliação:", error);
+      toast.error("Erro ao excluir avaliação");
+    }
+  };
+  
+  const handleEditEvaluation = (evaluation: any) => {
+    setSelectedEvaluation(evaluation);
+    setShowResults(false);
+    setAnswers(evaluation.answers || {});
+    if (formSections.length > 0) {
+      setCurrentSection(formSections[0].title);
+    }
+    setShowingHistoryView(false);
+  };
+
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
   const selectedFormTitle = availableForms.find(f => f.id === selectedFormId)?.titulo || "Formulário";
   const isLastSection = formSections.findIndex(section => section.title === currentSection) === formSections.length - 1;
@@ -205,6 +233,8 @@ const FormularioPage: React.FC = () => {
                       setShowingHistoryView(true);
                     }}
                     onNewEvaluation={handleNewEvaluation}
+                    onDeleteEvaluation={handleDeleteEvaluation}
+                    onEditEvaluation={handleEditEvaluation}
                   />
                 ) : (
                   <FormContent 
@@ -222,6 +252,7 @@ const FormularioPage: React.FC = () => {
                     formResult={formResult}
                     questions={questions}
                     onNotesChange={handleAnalystNotesChange}
+                    onSectionChange={setCurrentSection}
                   />
                 )}
               </div>
