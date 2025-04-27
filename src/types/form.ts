@@ -25,19 +25,31 @@ export interface FormResult {
   analyistNotes?: string;
 }
 
+export interface Section {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  ordem: number;
+  formulario_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Question {
   id: string;
   texto: string;
   risco_id: string;
-  secao: string;
-  secao_descricao?: string;
-  ordem?: number;
+  secao_id: string;
   ordem_pergunta?: number;
   formulario_id: string;
   opcoes?: { label: string; value: string; }[];
   observacao_obrigatoria?: boolean;
   risco?: Risk;
   pergunta_opcoes?: QuestionOption[];
+  // Keep old fields temporarily for backward compatibility
+  secao?: string;
+  secao_descricao?: string;
+  ordem?: number;
 }
 
 export interface QuestionOption {

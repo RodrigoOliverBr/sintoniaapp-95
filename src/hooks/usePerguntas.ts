@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Question } from "@/types/form";
+import { Question, Section } from "@/types/form";
 
 interface PerguntasHookProps {
   formularioId: string;
@@ -10,12 +10,25 @@ interface PerguntasHookProps {
 
 export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
   const [perguntas, setPerguntas] = useState<Question[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchPerguntas = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Fetch sections first
+      const { data: sectionsData, error: sectionsError } = await supabase
+        .from('secoes')
+        .select('*')
+        .eq('formulario_id', formularioId)
+        .order('ordem');
+
+      if (sectionsError) throw sectionsError;
+      setSections(sectionsData);
+
+      // Fetch questions with their relations
+      const { data: questionsData, error: questionsError } = await supabase
         .from('perguntas')
         .select(`
           *,
@@ -27,16 +40,13 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
         `)
         .eq('formulario_id', formularioId);
 
-      if (error) throw error;
+      if (questionsError) throw questionsError;
 
-      // Transformar os dados para corresponder ao tipo Question
-      const transformedData = data.map((item: any) => ({
+      const transformedData = questionsData.map((item: any) => ({
         id: item.id,
         texto: item.texto,
         risco_id: item.risco_id,
-        secao: item.secao,
-        secao_descricao: item.secao_descricao,
-        ordem: item.ordem || 0,
+        secao_id: item.secao_id,
         ordem_pergunta: item.ordem_pergunta || 0,
         formulario_id: item.formulario_id,
         opcoes: item.opcoes 
@@ -51,23 +61,23 @@ export const usePerguntas = ({ formularioId }: PerguntasHookProps) => {
         updated_at: item.updated_at
       }));
 
-      console.log("Fetched questions:", transformedData);
       setPerguntas(transformedData);
     } catch (error) {
-      console.error("Erro ao carregar perguntas:", error);
-      toast.error("Erro ao carregar perguntas");
+      console.error("Erro ao carregar dados:", error);
+      toast.error("Erro ao carregar dados");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPerguntas();
+    fetchData();
   }, [formularioId]);
 
   return {
     perguntas,
+    sections,
     loading,
-    refreshPerguntas: fetchPerguntas
+    refreshPerguntas: fetchData
   };
 };

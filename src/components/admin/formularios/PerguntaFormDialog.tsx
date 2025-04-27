@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -32,60 +31,52 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     texto: "",
-    secao: "",
+    secao_id: "",
     risco_id: "",
-    ordem: 0,
     ordem_pergunta: 0,
     observacao_obrigatoria: false
   });
   
   const [submitting, setSubmitting] = useState(false);
   const [riscos, setRiscos] = useState<Risk[]>([]);
-  const [availableSections, setAvailableSections] = useState<string[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
 
   useEffect(() => {
     if (open) {
       fetchRiscos();
-      fetchAvailableSections();
+      fetchSections();
       
       if (isEditing && currentPergunta) {
         setFormData({
           texto: currentPergunta.texto || "",
-          secao: currentPergunta.secao || "",
+          secao_id: currentPergunta.secao_id || "",
           risco_id: currentPergunta.risco_id || "",
-          ordem: currentPergunta.ordem || 0,
           ordem_pergunta: currentPergunta.ordem_pergunta || 0,
           observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
         });
       } else {
+        const preSelectedSectionData = sections.find(s => s.titulo === preSelectedSection);
         setFormData({
           texto: "",
-          secao: preSelectedSection,
+          secao_id: preSelectedSectionData?.id || "",
           risco_id: "",
-          ordem: 0,
           ordem_pergunta: 0,
           observacao_obrigatoria: false
         });
       }
     }
-  }, [open, isEditing, currentPergunta, preSelectedSection]);
+  }, [open, isEditing, currentPergunta, preSelectedSection, sections]);
 
-  const fetchAvailableSections = async () => {
+  const fetchSections = async () => {
     try {
       const { data, error } = await supabase
-        .from('perguntas')
-        .select('secao')
-        .eq('formulario_id', formularioId);
+        .from('secoes')
+        .select('*')
+        .eq('formulario_id', formularioId)
+        .order('ordem');
         
       if (error) throw error;
-      
-      const uniqueSections = Array.from(new Set(data.map(item => item.secao)));
-      
-      if (preSelectedSection && !uniqueSections.includes(preSelectedSection)) {
-        uniqueSections.push(preSelectedSection);
-      }
-      
-      setAvailableSections(uniqueSections.sort());
+      setSections(data || []);
     } catch (error) {
       console.error("Erro ao carregar seções:", error);
       toast.error("Erro ao carregar seções");
@@ -115,7 +106,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
   };
 
   const handleSectionChange = (value: string) => {
-    setFormData(prev => ({ ...prev, secao: value }));
+    setFormData(prev => ({ ...prev, secao_id: value }));
   };
 
   const handleCheckboxChange = (checked: boolean) => {
@@ -129,74 +120,24 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     try {
       if (formData.texto.trim() === "") {
         toast.error("O texto da pergunta é obrigatório");
-        setSubmitting(false);
         return;
       }
 
-      if (formData.secao.trim() === "") {
+      if (!formData.secao_id) {
         toast.error("É necessário selecionar uma seção");
-        setSubmitting(false);
         return;
       }
-
-      let secao_descricao: string | null = null;
-      // When editing, we should preserve the current section description
-      if (isEditing && currentPergunta && formData.secao === currentPergunta.secao) {
-        secao_descricao = currentPergunta.secao_descricao || null;
-      } else if (formData.secao) {
-        // Only fetch section description if we're changing sections or creating new
-        const { data } = await supabase
-          .from('perguntas')
-          .select('secao_descricao')
-          .eq('secao', formData.secao)
-          .eq('formulario_id', formularioId)
-          .limit(1);
-          
-        if (data && data.length > 0) {
-          secao_descricao = data[0].secao_descricao;
-        }
-      }
-
-      // Handle question order within section
-      let nextQuestionOrder = formData.ordem_pergunta;
-      if (!isEditing || (isEditing && currentPergunta && formData.secao !== currentPergunta.secao)) {
-        const { data } = await supabase
-          .from('perguntas')
-          .select('ordem_pergunta')
-          .eq('secao', formData.secao)
-          .eq('formulario_id', formularioId)
-          .order('ordem_pergunta', { ascending: false })
-          .limit(1);
-
-        nextQuestionOrder = data && data.length > 0 ? (data[0].ordem_pergunta || 0) + 1 : 1;
-      }
-
-      // Extract section order from section name (e.g., "1. Section Name" => 1)
-      const sectionOrderMatch = formData.secao.match(/^(\d+)\./);
-      const sectionOrder = sectionOrderMatch ? parseInt(sectionOrderMatch[1], 10) : 0;
 
       const perguntaData = {
         texto: formData.texto,
-        secao: formData.secao,
-        secao_descricao,
+        secao_id: formData.secao_id,
         risco_id: formData.risco_id || null,
-        ordem: sectionOrder,
-        ordem_pergunta: nextQuestionOrder,
+        ordem_pergunta: formData.ordem_pergunta,
         observacao_obrigatoria: formData.observacao_obrigatoria,
         formulario_id: formularioId
       };
 
       if (isEditing && currentPergunta) {
-        // For editing, preserve the original ordem_pergunta if we're not changing sections
-        if (formData.secao === currentPergunta.secao) {
-          // If user has explicitly set a question order, use that
-          if (formData.ordem_pergunta !== currentPergunta.ordem_pergunta) {
-            perguntaData.ordem_pergunta = formData.ordem_pergunta;
-          } else {
-            perguntaData.ordem_pergunta = currentPergunta.ordem_pergunta || 0;
-          }
-        }
-        
         console.log("Updating pergunta with data:", perguntaData);
         
         const { error } = await supabase
@@ -207,11 +148,6 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
         if (error) throw error;
         toast.success("Pergunta atualizada com sucesso");
       } else {
-        // For new questions, use the next order or the explicitly provided one
-        if (formData.ordem_pergunta > 0) {
-          perguntaData.ordem_pergunta = formData.ordem_pergunta;
-        }
-        
         console.log("Creating pergunta with data:", perguntaData);
         
         const { error } = await supabase
@@ -245,17 +181,16 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
             <div className="space-y-2">
               <Label>Seção</Label>
               <Select 
-                value={formData.secao}
-                onValueChange={handleSectionChange}
-                defaultValue={formData.secao}
+                value={formData.secao_id}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, secao_id: value }))}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione a seção" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableSections.map((section) => (
-                    <SelectItem key={section} value={section}>
-                      {section}
+                  {sections.map((section) => (
+                    <SelectItem key={section.id} value={section.id}>
+                      {section.ordem > 0 ? `${section.ordem}. ${section.titulo}` : section.titulo}
                     </SelectItem>
                   ))}
                 </SelectContent>

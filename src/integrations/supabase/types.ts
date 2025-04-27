@@ -572,6 +572,7 @@ export type Database = {
           risco_id: string
           secao: string
           secao_descricao: string | null
+          secao_id: string
           texto: string
           updated_at: string
         }
@@ -586,6 +587,7 @@ export type Database = {
           risco_id: string
           secao: string
           secao_descricao?: string | null
+          secao_id: string
           texto: string
           updated_at?: string
         }
@@ -600,6 +602,7 @@ export type Database = {
           risco_id?: string
           secao?: string
           secao_descricao?: string | null
+          secao_id?: string
           texto?: string
           updated_at?: string
         }
@@ -616,6 +619,13 @@ export type Database = {
             columns: ["risco_id"]
             isOneToOne: false
             referencedRelation: "riscos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "perguntas_secao_id_fkey"
+            columns: ["secao_id"]
+            isOneToOne: false
+            referencedRelation: "secoes"
             referencedColumns: ["id"]
           },
         ]
@@ -840,6 +850,44 @@ export type Database = {
             columns: ["severidade_id"]
             isOneToOne: false
             referencedRelation: "severidade"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secoes: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          formulario_id: string
+          id: string
+          ordem: number | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          formulario_id: string
+          id?: string
+          ordem?: number | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          formulario_id?: string
+          id?: string
+          ordem?: number | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secoes_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "formularios"
             referencedColumns: ["id"]
           },
         ]
