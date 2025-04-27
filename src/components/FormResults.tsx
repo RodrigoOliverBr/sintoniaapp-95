@@ -17,57 +17,61 @@ interface FormResultsProps {
 const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNotesChange }) => {
   const { toast } = useToast();
   
-  // Map database fields to component expected fields if not already set
-  if (!result.totalYes) result.totalYes = result.total_sim;
-  if (!result.totalNo) result.totalNo = result.total_nao;
-  if (!result.analyistNotes) result.analyistNotes = result.notas_analista || '';
+  // Ensure all required fields exist in the result object
+  const processedResult = {
+    totalYes: result.total_sim || result.totalYes || 0,
+    totalNo: result.total_nao || result.totalNo || 0,
+    analyistNotes: result.notas_analista || result.analyistNotes || '',
+  };
   
   // Calculate severity counts based on questions and answers
-  if (!result.yesPerSeverity) {
-    result.yesPerSeverity = {
-      "LEVEMENTE PREJUDICIAL": 0,
-      "PREJUDICIAL": 0,
-      "EXTREMAMENTE PREJUDICIAL": 0
-    };
-    
-    // If we have questions, calculate the severity counts
-    if (questions.length > 0) {
-      Object.entries(result.answers).forEach(([questionId, answer]) => {
-        if (answer.answer) {
-          const question = questions.find(q => q.id === questionId);
-          if (question?.risco?.severidade?.nivel) {
-            const severityLevel = question.risco.severidade.nivel;
-            result.yesPerSeverity![severityLevel] = (result.yesPerSeverity![severityLevel] || 0) + 1;
-          }
+  const severityCounts = {
+    "LEVEMENTE PREJUDICIAL": 0,
+    "PREJUDICIAL": 0,
+    "EXTREMAMENTE PREJUDICIAL": 0
+  };
+  
+  // Calculate the counts from actual answers
+  if (questions.length > 0 && result.answers) {
+    Object.entries(result.answers).forEach(([questionId, answer]) => {
+      if (answer.answer === true) {
+        const question = questions.find(q => q.id === questionId);
+        if (question?.risco?.severidade?.nivel) {
+          const severityLevel = question.risco.severidade.nivel;
+          severityCounts[severityLevel] = (severityCounts[severityLevel] || 0) + 1;
         }
-      });
-    }
+      }
+    });
   }
   
-  // Dados para o gráfico
+  // Update the result with calculated severity counts
+  result.yesPerSeverity = severityCounts;
+  
+  // Dados para o gráfico de respostas
   const chartData = [
     {
       name: "Sim",
-      total: result.totalYes || 0,
+      total: processedResult.totalYes,
     },
     {
       name: "Não",
-      total: result.totalNo || 0,
+      total: processedResult.totalNo,
     },
   ];
 
+  // Dados para o gráfico de severidade
   const severityChartData = [
     {
       name: "Lev. Prejud.",
-      total: result.yesPerSeverity["LEVEMENTE PREJUDICIAL"] || 0,
+      total: severityCounts["LEVEMENTE PREJUDICIAL"] || 0,
     },
     {
       name: "Prejudicial",
-      total: result.yesPerSeverity["PREJUDICIAL"] || 0,
+      total: severityCounts["PREJUDICIAL"] || 0,
     },
     {
       name: "Extrema. Prej.",
-      total: result.yesPerSeverity["EXTREMAMENTE PREJUDICIAL"] || 0,
+      total: severityCounts["EXTREMAMENTE PREJUDICIAL"] || 0,
     },
   ];
 
@@ -119,11 +123,11 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="bg-esocial-lightGray p-4 rounded-lg text-center">
                 <p className="text-sm text-muted-foreground">Sim</p>
-                <p className="text-2xl font-bold text-esocial-blue">{result.totalYes || 0}</p>
+                <p className="text-2xl font-bold text-esocial-blue">{processedResult.totalYes}</p>
               </div>
               <div className="bg-esocial-lightGray p-4 rounded-lg text-center">
                 <p className="text-sm text-muted-foreground">Não</p>
-                <p className="text-2xl font-bold text-esocial-darkGray">{result.totalNo || 0}</p>
+                <p className="text-2xl font-bold text-esocial-darkGray">{processedResult.totalNo}</p>
               </div>
             </div>
           </CardContent>
@@ -147,19 +151,19 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
               <div className="bg-severity-light/10 p-3 rounded-lg text-center">
                 <p className="text-xs text-muted-foreground">Levemente Prejudicial</p>
                 <p className="text-lg font-bold text-severity-light">
-                  {result.yesPerSeverity["LEVEMENTE PREJUDICIAL"] || 0}
+                  {severityCounts["LEVEMENTE PREJUDICIAL"]}
                 </p>
               </div>
               <div className="bg-severity-medium/10 p-3 rounded-lg text-center">
                 <p className="text-xs text-muted-foreground">Prejudicial</p>
                 <p className="text-lg font-bold text-severity-medium">
-                  {result.yesPerSeverity["PREJUDICIAL"] || 0}
+                  {severityCounts["PREJUDICIAL"]}
                 </p>
               </div>
               <div className="bg-severity-high/10 p-3 rounded-lg text-center">
                 <p className="text-xs text-muted-foreground">Extremamente Prejudicial</p>
                 <p className="text-lg font-bold text-severity-high">
-                  {result.yesPerSeverity["EXTREMAMENTE PREJUDICIAL"] || 0}
+                  {severityCounts["EXTREMAMENTE PREJUDICIAL"]}
                 </p>
               </div>
             </div>
@@ -184,7 +188,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
           <Textarea
             placeholder="Digite aqui suas observações e recomendações para melhorar o ambiente psicossocial..."
             className="min-h-[200px]"
-            value={result.analyistNotes || ""}
+            value={processedResult.analyistNotes}
             onChange={(e) => onNotesChange(e.target.value)}
           />
         </CardContent>
@@ -230,21 +234,21 @@ const RiskIndicator: React.FC<{ score: number }> = ({ score }) => {
 };
 
 function calculateRiskScore(result: FormResult, questions: Question[]): number {
-  if ((!result.total_sim && !result.totalYes) || questions.length === 0) return 0;
+  if (!result.answers || questions.length === 0) return 0;
   
-  // Calculate using the formula provided
+  // Calculate using the formula: 
   // Score = Σ(respostas Sim × peso) / (total de perguntas × 3) × 100
   
   let weightedSum = 0;
   let totalQuestions = questions.length;
   
-  // Count answers by severity
-  Object.entries(result.answers || {}).forEach(([questionId, answer]) => {
+  // Calculate weighted sum from actual answers
+  Object.entries(result.answers).forEach(([questionId, answer]) => {
     if (answer.answer === true) {
       const question = questions.find(q => q.id === questionId);
       if (question?.risco?.severidade?.nivel) {
         const severityLevel = question.risco.severidade.nivel;
-        let weight = 1; // Default weight
+        let weight = 1; // Default weight for LEVEMENTE PREJUDICIAL
         
         if (severityLevel === "PREJUDICIAL") {
           weight = 2;
@@ -258,7 +262,6 @@ function calculateRiskScore(result: FormResult, questions: Question[]): number {
   });
   
   // Calculate the risk score as a percentage
-  // (weightedSum / (totalQuestions * 3)) * 100
   return (weightedSum / (totalQuestions * 3)) * 100;
 }
 
