@@ -1,10 +1,11 @@
+
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getCompanies, getEmployeesByCompany } from "@/services";
-import { getFormQuestions, getFormResultByEmployeeId, saveFormResult } from "@/services/form/formService";
+import { getFormQuestions, getFormResultByEmployeeId, saveFormResult, getAllForms } from "@/services/form/formService";
 import { Company, Employee } from "@/types/cadastro";
-import { Question, FormAnswer, FormResult, Section } from "@/types/form";
+import { Question, FormAnswer, FormResult, Section, Form } from "@/types/form";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import ProgressHeader from "@/components/form/ProgressHeader";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 const FormularioPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -23,6 +26,10 @@ const FormularioPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, FormAnswer>>({});
   const [currentSection, setCurrentSection] = useState<string>("");
+  const [availableForms, setAvailableForms] = useState<Form[]>([]);
+  const [selectedFormId, setSelectedFormId] = useState<string>("");
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [formSections, setFormSections] = useState<{title: string, description?: string, ordem: number, questions: Question[]}[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -41,7 +48,26 @@ const FormularioPage: React.FC = () => {
     };
 
     loadCompanies();
+    loadAvailableForms();
   }, [toast]);
+
+  const loadAvailableForms = async () => {
+    try {
+      const forms = await getAllForms();
+      setAvailableForms(forms);
+      
+      if (forms.length > 0) {
+        setSelectedFormId(forms[0].id);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar formulários:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os formulários disponíveis",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     const loadEmployees = async () => {
@@ -67,9 +93,9 @@ const FormularioPage: React.FC = () => {
 
   useEffect(() => {
     const loadFormResult = async () => {
-      if (selectedEmployeeId) {
+      if (selectedEmployeeId && selectedFormId) {
         try {
-          const formResultData = await getFormResultByEmployeeId(selectedEmployeeId);
+          const formResultData = await getFormResultByEmployeeId(selectedEmployeeId, selectedFormId);
           setFormResult(formResultData);
           
           if (formResultData && formResultData.answers) {
@@ -92,17 +118,17 @@ const FormularioPage: React.FC = () => {
     };
 
     loadFormResult();
-  }, [selectedEmployeeId, toast]);
+  }, [selectedEmployeeId, selectedFormId, toast]);
 
   useEffect(() => {
     const loadFormQuestions = async () => {
+      if (!selectedFormId) return;
+      
       try {
-        const formId = 'a3b97a26-405e-4e13-9339-557db4099351';
-        
         const { data: sectionsData, error: sectionsError } = await supabase
           .from('secoes')
           .select('*')
-          .eq('formulario_id', formId)
+          .eq('formulario_id', selectedFormId)
           .order('ordem', { ascending: true });
         
         if (sectionsError) throw sectionsError;
@@ -112,7 +138,7 @@ const FormularioPage: React.FC = () => {
           return acc;
         }, {} as Record<string, Section>);
         
-        const questionsData = await getFormQuestions(formId);
+        const questionsData = await getFormQuestions(selectedFormId);
         setQuestions(questionsData);
         
         const sectionGroups = sectionsData.map(section => {
@@ -126,6 +152,9 @@ const FormularioPage: React.FC = () => {
         
         const orderedSections = sectionGroups.sort((a, b) => a.ordem - b.ordem);
         setFormSections(orderedSections);
+        
+        // Reset current section when loading new form
+        setCurrentSection("");
       } catch (error) {
         console.error("Erro ao carregar perguntas:", error);
         toast({
@@ -137,7 +166,7 @@ const FormularioPage: React.FC = () => {
     };
 
     loadFormQuestions();
-  }, [toast]);
+  }, [selectedFormId, toast]);
 
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value);
@@ -148,8 +177,11 @@ const FormularioPage: React.FC = () => {
     setSelectedEmployeeId(value);
   };
 
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [formSections, setFormSections] = useState<{title: string, description?: string, ordem: number, questions: Question[]}[]>([]);
+  const handleFormChange = (value: string) => {
+    setSelectedFormId(value);
+    setAnswers({});
+    setCurrentSection("");
+  };
   
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
 
@@ -200,6 +232,15 @@ const FormularioPage: React.FC = () => {
   };
 
   const handleSaveForm = async () => {
+    if (!selectedFormId) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um formulário",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       let totalYes = 0;
@@ -214,15 +255,16 @@ const FormularioPage: React.FC = () => {
       });
       
       const formResultData: FormResult = {
-        id: '',
+        id: formResult?.id || '',
         employeeId: selectedEmployeeId!,
         empresa_id: selectedCompanyId!,
+        formulario_id: selectedFormId,
         answers,
         total_sim: totalYes,
         total_nao: totalNo,
         is_complete: true,
         last_updated: new Date().toISOString(),
-        created_at: new Date().toISOString(),
+        created_at: formResult?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
       
@@ -257,6 +299,8 @@ const FormularioPage: React.FC = () => {
     }
   };
 
+  const selectedFormTitle = availableForms.find(f => f.id === selectedFormId)?.titulo || "Formulário";
+  
   return (
     <Layout title="Formulário">
       <div className="container mx-auto py-6 space-y-8">
@@ -264,12 +308,12 @@ const FormularioPage: React.FC = () => {
           <CardHeader className="border-b bg-muted/40">
             <CardTitle className="text-2xl text-primary">Preenchimento do Formulário</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Selecione a empresa e o funcionário para preencher o formulário.
+              Selecione a empresa, o funcionário e o formulário para preencher.
             </CardDescription>
           </CardHeader>
           
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Empresa</label>
                 <Select onValueChange={handleCompanyChange}>
@@ -305,15 +349,42 @@ const FormularioPage: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Formulário</label>
+                <Select onValueChange={handleFormChange} value={selectedFormId} disabled={availableForms.length <= 1}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o formulário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="max-h-[200px]">
+                      {availableForms.map((form) => (
+                        <SelectItem key={form.id} value={form.id}>
+                          {form.titulo}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+                {availableForms.length <= 1 && (
+                  <Alert variant="default" className="bg-blue-50 mt-2">
+                    <Info className="h-4 w-4 text-blue-500" />
+                    <AlertDescription className="text-xs text-blue-600">
+                      Apenas um formulário disponível no momento.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
             </div>
 
-            {selectedEmployeeId && selectedEmployee && (
+            {selectedEmployeeId && selectedEmployee && selectedFormId && (
               <div className="mt-6">
                 <ProgressHeader 
                   employeeName={selectedEmployee.name}
                   jobRole={selectedEmployee.role || ""}
                   currentSection={formSections.findIndex(s => s.title === currentSection) + 1}
                   totalSections={formSections.length}
+                  formTitle={selectedFormTitle}
                 />
 
                 <div className="space-y-6">
@@ -353,7 +424,7 @@ const FormularioPage: React.FC = () => {
             )}
           </CardContent>
 
-          {selectedEmployeeId && (
+          {selectedEmployeeId && selectedFormId && (
             <div className="flex justify-end p-6 bg-muted/40 border-t">
               <Button 
                 onClick={handleSaveForm} 

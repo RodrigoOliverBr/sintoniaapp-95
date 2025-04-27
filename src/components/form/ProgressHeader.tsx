@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React from "react";
 import { Progress } from "@/components/ui/progress";
 
 interface ProgressHeaderProps {
@@ -7,29 +7,42 @@ interface ProgressHeaderProps {
   jobRole: string;
   currentSection: number;
   totalSections: number;
+  formTitle?: string;
 }
 
 const ProgressHeader: React.FC<ProgressHeaderProps> = ({
   employeeName,
   jobRole,
   currentSection,
-  totalSections
+  totalSections,
+  formTitle = "Formulário"
 }) => {
-  const progress = (currentSection / totalSections) * 100;
+  const progressPercentage = totalSections ? (currentSection / totalSections) * 100 : 0;
 
   return (
-    <div className="space-y-4 mb-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="text-xl font-semibold mb-1">Avaliação para: {employeeName}</h2>
-        <p className="text-muted-foreground">Função: {jobRole}</p>
-      </div>
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm text-muted-foreground">
-          <span>Seção {currentSection} de {totalSections}</span>
-          <span>{Math.round(progress)}% completo</span>
+    <div className="bg-muted/40 p-4 rounded-lg mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+        <div>
+          <h2 className="text-xl font-semibold">
+            Avaliação para: {employeeName}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Função: {jobRole || "Não especificada"}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Formulário: {formTitle}
+          </p>
         </div>
-        <Progress value={progress} className="w-full" />
+        <div className="mt-2 md:mt-0 text-right">
+          <div className="text-sm font-medium">
+            Seção {currentSection} de {totalSections}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {progressPercentage.toFixed(0)}% completo
+          </div>
+        </div>
       </div>
+      <Progress value={progressPercentage} className="h-2" />
     </div>
   );
 };

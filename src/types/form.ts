@@ -74,6 +74,13 @@ export interface FormResult {
   last_updated: string;
   created_at: string;
   updated_at: string;
+  formulario_id?: string; // Add this field to link to the selected form
+  
+  // These properties are used by the FormResults component
+  totalYes?: number;
+  totalNo?: number;
+  analyistNotes?: string;
+  yesPerSeverity?: Record<string, number>;
 }
 
 export interface SeverityLevel {
@@ -90,8 +97,18 @@ export interface FormData {
     questions: {
       id: string;
       text: string;
-      severity: SeverityLevel;
-      options?: string[];
+      severity: string;
+      options?: { label: string; value: string; }[];
     }[];
   }[];
+}
+
+export interface Form {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  version?: string;
+  ativo?: boolean;
+  created_at: string;
+  updated_at: string;
 }

@@ -10,5 +10,6 @@ export {
   saveFormResult,
   getMitigationsByRiskId,
   getFormStatusByEmployeeId,
-  getFormResults
+  getFormResults,
+  getAllForms
 } from './form/formService';

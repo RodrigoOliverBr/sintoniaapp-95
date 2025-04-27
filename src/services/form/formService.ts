@@ -1,6 +1,23 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer, Section } from '@/types/form';
+import { FormResult, Question, Risk, Severity, Mitigation, FormAnswer, Section, Form } from '@/types/form';
+
+export async function getAllForms(): Promise<Form[]> {
+  try {
+    const { data, error } = await supabase
+      .from('formularios')
+      .select('*')
+      .eq('ativo', true)
+      .order('titulo');
+    
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching forms:', error);
+    throw error;
+  }
+}
 
 export async function getFormQuestions(formId: string): Promise<Question[]> {
   // First fetch all sections for this form
@@ -83,8 +100,8 @@ export async function getFormQuestions(formId: string): Promise<Question[]> {
   }));
 }
 
-export async function getFormResultByEmployeeId(employeeId: string): Promise<FormResult | null> {
-  const { data: avaliacoes, error } = await supabase
+export async function getFormResultByEmployeeId(employeeId: string, formId?: string): Promise<FormResult | null> {
+  let query = supabase
     .from('avaliacoes')
     .select(`
       *,
@@ -96,14 +113,15 @@ export async function getFormResultByEmployeeId(employeeId: string): Promise<For
       )
     `)
     .eq('funcionario_id', employeeId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+    .order('created_at', { ascending: false });
+  
+  if (formId) {
+    query = query.eq('formulario_id', formId);
+  }
+
+  const { data: avaliacoes, error } = await query.limit(1).maybeSingle();
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      return null; // No results found
-    }
     console.error('Error fetching form result:', error);
     throw error;
   }
@@ -120,10 +138,11 @@ export async function getFormResultByEmployeeId(employeeId: string): Promise<For
     };
   });
 
-  return {
+  const result = {
     id: avaliacoes.id,
     employeeId: avaliacoes.funcionario_id,
     empresa_id: avaliacoes.empresa_id,
+    formulario_id: avaliacoes.formulario_id,
     answers,
     total_sim: avaliacoes.total_sim,
     total_nao: avaliacoes.total_nao,
@@ -131,8 +150,15 @@ export async function getFormResultByEmployeeId(employeeId: string): Promise<For
     is_complete: avaliacoes.is_complete,
     last_updated: avaliacoes.last_updated,
     created_at: avaliacoes.created_at,
-    updated_at: avaliacoes.updated_at
+    updated_at: avaliacoes.updated_at,
+    // Add these fields for the FormResults component compatibility
+    totalYes: avaliacoes.total_sim,
+    totalNo: avaliacoes.total_nao,
+    analyistNotes: avaliacoes.notas_analista,
+    yesPerSeverity: {} // This would need to be calculated if needed
   };
+
+  return result;
 }
 
 export function getFormStatusByEmployeeId(employeeId: string): 'completed' | 'pending' | 'error' {
@@ -145,44 +171,83 @@ export function getFormStatusByEmployeeId(employeeId: string): 'completed' | 'pe
 }
 
 export async function saveFormResult(formData: FormResult): Promise<void> {
-  const { employeeId, answers, total_sim, total_nao, is_complete, empresa_id } = formData;
+  const { employeeId, answers, total_sim, total_nao, is_complete, empresa_id, formulario_id, id } = formData;
 
   try {
-    const { data: avaliacao, error: avaliacaoError } = await supabase
-      .from('avaliacoes')
-      .insert({
-        funcionario_id: employeeId,
-        empresa_id: empresa_id,
-        total_sim,
-        total_nao,
-        is_complete,
-        last_updated: new Date().toISOString()
-      })
-      .select()
-      .single();
+    let avaliacaoId = id;
+    
+    if (!avaliacaoId) {
+      // Create new evaluation record
+      const { data: avaliacao, error: avaliacaoError } = await supabase
+        .from('avaliacoes')
+        .insert({
+          funcionario_id: employeeId,
+          empresa_id: empresa_id,
+          formulario_id: formulario_id,
+          total_sim,
+          total_nao,
+          is_complete,
+          last_updated: new Date().toISOString()
+        })
+        .select()
+        .single();
 
-    if (avaliacaoError) {
-      console.error('Erro ao salvar avaliação:', avaliacaoError);
-      throw avaliacaoError;
+      if (avaliacaoError) {
+        console.error('Erro ao salvar avaliação:', avaliacaoError);
+        throw avaliacaoError;
+      }
+      
+      avaliacaoId = avaliacao.id;
+    } else {
+      // Update existing evaluation record
+      const { error: updateError } = await supabase
+        .from('avaliacoes')
+        .update({
+          total_sim,
+          total_nao,
+          is_complete,
+          last_updated: new Date().toISOString()
+        })
+        .eq('id', id);
+        
+      if (updateError) {
+        console.error('Erro ao atualizar avaliação:', updateError);
+        throw updateError;
+      }
+      
+      // Delete old answers to replace with new ones
+      const { error: deleteError } = await supabase
+        .from('respostas')
+        .delete()
+        .eq('avaliacao_id', id);
+        
+      if (deleteError) {
+        console.error('Erro ao deletar respostas antigas:', deleteError);
+        throw deleteError;
+      }
     }
 
+    // Insert new answers
     const respostasToInsert = Object.entries(answers).map(([perguntaId, answer]) => ({
-      avaliacao_id: avaliacao.id,
+      avaliacao_id: avaliacaoId,
       pergunta_id: perguntaId,
       resposta: answer.answer,
       observacao: answer.observation || null,
       opcoes_selecionadas: answer.selectedOptions || null
     }));
 
-    const { error: respostasError } = await supabase
-      .from('respostas')
-      .insert(respostasToInsert);
+    if (respostasToInsert.length > 0) {
+      const { error: respostasError } = await supabase
+        .from('respostas')
+        .insert(respostasToInsert);
 
-    if (respostasError) {
-      console.error('Erro ao salvar respostas:', respostasError);
-      throw respostasError;
+      if (respostasError) {
+        console.error('Erro ao salvar respostas:', respostasError);
+        throw respostasError;
+      }
     }
 
+    // Handle options selection if needed
     for (const [perguntaId, resposta] of Object.entries(answers)) {
       if (resposta.selectedOptions && resposta.selectedOptions.length > 0) {
         const { data: perguntaOpcoes } = await supabase
@@ -190,13 +255,13 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
           .select('id, texto')
           .eq('pergunta_id', perguntaId);
 
-        if (perguntaOpcoes) {
+        if (perguntaOpcoes && perguntaOpcoes.length > 0) {
           const opcoesRespostas = [];
           for (const opcaoTexto of resposta.selectedOptions) {
             const opcao = perguntaOpcoes.find(o => o.texto === opcaoTexto);
             if (opcao) {
               opcoesRespostas.push({
-                resposta_id: respostasError ? undefined : avaliacao.id,
+                resposta_id: avaliacaoId,
                 opcao_id: opcao.id,
                 texto_outro: opcaoTexto === 'Outro' ? resposta.otherText : null
               });

@@ -1,9 +1,8 @@
+
 import React from "react";
-import { FormResult, SeverityLevel } from "@/types/form";
-import { formData } from "@/data/formData";
+import { FormResult } from "@/types/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { BarChart } from "@/components/ui/BarChart";
 import { Button } from "@/components/ui/button";
 import { Download, Printer } from "lucide-react";
@@ -17,27 +16,29 @@ interface FormResultsProps {
 const FormResults: React.FC<FormResultsProps> = ({ result, onNotesChange }) => {
   const { toast } = useToast();
   
-  // Map database fields to component expected fields
-  result.totalYes = result.total_sim;
-  result.totalNo = result.total_nao;
-  result.analyistNotes = result.notas_analista;
+  // Map database fields to component expected fields if not already set
+  if (!result.totalYes) result.totalYes = result.total_sim;
+  if (!result.totalNo) result.totalNo = result.total_nao;
+  if (!result.analyistNotes) result.analyistNotes = result.notas_analista || '';
   
   // Initialize yesPerSeverity if not defined
-  result.yesPerSeverity = result.yesPerSeverity || {
-    "LEVEMENTE PREJUDICIAL": 0,
-    "PREJUDICIAL": 0,
-    "EXTREMAMENTE PREJUDICIAL": 0
-  };
+  if (!result.yesPerSeverity) {
+    result.yesPerSeverity = {
+      "LEVEMENTE PREJUDICIAL": 0,
+      "PREJUDICIAL": 0,
+      "EXTREMAMENTE PREJUDICIAL": 0
+    };
+  }
   
   // Dados para o gráfico
   const chartData = [
     {
       name: "Sim",
-      total: result.totalYes,
+      total: result.totalYes || 0,
     },
     {
       name: "Não",
-      total: result.totalNo,
+      total: result.totalNo || 0,
     },
   ];
 
@@ -104,11 +105,11 @@ const FormResults: React.FC<FormResultsProps> = ({ result, onNotesChange }) => {
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="bg-esocial-lightGray p-4 rounded-lg text-center">
                 <p className="text-sm text-muted-foreground">Sim</p>
-                <p className="text-2xl font-bold text-esocial-blue">{result.totalYes}</p>
+                <p className="text-2xl font-bold text-esocial-blue">{result.totalYes || 0}</p>
               </div>
               <div className="bg-esocial-lightGray p-4 rounded-lg text-center">
                 <p className="text-sm text-muted-foreground">Não</p>
-                <p className="text-2xl font-bold text-esocial-darkGray">{result.totalNo}</p>
+                <p className="text-2xl font-bold text-esocial-darkGray">{result.totalNo || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -215,35 +216,16 @@ const RiskIndicator: React.FC<{ score: number }> = ({ score }) => {
 };
 
 function calculateRiskScore(result: FormResult): number {
-  if (result.totalYes === 0) return 0;
-
-  const severityWeight = {
-    "LEVEMENTE PREJUDICIAL": 1,
-    "PREJUDICIAL": 2,
-    "EXTREMAMENTE PREJUDICIAL": 3,
-  };
-
-  let totalSeverityPoints = 0;
-  let maxPossiblePoints = 0;
-
-  // Calculate points based on positive answers and severity
-  Object.entries(result.answers).forEach(([id, answer]) => {
-    const questionId = parseInt(id);
-    const question = formData.sections
-      .flatMap(section => section.questions)
-      .find(q => q.id === questionId);
-
-    if (question) {
-      const weight = severityWeight[question.severity as SeverityLevel] || 1;
-      maxPossiblePoints += weight;
-
-      if (answer.answer === true) {
-        totalSeverityPoints += weight;
-      }
-    }
-  });
-
-  return (totalSeverityPoints / maxPossiblePoints) * 100;
+  if (!result.total_sim && !result.totalYes) return 0;
+  
+  // Simple calculation based on percentage of "yes" answers
+  const totalAnswers = (result.total_sim || result.totalYes || 0) + 
+                      (result.total_nao || result.totalNo || 0);
+  
+  if (totalAnswers === 0) return 0;
+  
+  const yesAnswers = result.total_sim || result.totalYes || 0;
+  return (yesAnswers / totalAnswers) * 100;
 }
 
 export default FormResults;
