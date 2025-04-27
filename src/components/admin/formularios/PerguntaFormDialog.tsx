@@ -46,7 +46,11 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     if (open) {
       fetchRiscos();
       fetchSections();
-      
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
       if (isEditing && currentPergunta) {
         setFormData({
           texto: currentPergunta.texto || "",
@@ -56,25 +60,18 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
           observacao_obrigatoria: currentPergunta.observacao_obrigatoria || false
         });
       } else {
-        // If not editing, find the section by title if preSelectedSection is provided
-        if (preSelectedSection && sections.length > 0) {
-          const preSelectedSectionData = sections.find(s => s.titulo === preSelectedSection);
-          setFormData({
-            texto: "",
-            secao_id: preSelectedSectionData?.id || "",
-            risco_id: "",
-            ordem_pergunta: 0,
-            observacao_obrigatoria: false
-          });
-        } else {
-          setFormData({
-            texto: "",
-            secao_id: "",
-            risco_id: "",
-            ordem_pergunta: 0,
-            observacao_obrigatoria: false
-          });
-        }
+        // Reset form for new question
+        const initialSection = preSelectedSection && sections.length > 0 
+          ? sections.find(s => s.titulo === preSelectedSection)?.id || ""
+          : "";
+        
+        setFormData({
+          texto: "",
+          secao_id: initialSection,
+          risco_id: "",
+          ordem_pergunta: 0,
+          observacao_obrigatoria: false
+        });
       }
     }
   }, [open, isEditing, currentPergunta, preSelectedSection, sections]);
@@ -114,11 +111,11 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCheckboxChange = (checked: boolean) => {
-    setFormData({ ...formData, observacao_obrigatoria: checked });
+    setFormData(prev => ({ ...prev, observacao_obrigatoria: checked }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,11 +125,13 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
     try {
       if (formData.texto.trim() === "") {
         toast.error("O texto da pergunta é obrigatório");
+        setSubmitting(false);
         return;
       }
 
       if (!formData.secao_id) {
         toast.error("É necessário selecionar uma seção");
+        setSubmitting(false);
         return;
       }
 
@@ -222,7 +221,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
                 <RiskSelectionGroup
                   risks={riscos}
                   selectedRiskId={formData.risco_id}
-                  onRiskChange={(value) => setFormData({...formData, risco_id: value})}
+                  onRiskChange={(value) => setFormData(prev => ({...prev, risco_id: value}))}
                 />
               </div>
             </div>
@@ -235,7 +234,7 @@ const PerguntaFormDialog: React.FC<PerguntaFormDialogProps> = ({
                   name="ordem_pergunta"
                   type="number"
                   value={formData.ordem_pergunta}
-                  onChange={handleInputChange}
+                  onChange={(e) => setFormData(prev => ({...prev, ordem_pergunta: parseInt(e.target.value) || 0}))}
                   placeholder="Ordem de exibição dentro da seção"
                 />
               </div>
