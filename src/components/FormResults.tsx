@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { FormResult, Question } from "@/types/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,8 +6,11 @@ import { ResultsActions } from "./results/ResultsActions";
 import { AnswersChart } from "./charts/AnswersChart";
 import { SeverityChart } from "./charts/SeverityChart";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Save } from "lucide-react";
 import { format } from "date-fns";
+import { updateAnalystNotes } from "@/services/form/evaluations";
+import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 
 interface FormResultsProps {
   result: FormResult;
@@ -23,8 +25,60 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     medium: 0,
     high: 0
   });
+  
+  const [notes, setNotes] = useState(result.notas_analista || result.analyistNotes || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
 
-  // Calculate the actual yes/no counts from the answers object
+  useEffect(() => {
+    setNotes(result.notas_analista || result.analyistNotes || '');
+  }, [result]);
+
+  const debouncedSave = useCallback(async (value: string) => {
+    if (!result.id || isReadOnly) return;
+    
+    try {
+      setIsSaving(true);
+      await updateAnalystNotes(result.id, value);
+      onNotesChange(value);
+    } catch (error) {
+      console.error("Error saving notes:", error);
+      sonnerToast.error("Não foi possível salvar as observações.");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [result.id, onNotesChange, isReadOnly]);
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setNotes(newValue);
+    
+    onNotesChange(newValue);
+    
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    
+    if (!isReadOnly) {
+      const timeout = setTimeout(() => {
+        debouncedSave(newValue);
+      }, 2000);
+      setSaveTimeout(timeout);
+    }
+  };
+
+  const handleBlur = async () => {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      setSaveTimeout(null);
+    }
+    
+    if (!isReadOnly && result.id) {
+      debouncedSave(notes);
+    }
+  };
+
   const calculateActualCounts = () => {
     let yes = 0;
     let no = 0;
@@ -39,13 +93,8 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     return { yes, no };
   };
 
-  // Get the actual counts from the answers
   const actualCounts = calculateActualCounts();
 
-  // Get the notes from either field (notas_analista or analyistNotes)
-  const notes = result.notas_analista || result.analyistNotes || '';
-
-  // Get questions that were answered with "Yes"
   const getYesQuestions = () => {
     if (!result.answers || !questions.length) return [];
     
@@ -65,7 +114,6 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   
   const yesQuestions = getYesQuestions();
   
-  // Calculate severity counts based on "Yes" answers
   useEffect(() => {
     const counts = {
       light: 0,
@@ -91,7 +139,6 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     setSeverityCounts(counts);
   }, [questions, result.answers, yesQuestions]);
 
-  // Format date for display
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Data desconhecida";
     try {
@@ -188,16 +235,30 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
 
       <Card>
         <CardHeader>
-          <CardTitle>Observações e Recomendações do Analista</CardTitle>
+          <CardTitle className="flex justify-between items-center">
+            <span>Observações e Recomendações do Analista</span>
+            {isSaving && !isReadOnly && (
+              <div className="flex items-center gap-1 text-sm text-gray-500">
+                <Save className="h-4 w-4 animate-pulse" />
+                <span>Salvando...</span>
+              </div>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea
             placeholder="Digite aqui suas observações e recomendações para melhorar o ambiente psicossocial..."
             className="min-h-[200px]"
             value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
+            onChange={handleNotesChange}
+            onBlur={handleBlur}
             readOnly={isReadOnly}
           />
+          {!isReadOnly && (
+            <p className="text-xs text-gray-500 mt-2">
+              As observações serão salvas automaticamente após você parar de digitar ou ao sair do campo.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

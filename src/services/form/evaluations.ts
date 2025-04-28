@@ -249,7 +249,34 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
   }
 }
 
-// Get evaluation by employee ID and form ID
+export async function updateAnalystNotes(evaluationId: string, notes: string): Promise<void> {
+  if (!evaluationId) {
+    throw new Error("Evaluation ID is required");
+  }
+
+  console.log(`Updating analyst notes for evaluation ${evaluationId}`);
+  
+  try {
+    const { error } = await supabase
+      .from('avaliacoes')
+      .update({
+        notas_analista: notes,
+        last_updated: new Date().toISOString()
+      })
+      .eq('id', evaluationId);
+      
+    if (error) {
+      console.error("Error updating analyst notes:", error);
+      throw error;
+    }
+    
+    console.log("Analyst notes updated successfully");
+  } catch (error) {
+    console.error("Failed to update analyst notes:", error);
+    throw error;
+  }
+}
+
 export async function getFormResultByEmployeeId(employeeId: string, formId: string): Promise<FormResult | null> {
   try {
     // First check for completed evaluations
@@ -298,7 +325,6 @@ export async function getFormResultByEmployeeId(employeeId: string, formId: stri
   }
 }
 
-// Get employee evaluation history
 export async function getEmployeeFormHistory(employeeId: string): Promise<FormResult[]> {
   try {
     const { data: evaluations, error } = await supabase
@@ -328,7 +354,6 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
   }
 }
 
-// The delete method is now only a wrapper, the main implementation is in useEvaluationHistory
 export async function deleteFormEvaluation(evaluationId: string): Promise<void> {
   try {
     console.log(`Legacy deleteFormEvaluation called for ID: ${evaluationId}`);
@@ -373,7 +398,6 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
   }
 }
 
-// Helper function to get the full evaluation data with answers
 async function getFullEvaluation(evaluation: any): Promise<FormResult> {
   try {
     // Get all responses for this evaluation

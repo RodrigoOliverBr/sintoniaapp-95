@@ -123,8 +123,8 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   
   // Get employee role safely
   const getEmployeeRole = () => {
-    if (!selectedEmployee) return "Não especificado";
-    return selectedEmployee.cargo_id ? "Especificado" : "Não especificado";
+    if (!selectedEmployee || !selectedEmployee.cargo_id) return "Não especificado";
+    return "Especificado"; // You can replace this with actual role name if available
   };
 
   return (
