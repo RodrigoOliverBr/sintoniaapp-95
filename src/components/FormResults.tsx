@@ -6,9 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ResultsActions } from "./results/ResultsActions";
 import { AnswersChart } from "./charts/AnswersChart";
 import { SeverityChart } from "./charts/SeverityChart";
-import { RiskIndicator } from "./results/RiskIndicator";
-import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { format } from "date-fns";
 
 interface FormResultsProps {
   result: FormResult;
@@ -17,42 +18,10 @@ interface FormResultsProps {
   isReadOnly?: boolean;
 }
 
-function calculateSeverityCounts(result: FormResult, questions: Question[] = []): { light: number; medium: number; high: number } {
-  const counts = {
-    light: 0,
-    medium: 0,
-    high: 0
-  };
-
-  if (!result.answers || !questions.length) return counts;
-
-  Object.entries(result.answers).forEach(([questionId, answer]) => {
-    if (answer.answer === true) {
-      const question = questions.find(q => q.id === questionId);
-      if (question?.risco?.severidade?.nivel) {
-        switch (question.risco.severidade.nivel) {
-          case "LEVEMENTE PREJUDICIAL":
-            counts.light++;
-            break;
-          case "PREJUDICIAL":
-            counts.medium++;
-            break;
-          case "EXTREMAMENTE PREJUDICIAL":
-            counts.high++;
-            break;
-        }
-      }
-    }
-  });
-
-  return counts;
-}
-
 const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNotesChange, isReadOnly = false }) => {
   // Make sure we're using the actual values from the result, not the default ones
   const totalYes = result.total_sim || 0;
   const totalNo = result.total_nao || 0;
-  const severityCounts = calculateSeverityCounts(result, questions);
 
   const handlePrint = () => {
     window.print();
@@ -79,9 +48,31 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   // Get the notes from either field (notas_analista or analyistNotes)
   const notes = result.notas_analista || result.analyistNotes || '';
 
-  console.log("Form Results - totalYes:", totalYes, "totalNo:", totalNo);
-  console.log("Actual counts - yes:", actualCounts.yes, "no:", actualCounts.no);
-  console.log("Notes editable:", !isReadOnly);
+  // Get questions that were answered with "Yes"
+  const getYesQuestions = () => {
+    if (!result.answers || !questions.length) return [];
+    
+    const yesQuestions: Question[] = [];
+    
+    Object.entries(result.answers).forEach(([questionId, answer]) => {
+      if (answer.answer === true) {
+        const question = questions.find(q => q.id === questionId);
+        if (question) {
+          yesQuestions.push(question);
+        }
+      }
+    });
+    
+    return yesQuestions;
+  };
+  
+  const yesQuestions = getYesQuestions();
+  
+  // Format date for display
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Data desconhecida";
+    return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm");
+  };
 
   return (
     <div className="space-y-6 print:pt-0">
@@ -95,11 +86,29 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
           </AlertDescription>
         </Alert>
       )}
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações da Avaliação</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Data de criação</p>
+              <p>{formatDate(result.created_at)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Última atualização</p>
+              <p>{formatDate(result.last_updated || result.updated_at)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Respostas</CardTitle>
+            <CardTitle>Resumo das Respostas</CardTitle>
           </CardHeader>
           <CardContent>
             <AnswersChart yesCount={actualCounts.yes} noCount={actualCounts.no} />
@@ -118,22 +127,33 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
 
         <Card>
           <CardHeader>
-            <CardTitle>Severidade</CardTitle>
+            <CardTitle>Questões com Resposta "Sim"</CardTitle>
           </CardHeader>
-          <CardContent>
-            <SeverityChart severityCounts={severityCounts} />
+          <CardContent className="max-h-[300px] overflow-y-auto">
+            {yesQuestions.length > 0 ? (
+              <ul className="space-y-3">
+                {yesQuestions.map((question, index) => (
+                  <li key={question.id} className={index > 0 ? "pt-3 border-t" : ""}>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <span>{question.texto}</span>
+                    </div>
+                    {result.answers?.[question.id]?.observation && (
+                      <div className="ml-7 mt-1 text-sm text-gray-600 italic">
+                        Observação: {result.answers[question.id].observation}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">
+                Nenhuma questão foi respondida com "Sim".
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Nível de Risco</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RiskIndicator score={calculateRiskScore(result, questions)} />
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
@@ -152,29 +172,5 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     </div>
   );
 };
-
-function calculateRiskScore(result: FormResult, questions: Question[]): number {
-  if (!result.answers || questions.length === 0) return 0;
-  
-  let weightedSum = 0;
-  let totalWeight = 0;
-  
-  Object.entries(result.answers).forEach(([questionId, answer]) => {
-    if (answer.answer === true) {
-      const question = questions.find(q => q.id === questionId);
-      if (question?.risco?.severidade?.nivel) {
-        let weight = 1;
-        if (question.risco.severidade.nivel === "PREJUDICIAL") {
-          weight = 2;
-        } else if (question.risco.severidade.nivel === "EXTREMAMENTE PREJUDICIAL") {
-          weight = 3;
-        }
-        weightedSum += weight;
-      }
-    }
-  });
-  
-  return (weightedSum / (questions.length * 3)) * 100;
-}
 
 export default FormResults;

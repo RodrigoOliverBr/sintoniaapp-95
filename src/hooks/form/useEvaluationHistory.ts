@@ -52,12 +52,15 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
   const handleDeleteEvaluation = async (evaluationId: string) => {
     setIsDeletingEvaluation(true);
     try {
+      console.log(`Deleting evaluation ID: ${evaluationId}`);
       await deleteFormEvaluation(evaluationId);
       
       sonnerToast.success("Avaliação excluída com sucesso");
       
-      // Refresh the history list
-      await loadEmployeeHistory();
+      // Update the state locally by removing the deleted evaluation
+      setEvaluationHistory(prevHistory => 
+        prevHistory.filter(eval => eval.id !== evaluationId)
+      );
       
       // If no more items in history, hide history view
       if (evaluationHistory.length <= 1) {

@@ -66,7 +66,6 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
       <EmployeeFormHistory
         evaluations={evaluationHistory}
         onShowResults={(evaluation) => {
-          if (onShowResults) onShowResults();
           if (onEditEvaluation) onEditEvaluation(evaluation);
         }}
         onNewEvaluation={onNewEvaluation}
@@ -108,14 +107,26 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
     );
   }
 
+  // Get employee name safely
+  const getEmployeeName = () => {
+    if (!selectedEmployee) return "Funcionário não selecionado";
+    return selectedEmployee.name || selectedEmployee.nome || "Funcionário";
+  };
+  
+  // Get employee role safely
+  const getEmployeeRole = () => {
+    if (!selectedEmployee) return "Não especificado";
+    return selectedEmployee.role || (selectedEmployee.cargo_id ? "Especificado" : "Não especificado");
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
         <h2 className="text-xl font-bold text-primary mb-1">
-          Avaliação para: {selectedEmployee?.name || selectedEmployee?.nome || "Funcionário não selecionado"}
+          Avaliação para: {getEmployeeName()}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Cargo: {selectedEmployee?.role || (selectedEmployee?.cargo_id ? "Especificado" : "Não especificado")}
+          Cargo: {getEmployeeRole()}
         </p>
         <p className="text-sm text-muted-foreground">
           Formulário: {selectedFormTitle}

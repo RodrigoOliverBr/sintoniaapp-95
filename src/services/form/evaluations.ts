@@ -251,7 +251,9 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
 // Delete an evaluation and its associated data
 export async function deleteFormEvaluation(evaluationId: string): Promise<void> {
   try {
-    // Delete responses first
+    console.log(`Starting deletion process for evaluation: ${evaluationId}`);
+    
+    // Delete responses first (including cascading to resposta_opcoes via trigger)
     const { error: responsesError } = await supabase
       .from('respostas')
       .delete()
@@ -261,6 +263,8 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
       console.error('Error deleting responses:', responsesError);
       throw responsesError;
     }
+    
+    console.log('Successfully deleted associated responses');
     
     // Delete reports linked to this evaluation
     const { error: reportsError } = await supabase
@@ -272,6 +276,8 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
       console.error('Error deleting reports:', reportsError);
       throw reportsError;
     }
+    
+    console.log('Successfully deleted associated reports');
     
     // Finally delete the evaluation itself
     const { error: evaluationError } = await supabase

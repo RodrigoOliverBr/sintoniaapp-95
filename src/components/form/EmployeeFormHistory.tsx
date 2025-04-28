@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmployeeFormHistoryProps {
   evaluations: FormResult[];
@@ -37,13 +38,28 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
 }) => {
   const [evaluationToDelete, setEvaluationToDelete] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleConfirmDelete = async () => {
     if (evaluationToDelete) {
-      await onDeleteEvaluation(evaluationToDelete);
-      setEvaluationToDelete(null);
+      try {
+        await onDeleteEvaluation(evaluationToDelete);
+        toast({
+          title: "Avaliação excluída",
+          description: "A avaliação foi excluída com sucesso",
+        });
+      } catch (error) {
+        console.error("Error deleting evaluation:", error);
+        toast({
+          title: "Erro ao excluir",
+          description: "Não foi possível excluir a avaliação",
+          variant: "destructive"
+        });
+      } finally {
+        setEvaluationToDelete(null);
+        setIsConfirmOpen(false);
+      }
     }
-    setIsConfirmOpen(false);
   };
 
   const handleDelete = (evaluationId: string) => {
@@ -104,9 +120,10 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">Total de Respostas:</span>
+                        <span className="font-medium">Respostas:</span>
                         <span>
-                          {evaluation.total_sim + evaluation.total_nao} ({evaluation.total_sim} Sim, {evaluation.total_nao} Não)
+                          <span className="text-green-600 font-medium">{evaluation.total_sim} Sim</span>, 
+                          <span className="text-gray-600 ml-1">{evaluation.total_nao} Não</span>
                         </span>
                       </div>
                       {evaluation.is_complete ? (
