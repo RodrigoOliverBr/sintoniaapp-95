@@ -3,6 +3,8 @@ import React from "react";
 import FormSelector from "@/components/form/FormSelector";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Company, Employee, Form } from "@/types/cadastro";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 interface FormSelectionSectionProps {
   companies: Company[];
@@ -15,6 +17,8 @@ interface FormSelectionSectionProps {
   onEmployeeChange: (value: string) => void;
   onFormChange: (value: string) => void;
   isLoadingHistory: boolean;
+  showNewEvaluationButton?: boolean;
+  onNewEvaluation?: () => void;
 }
 
 const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
@@ -27,19 +31,35 @@ const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
   onCompanyChange,
   onEmployeeChange,
   onFormChange,
-  isLoadingHistory
+  isLoadingHistory,
+  showNewEvaluationButton,
+  onNewEvaluation
 }) => {
   return (
     <Card className="shadow-lg">
       <CardHeader className="border-b bg-muted/40">
-        <CardTitle className="text-2xl text-primary">
-          {false ? "Resultado da Avaliação" : "Preenchimento do Formulário"}
-        </CardTitle>
-        <CardDescription className="text-muted-foreground">
-          {false
-            ? "Visualize os resultados da avaliação e adicione suas observações."
-            : "Selecione a empresa, o funcionário e o formulário para preencher."}
-        </CardDescription>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-2xl text-primary">
+              {false ? "Resultado da Avaliação" : "Preenchimento do Formulário"}
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              {false
+                ? "Visualize os resultados da avaliação e adicione suas observações."
+                : "Selecione a empresa, o funcionário e o formulário para preencher."}
+            </CardDescription>
+          </div>
+          {showNewEvaluationButton && onNewEvaluation && (
+            <Button 
+              onClick={onNewEvaluation}
+              variant="outline" 
+              className="flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Nova Avaliação
+            </Button>
+          )}
+        </div>
       </CardHeader>
       
       <CardContent className="pt-6">

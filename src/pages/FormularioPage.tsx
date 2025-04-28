@@ -63,6 +63,7 @@ const FormularioPage: React.FC = () => {
 
   // State for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isNewEvaluation, setIsNewEvaluation] = useState(false);
 
   // Reset form when switching between employees
   useEffect(() => {
@@ -74,6 +75,7 @@ const FormularioPage: React.FC = () => {
     setFormComplete(false);
     setShowResults(false);
     setSelectedEvaluation(null);
+    setIsNewEvaluation(false);
   };
 
   const handleCompanyChange = (value: string) => {
@@ -98,6 +100,8 @@ const FormularioPage: React.FC = () => {
   const handleNewEvaluation = () => {
     resetForm();
     setShowingHistoryView(false);
+    setIsNewEvaluation(true); 
+    console.log("Iniciando nova avaliação");
   };
   
   const handleExitResults = () => {
@@ -145,24 +149,39 @@ const FormularioPage: React.FC = () => {
         }
       });
       
-      // Check if we already have an evaluation result with the same employee and form
+      // Determine if we're editing an existing evaluation or creating a new one
       let existingFormResult = formResult;
-      if (evaluationHistory && evaluationHistory.length > 0) {
-        // Don't create duplicate evaluations
-        const existingEvaluation = evaluationHistory.find(
+      
+      if (selectedEvaluation && !isNewEvaluation) {
+        // We're editing an existing evaluation
+        console.log(`Editing existing evaluation with ID: ${selectedEvaluation.id}`);
+        existingFormResult = selectedEvaluation;
+      } else if (!isNewEvaluation && evaluationHistory && evaluationHistory.length > 0) {
+        // Check if there's an incomplete evaluation to continue working on
+        const incompleteEvaluation = evaluationHistory.find(
           evaluation => evaluation.formulario_id === selectedFormId && !evaluation.is_complete
         );
         
-        if (existingEvaluation) {
-          // Update existing evaluation instead of creating a new one
-          existingFormResult = existingEvaluation;
+        if (incompleteEvaluation) {
+          console.log(`Continuing work on existing incomplete evaluation: ${incompleteEvaluation.id}`);
+          existingFormResult = incompleteEvaluation;
+        } else {
+          // If we're in showingHistoryView but isNewEvaluation is false, we're potentially 
+          // working on an existing evaluation
+          const mostRecentEvaluation = evaluationHistory[0]; // They're ordered by date desc
+          if (mostRecentEvaluation && !isNewEvaluation) {
+            console.log(`Using most recent evaluation: ${mostRecentEvaluation.id}`);
+            existingFormResult = mostRecentEvaluation;
+          }
         }
+      } else {
+        console.log("Creating a new evaluation (isNewEvaluation flag is true)");
       }
       
-      // Make sure to save analyst notes that might have been added
-      const notesAnalista = formResult?.notas_analista || '';
+      // Get existing analyst notes
+      const notesAnalista = selectedEvaluation?.notas_analista || formResult?.notas_analista || '';
       
-      // Prepare form result data - ensure is_complete is set to true
+      // Prepare form result data
       const formResultData = {
         id: existingFormResult?.id || '',
         employeeId: selectedEmployeeId,
@@ -172,14 +191,15 @@ const FormularioPage: React.FC = () => {
         total_sim: totalYes,
         total_nao: totalNo,
         notas_analista: notesAnalista,
-        is_complete: true, // Explicitly set to true to ensure report generation
+        is_complete: true, // Explicitly set to true for completed forms
         last_updated: new Date().toISOString(),
         created_at: existingFormResult?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
       
-      console.log("Saving form with is_complete=true to trigger report generation");
-      console.log("Analyst notes:", notesAnalista);
+      console.log(`Saving form with ID: ${formResultData.id || 'new'}`);
+      console.log(`Is new evaluation: ${isNewEvaluation}`);
+      console.log(`Is complete: ${formResultData.is_complete}`);
       
       // Save form result
       await saveFormResult(formResultData);
@@ -193,9 +213,10 @@ const FormularioPage: React.FC = () => {
         setShowResults(true);
         setFormComplete(true);
         setSelectedEvaluation(updatedResult);
+        setIsNewEvaluation(false); // Reset new evaluation flag after saving
         
-        // Reload history after completing
-        loadEmployeeHistory();
+        // Reload history after completing to get the updated list
+        await loadEmployeeHistory();
       }
     } catch (error: any) {
       console.error("Erro ao salvar o formulário:", error);
@@ -219,6 +240,8 @@ const FormularioPage: React.FC = () => {
           onEmployeeChange={handleEmployeeChange}
           onFormChange={handleFormChange}
           isLoadingHistory={isLoadingHistory}
+          showNewEvaluationButton={!isNewEvaluation && selectedEmployeeId && evaluationHistory && evaluationHistory.length > 0}
+          onNewEvaluation={handleNewEvaluation}
         />
 
         {selectedEmployeeId && selectedEmployee && selectedFormId && (
@@ -226,7 +249,7 @@ const FormularioPage: React.FC = () => {
             selectedEmployee={selectedEmployee}
             selectedFormId={selectedFormId}
             showResults={showResults}
-            showingHistoryView={showingHistoryView}
+            showingHistoryView={showingHistoryView && !isNewEvaluation}
             selectedFormTitle={selectedFormTitle}
             formSections={formSections}
             answers={answers}
@@ -264,7 +287,14 @@ const FormularioPage: React.FC = () => {
             formResult={formResult}
             questions={questions}
             onNotesChange={(notes) => {
-              if (formResult) {
+              console.log("Updating notes:", notes);
+              if (selectedEvaluation) {
+                setSelectedEvaluation({
+                  ...selectedEvaluation,
+                  notas_analista: notes,
+                  analyistNotes: notes
+                });
+              } else if (formResult) {
                 setFormResult({
                   ...formResult,
                   notas_analista: notes,
@@ -281,10 +311,13 @@ const FormularioPage: React.FC = () => {
             onSaveAndComplete={handleSaveAndComplete}
             onDeleteEvaluation={handleDeleteEvaluation}
             onEditEvaluation={(evaluation) => {
+              console.log("Editing evaluation:", evaluation.id);
               setSelectedEvaluation(evaluation);
-              setShowResults(false);
+              setFormResult(evaluation);
               setAnswers(evaluation.answers || {});
+              setShowResults(true);
               setShowingHistoryView(false);
+              setIsNewEvaluation(false);
             }}
             onExitResults={handleExitResults}
           />

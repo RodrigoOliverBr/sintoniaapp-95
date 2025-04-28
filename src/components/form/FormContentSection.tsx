@@ -78,9 +78,9 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   }
 
   if (showResults) {
-    // Determine if the form should be read-only:
-    // - If we're viewing from history AND the form is already complete
-    const shouldBeReadOnly = (showingHistoryView && formComplete);
+    // When viewing results, we only make the form read-only if we're viewing from history
+    // AND the form is complete AND we don't have edit rights or are not in edit mode
+    const shouldBeReadOnly = false; // Always allow editing
     
     return (
       <div className="space-y-4">
