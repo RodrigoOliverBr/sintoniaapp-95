@@ -35,7 +35,7 @@ const EmployeeModals: React.FC<EmployeeModalsProps> = ({
       {selectedEmployee && (
         <EditEmployeeModal
           open={openEditModal}
-          onOpenChange={onEditModalOpenChange}
+          setOpen={onEditModalOpenChange}
           employee={selectedEmployee}
           onEmployeeUpdated={onEmployeeUpdated}
         />

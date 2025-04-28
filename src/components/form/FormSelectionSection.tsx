@@ -41,12 +41,10 @@ const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
         <div className="flex justify-between items-center">
           <div>
             <CardTitle className="text-2xl text-primary">
-              {false ? "Resultado da Avaliação" : "Preenchimento do Formulário"}
+              Preenchimento do Formulário
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              {false
-                ? "Visualize os resultados da avaliação e adicione suas observações."
-                : "Selecione a empresa, o funcionário e o formulário para preencher."}
+              Selecione a empresa, o funcionário e o formulário para preencher.
             </CardDescription>
           </div>
           {showNewEvaluationButton && onNewEvaluation && selectedEmployeeId && (

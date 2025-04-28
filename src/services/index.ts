@@ -18,4 +18,3 @@ export {
   getFormResults,
   deleteFormEvaluation
 } from './form';
-

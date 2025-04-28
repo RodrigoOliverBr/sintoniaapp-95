@@ -55,78 +55,40 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
   console.log('Evaluation ID:', id || 'new');
   console.log('Is complete:', is_complete);
   console.log('Analyst notes present:', !!notas_analista);
+  console.log('Total sim:', total_sim);
+  console.log('Total não:', total_nao);
   
   try {
     let avaliacaoId = id;
     
     if (!avaliacaoId || avaliacaoId.trim() === '') {
       console.log('Creating new evaluation since no ID was provided');
-      // Check if there's an existing draft for this employee and form
-      const { data: existingDraft, error: findError } = await supabase
+      
+      // Insert new evaluation
+      const insertData = {
+        funcionario_id: employeeId,
+        empresa_id,
+        formulario_id,
+        total_sim,
+        total_nao,
+        is_complete,
+        notas_analista,
+        last_updated: new Date().toISOString()
+      };
+      
+      const { data: avaliacao, error: avaliacaoError } = await supabase
         .from('avaliacoes')
-        .select('id')
-        .eq('funcionario_id', employeeId)
-        .eq('is_complete', false)
-        .eq('formulario_id', formulario_id)
-        .maybeSingle();
-        
-      if (findError) {
-        console.error('Error checking for existing draft:', findError);
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (avaliacaoError) {
+        console.error('Error saving new evaluation:', avaliacaoError);
+        throw avaliacaoError;
       }
       
-      if (existingDraft) {
-        // Use the existing draft instead of creating a new one
-        avaliacaoId = existingDraft.id;
-        console.log(`Found existing draft: ${avaliacaoId}, will update it instead of creating new`);
-        
-        const updateData = {
-          total_sim,
-          total_nao,
-          is_complete,
-          notas_analista,
-          formulario_id,
-          last_updated: new Date().toISOString()
-        };
-        
-        const { error: updateError } = await supabase
-          .from('avaliacoes')
-          .update(updateData)
-          .eq('id', avaliacaoId);
-          
-        if (updateError) {
-          console.error('Error updating existing draft:', updateError);
-          throw updateError;
-        }
-        
-        console.log(`Updated existing draft evaluation: ${avaliacaoId}`);
-      } else {
-        // Insert new evaluation
-        console.log('No existing draft found, creating brand new evaluation');
-        const insertData = {
-          funcionario_id: employeeId,
-          empresa_id,
-          formulario_id,
-          total_sim,
-          total_nao,
-          is_complete,
-          notas_analista,
-          last_updated: new Date().toISOString()
-        };
-        
-        const { data: avaliacao, error: avaliacaoError } = await supabase
-          .from('avaliacoes')
-          .insert(insertData)
-          .select()
-          .single();
-
-        if (avaliacaoError) {
-          console.error('Error saving new evaluation:', avaliacaoError);
-          throw avaliacaoError;
-        }
-        
-        avaliacaoId = avaliacao.id;
-        console.log(`Created new evaluation with ID: ${avaliacaoId}`);
-      }
+      avaliacaoId = avaliacao.id;
+      console.log(`Created new evaluation with ID: ${avaliacaoId}`);
     } else {
       console.log(`Updating existing evaluation with ID: ${avaliacaoId}`);
       // Update existing evaluation
@@ -356,15 +318,26 @@ async function getFullEvaluation(evaluation: any): Promise<FormResult> {
         };
       });
     }
+
+    // Count actual yes/no answers based on the responses
+    let total_sim = 0;
+    let total_nao = 0;
     
-    // Return the full evaluation object
+    if (responses) {
+      responses.forEach((response) => {
+        if (response.resposta === true) total_sim++;
+        if (response.resposta === false) total_nao++;
+      });
+    }
+    
+    // Return the full evaluation object with updated counts
     return {
       id: evaluation.id,
       employeeId: evaluation.funcionario_id,
       empresa_id: evaluation.empresa_id,
       formulario_id: evaluation.formulario_id,
-      total_sim: evaluation.total_sim || 0,
-      total_nao: evaluation.total_nao || 0,
+      total_sim: total_sim, // Use the calculated value
+      total_nao: total_nao, // Use the calculated value
       notas_analista: evaluation.notas_analista || '',
       analyistNotes: evaluation.notas_analista || '',
       answers,

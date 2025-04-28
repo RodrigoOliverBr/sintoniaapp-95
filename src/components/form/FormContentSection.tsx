@@ -66,21 +66,22 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
       <EmployeeFormHistory
         evaluations={evaluationHistory}
         onShowResults={(evaluation) => {
+          if (onShowResults) onShowResults();
           if (onEditEvaluation) onEditEvaluation(evaluation);
-          onShowResults();
         }}
         onNewEvaluation={onNewEvaluation}
         onDeleteEvaluation={onDeleteEvaluation}
-        onEditEvaluation={onEditEvaluation}
+        onEditEvaluation={(evaluation) => {
+          if (onEditEvaluation) onEditEvaluation(evaluation);
+        }}
         isDeletingEvaluation={isDeletingEvaluation}
       />
     );
   }
 
   if (showResults) {
-    // When viewing results, we only make the form read-only if we're viewing from history
-    // AND the form is complete AND we don't have edit rights or are not in edit mode
-    const shouldBeReadOnly = false; // Always allow editing
+    // When viewing results, only make the form read-only if specified
+    const shouldBeReadOnly = false;
     
     return (
       <div className="space-y-4">
@@ -101,7 +102,7 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
           result={selectedEvaluation || formResult!}
           questions={questions}
           onNotesChange={onNotesChange}
-          isReadOnly={shouldBeReadOnly} 
+          isReadOnly={shouldBeReadOnly}
         />
       </div>
     );
@@ -111,10 +112,10 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
     <div className="space-y-6">
       <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
         <h2 className="text-xl font-bold text-primary mb-1">
-          Avaliação para: {selectedEmployee?.nome || "Funcionário não selecionado"}
+          Avaliação para: {selectedEmployee?.name || selectedEmployee?.nome || "Funcionário não selecionado"}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Cargo: {selectedEmployee?.cargo_id ? "Especificado" : "Não especificado"}
+          Cargo: {selectedEmployee?.role || (selectedEmployee?.cargo_id ? "Especificado" : "Não especificado")}
         </p>
         <p className="text-sm text-muted-foreground">
           Formulário: {selectedFormTitle}

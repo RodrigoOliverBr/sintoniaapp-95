@@ -64,10 +64,16 @@ const FormularioPage: React.FC = () => {
   // State for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isNewEvaluation, setIsNewEvaluation] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   // Reset form when switching between employees
   useEffect(() => {
     resetForm();
+    
+    if (selectedEmployeeId) {
+      // Load history when an employee is selected, don't show the form yet
+      setShowForm(false);
+    }
   }, [selectedEmployeeId]);
 
   const resetForm = () => {
@@ -76,6 +82,7 @@ const FormularioPage: React.FC = () => {
     setShowResults(false);
     setSelectedEvaluation(null);
     setIsNewEvaluation(false);
+    setShowForm(false);
   };
 
   const handleCompanyChange = (value: string) => {
@@ -100,7 +107,8 @@ const FormularioPage: React.FC = () => {
   const handleNewEvaluation = () => {
     resetForm();
     setShowingHistoryView(false);
-    setIsNewEvaluation(true); 
+    setIsNewEvaluation(true);
+    setShowForm(true);
     console.log("Iniciando nova avaliação");
   };
   
@@ -137,7 +145,7 @@ const FormularioPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Count yes/no answers
+      // Count actual yes/no answers
       let totalYes = 0;
       let totalNo = 0;
       
@@ -156,7 +164,7 @@ const FormularioPage: React.FC = () => {
         // We're editing an existing evaluation
         console.log(`Editing existing evaluation with ID: ${selectedEvaluation.id}`);
         existingFormResult = selectedEvaluation;
-      } else if (!isNewEvaluation && evaluationHistory && evaluationHistory.length > 0) {
+      } else if (!isNewEvaluation && evaluationHistory && evaluationHistory.length > 0 && !showForm) {
         // Check if there's an incomplete evaluation to continue working on
         const incompleteEvaluation = evaluationHistory.find(
           evaluation => evaluation.formulario_id === selectedFormId && !evaluation.is_complete
@@ -165,17 +173,11 @@ const FormularioPage: React.FC = () => {
         if (incompleteEvaluation) {
           console.log(`Continuing work on existing incomplete evaluation: ${incompleteEvaluation.id}`);
           existingFormResult = incompleteEvaluation;
-        } else {
-          // If we're in showingHistoryView but isNewEvaluation is false, we're potentially 
-          // working on an existing evaluation
-          const mostRecentEvaluation = evaluationHistory[0]; // They're ordered by date desc
-          if (mostRecentEvaluation && !isNewEvaluation) {
-            console.log(`Using most recent evaluation: ${mostRecentEvaluation.id}`);
-            existingFormResult = mostRecentEvaluation;
-          }
-        }
+        } 
       } else {
         console.log("Creating a new evaluation (isNewEvaluation flag is true)");
+        // If we're creating a new evaluation, don't use existing formResult
+        existingFormResult = null;
       }
       
       // Get existing analyst notes
@@ -240,87 +242,118 @@ const FormularioPage: React.FC = () => {
           onEmployeeChange={handleEmployeeChange}
           onFormChange={handleFormChange}
           isLoadingHistory={isLoadingHistory}
-          showNewEvaluationButton={!isNewEvaluation && selectedEmployeeId && evaluationHistory && evaluationHistory.length > 0}
+          showNewEvaluationButton={selectedEmployeeId !== undefined}
           onNewEvaluation={handleNewEvaluation}
         />
 
         {selectedEmployeeId && selectedEmployee && selectedFormId && (
-          <FormContentSection
-            selectedEmployee={selectedEmployee}
-            selectedFormId={selectedFormId}
-            showResults={showResults}
-            showingHistoryView={showingHistoryView && !isNewEvaluation}
-            selectedFormTitle={selectedFormTitle}
-            formSections={formSections}
-            answers={answers}
-            onAnswerChange={(questionId, answer) => {
-              setAnswers(prev => ({
-                ...prev,
-                [questionId]: { 
-                  ...prev[questionId], 
-                  questionId, 
-                  answer: answer 
-                }
-              }));
-            }}
-            onObservationChange={(questionId, observation) => {
-              setAnswers(prev => ({
-                ...prev,
-                [questionId]: { 
-                  ...prev[questionId], 
-                  questionId, 
-                  observation 
-                }
-              }));
-            }}
-            onOptionsChange={(questionId, selectedOptions) => {
-              setAnswers(prev => ({
-                ...prev,
-                [questionId]: { 
-                  ...prev[questionId], 
-                  questionId, 
-                  selectedOptions 
-                }
-              }));
-            }}
-            selectedEvaluation={selectedEvaluation}
-            formResult={formResult}
-            questions={questions}
-            onNotesChange={(notes) => {
-              console.log("Updating notes:", notes);
-              if (selectedEvaluation) {
-                setSelectedEvaluation({
-                  ...selectedEvaluation,
-                  notas_analista: notes,
-                  analyistNotes: notes
-                });
-              } else if (formResult) {
-                setFormResult({
-                  ...formResult,
-                  notas_analista: notes,
-                  analyistNotes: notes
-                });
-              }
-            }}
-            evaluationHistory={evaluationHistory || []}
-            formComplete={formComplete}
-            isSubmitting={isSubmitting}
-            isDeletingEvaluation={isDeletingEvaluation}
-            onNewEvaluation={handleNewEvaluation}
-            onShowResults={() => setShowResults(true)}
-            onSaveAndComplete={handleSaveAndComplete}
-            onDeleteEvaluation={handleDeleteEvaluation}
-            onEditEvaluation={(evaluation) => {
-              console.log("Editing evaluation:", evaluation.id);
-              setSelectedEvaluation(evaluation);
-              setFormResult(evaluation);
-              setAnswers(evaluation.answers || {});
-              setShowResults(true);
-              setShowingHistoryView(false);
-              setIsNewEvaluation(false);
-            }}
-            onExitResults={handleExitResults}
-          />
+          <>
+            {/* Show New Evaluation Button if form is not yet shown */}
+            {!showForm && !showResults && !showingHistoryView && (
+              <div className="bg-white p-8 rounded-lg shadow-sm text-center">
+                <h3 className="text-lg font-medium text-gray-700 mb-4">
+                  {evaluationHistory && evaluationHistory.length > 0 
+                    ? "Este funcionário já possui avaliações anteriores."
+                    : "Iniciar nova avaliação para este funcionário?"
+                  }
+                </h3>
+                <div className="flex gap-4 justify-center">
+                  {evaluationHistory && evaluationHistory.length > 0 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowingHistoryView(true)}
+                    >
+                      Ver Histórico
+                    </Button>
+                  )}
+                  <Button onClick={handleNewEvaluation}>
+                    Nova Avaliação
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Show Form Content when appropriate */}
+            {(showForm || showResults || showingHistoryView) && (
+              <FormContentSection
+                selectedEmployee={selectedEmployee}
+                selectedFormId={selectedFormId}
+                showResults={showResults}
+                showingHistoryView={showingHistoryView && !isNewEvaluation}
+                selectedFormTitle={selectedFormTitle}
+                formSections={formSections}
+                answers={answers}
+                onAnswerChange={(questionId, answer) => {
+                  setAnswers(prev => ({
+                    ...prev,
+                    [questionId]: { 
+                      ...prev[questionId], 
+                      questionId, 
+                      answer: answer 
+                    }
+                  }));
+                }}
+                onObservationChange={(questionId, observation) => {
+                  setAnswers(prev => ({
+                    ...prev,
+                    [questionId]: { 
+                      ...prev[questionId], 
+                      questionId, 
+                      observation 
+                    }
+                  }));
+                }}
+                onOptionsChange={(questionId, selectedOptions) => {
+                  setAnswers(prev => ({
+                    ...prev,
+                    [questionId]: { 
+                      ...prev[questionId], 
+                      questionId, 
+                      selectedOptions 
+                    }
+                  }));
+                }}
+                selectedEvaluation={selectedEvaluation}
+                formResult={formResult}
+                questions={questions}
+                onNotesChange={(notes) => {
+                  console.log("Updating notes:", notes);
+                  if (selectedEvaluation) {
+                    setSelectedEvaluation({
+                      ...selectedEvaluation,
+                      notas_analista: notes,
+                      analyistNotes: notes
+                    });
+                  } else if (formResult) {
+                    setFormResult({
+                      ...formResult,
+                      notas_analista: notes,
+                      analyistNotes: notes
+                    });
+                  }
+                }}
+                evaluationHistory={evaluationHistory || []}
+                formComplete={formComplete}
+                isSubmitting={isSubmitting}
+                isDeletingEvaluation={isDeletingEvaluation}
+                onNewEvaluation={handleNewEvaluation}
+                onShowResults={() => setShowResults(true)}
+                onSaveAndComplete={handleSaveAndComplete}
+                onDeleteEvaluation={handleDeleteEvaluation}
+                onEditEvaluation={(evaluation) => {
+                  console.log("Editing evaluation:", evaluation.id);
+                  setSelectedEvaluation(evaluation);
+                  setFormResult(evaluation);
+                  setAnswers(evaluation.answers || {});
+                  setShowResults(false);
+                  setShowingHistoryView(false);
+                  setIsNewEvaluation(false);
+                  setShowForm(true);
+                }}
+                onExitResults={handleExitResults}
+              />
+            )}
+          </>
         )}
       </div>
     </Layout>

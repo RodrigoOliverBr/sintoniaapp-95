@@ -1,146 +1,176 @@
 
 import React from "react";
-import { FormResult } from "@/types/form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { FormResult } from "@/types/form";
 import { format } from "date-fns";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Edit, Eye, Trash2, FilePlus } from "lucide-react";
 import { ptBR } from "date-fns/locale";
+import { FileText, Pencil, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 interface EmployeeFormHistoryProps {
   evaluations: FormResult[];
   onShowResults: (evaluation: FormResult) => void;
-  onDeleteEvaluation: (id: string) => Promise<void>;
-  onEditEvaluation?: (evaluation: FormResult) => void;
   onNewEvaluation: () => void;
+  onDeleteEvaluation: (evaluationId: string) => Promise<void>;
+  onEditEvaluation?: (evaluation: FormResult) => void;
   isDeletingEvaluation?: boolean;
 }
 
 const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   evaluations,
   onShowResults,
+  onNewEvaluation,
   onDeleteEvaluation,
   onEditEvaluation,
-  onNewEvaluation,
   isDeletingEvaluation
 }) => {
-  if (!evaluations || evaluations.length === 0) {
-    return (
-      <div className="bg-white p-8 rounded-lg shadow-sm text-center">
-        <h3 className="text-lg font-medium text-gray-700 mb-4">
-          Nenhuma avaliação encontrada
-        </h3>
-        <p className="text-muted-foreground mb-6">
-          Este funcionário ainda não possui avaliações.
-        </p>
-        <Button onClick={onNewEvaluation} className="flex items-center gap-2">
-          <FilePlus size={18} />
-          Nova Avaliação
-        </Button>
-      </div>
-    );
-  }
+  const [evaluationToDelete, setEvaluationToDelete] = useState<string | null>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (evaluationToDelete) {
+      await onDeleteEvaluation(evaluationToDelete);
+      setEvaluationToDelete(null);
+    }
+    setIsConfirmOpen(false);
+  };
+
+  const handleDelete = (evaluationId: string) => {
+    setEvaluationToDelete(evaluationId);
+    setIsConfirmOpen(true);
+  };
+
+  // Sort evaluations by date, most recent first
+  const sortedEvaluations = [...evaluations].sort((a, b) => {
+    const dateA = new Date(a.created_at || Date.now());
+    const dateB = new Date(b.created_at || Date.now());
+    return dateB.getTime() - dateA.getTime();
+  });
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Histórico de Avaliações</h2>
-        <Button 
-          onClick={onNewEvaluation}
-          className="flex items-center gap-2"
-        >
-          <FilePlus size={18} />
+        <h2 className="text-2xl font-bold">Histórico de Avaliações</h2>
+        <Button onClick={onNewEvaluation} className="flex items-center gap-2">
+          <FileText className="h-4 w-4" />
           Nova Avaliação
         </Button>
       </div>
 
-      {evaluations.map((evaluation) => (
-        <div 
-          key={evaluation.id}
-          className="border rounded-lg p-4 bg-white"
-        >
-          <div className="flex flex-col md:flex-row justify-between md:items-center">
-            <div>
-              <h3 className="text-lg font-medium">
-                Avaliação {format(new Date(evaluation.created_at), 'dd/MM/yyyy')}
-              </h3>
-              <div className="flex flex-col space-y-1 md:space-y-0 md:flex-row md:gap-4 text-sm text-muted-foreground">
-                <p>
-                  Nível de Risco: <span className="font-medium text-green-600">Baixo</span>
-                </p>
-                <p>
-                  Última atualização: {format(
-                    new Date(evaluation.last_updated || evaluation.updated_at), 
-                    "dd/MM/yyyy 'às' HH:mm",
-                    { locale: ptBR }
-                  )}
-                </p>
-              </div>
-            </div>
+      {sortedEvaluations.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">
+              Este funcionário ainda não possui avaliações registradas.
+            </p>
+            <Button onClick={onNewEvaluation} className="mt-4">
+              Criar Primeira Avaliação
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {sortedEvaluations.map((evaluation) => {
+            const date = evaluation.created_at
+              ? format(new Date(evaluation.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+              : "Data desconhecida";
+            
+            const time = evaluation.created_at
+              ? format(new Date(evaluation.created_at), "HH:mm", { locale: ptBR })
+              : "";
 
-            <div className="flex space-x-2 mt-4 md:mt-0">
-              <Button 
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-                onClick={() => onShowResults(evaluation)}
-              >
-                <Eye size={16} />
-                Ver Resultados
-              </Button>
-              
-              {onEditEvaluation && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                  onClick={() => {
-                    if (onEditEvaluation) onEditEvaluation(evaluation);
-                  }}
-                >
-                  <Edit size={16} />
-                  Editar
-                </Button>
-              )}
-              
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="flex items-center gap-2 border-destructive text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 size={16} />
-                    Excluir
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação não pode ser desfeita. Isso excluirá permanentemente esta avaliação
-                      e todos os resultados associados.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      disabled={isDeletingEvaluation}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        onDeleteEvaluation(evaluation.id);
-                      }}
-                      className="bg-destructive hover:bg-destructive/90"
-                    >
-                      {isDeletingEvaluation ? "Excluindo..." : "Excluir avaliação"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </div>
+            return (
+              <Card key={evaluation.id} className="overflow-hidden">
+                <CardHeader className="bg-muted/40 py-3">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg font-medium">
+                      Avaliação {evaluation.is_complete ? "Completa" : "Incompleta"}
+                    </CardTitle>
+                    <span className="text-sm text-muted-foreground">{date} às {time}</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="py-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Total de Respostas:</span>
+                        <span>
+                          {evaluation.total_sim + evaluation.total_nao} ({evaluation.total_sim} Sim, {evaluation.total_nao} Não)
+                        </span>
+                      </div>
+                      {evaluation.is_complete ? (
+                        <div className="text-sm text-emerald-600">Avaliação finalizada</div>
+                      ) : (
+                        <div className="text-sm text-amber-600">Avaliação em andamento</div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      {onEditEvaluation && (
+                        <Button 
+                          onClick={() => onEditEvaluation(evaluation)} 
+                          variant="outline" 
+                          className="w-full sm:w-auto"
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
+                      )}
+                      <Button 
+                        onClick={() => onShowResults(evaluation)}
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Ver Resultados
+                      </Button>
+                      <Button 
+                        onClick={() => handleDelete(evaluation.id)}
+                        variant="outline"
+                        className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50"
+                        disabled={isDeletingEvaluation}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-      ))}
+      )}
+
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeletingEvaluation ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

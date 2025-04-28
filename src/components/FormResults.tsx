@@ -49,6 +49,7 @@ function calculateSeverityCounts(result: FormResult, questions: Question[] = [])
 }
 
 const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNotesChange, isReadOnly = false }) => {
+  // Make sure we're using the actual values from the result, not the default ones
   const totalYes = result.total_sim || 0;
   const totalNo = result.total_nao || 0;
   const severityCounts = calculateSeverityCounts(result, questions);
@@ -57,8 +58,30 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     window.print();
   };
 
+  // Calculate the actual yes/no counts from the answers object
+  const calculateActualCounts = () => {
+    let yes = 0;
+    let no = 0;
+
+    if (result.answers) {
+      Object.values(result.answers).forEach(answer => {
+        if (answer.answer === true) yes++;
+        if (answer.answer === false) no++;
+      });
+    }
+    
+    return { yes, no };
+  };
+
+  // Get the actual counts from the answers
+  const actualCounts = calculateActualCounts();
+
   // Get the notes from either field (notas_analista or analyistNotes)
   const notes = result.notas_analista || result.analyistNotes || '';
+
+  console.log("Form Results - totalYes:", totalYes, "totalNo:", totalNo);
+  console.log("Actual counts - yes:", actualCounts.yes, "no:", actualCounts.no);
+  console.log("Notes editable:", !isReadOnly);
 
   return (
     <div className="space-y-6 print:pt-0">
@@ -79,7 +102,17 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
             <CardTitle>Respostas</CardTitle>
           </CardHeader>
           <CardContent>
-            <AnswersChart yesCount={totalYes} noCount={totalNo} />
+            <AnswersChart yesCount={actualCounts.yes} noCount={actualCounts.no} />
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="bg-blue-50 p-4 rounded text-center">
+                <div className="text-lg font-medium text-blue-500">Sim</div>
+                <div className="text-3xl font-bold text-blue-700">{actualCounts.yes}</div>
+              </div>
+              <div className="bg-gray-100 p-4 rounded text-center">
+                <div className="text-lg font-medium text-gray-500">Não</div>
+                <div className="text-3xl font-bold text-gray-700">{actualCounts.no}</div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
