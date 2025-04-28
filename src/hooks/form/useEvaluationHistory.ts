@@ -59,7 +59,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
       
       // Update the state locally by removing the deleted evaluation
       setEvaluationHistory(prevHistory => 
-        prevHistory.filter(eval => eval.id !== evaluationId)
+        prevHistory.filter(evaluation => evaluation.id !== evaluationId)
       );
       
       // If no more items in history, hide history view
