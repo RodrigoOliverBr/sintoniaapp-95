@@ -60,33 +60,36 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
       setIsLoadingHistory(true);
       console.log(`Iniciando exclusão da avaliação: ${evaluationId}`);
       
-      // Chamar o serviço para excluir a avaliação no banco de dados
       const deleteSuccess = await deleteFormEvaluation(evaluationId);
       
       if (deleteSuccess) {
-        console.log("Exclusão no banco de dados bem-sucedida, atualizando estado local");
+        console.log("Exclusão bem-sucedida, atualizando estado local");
         
-        // Remover a avaliação do estado local
-        setEvaluationHistory(prevEvaluations => prevEvaluations.filter(evaluation => evaluation.id !== evaluationId));
+        // Atualizar estado local primeiro para feedback imediato
+        setEvaluationHistory(prevEvaluations => {
+          const updatedEvaluations = prevEvaluations.filter(
+            evaluation => evaluation.id !== evaluationId
+          );
+          
+          // Se não houver mais avaliações, desativar a visualização
+          if (updatedEvaluations.length === 0) {
+            setShowingHistoryView(false);
+          }
+          
+          return updatedEvaluations;
+        });
         
-        // Limpar a avaliação selecionada se for a mesma que foi excluída
+        // Limpar avaliação selecionada se necessário
         if (selectedEvaluation?.id === evaluationId) {
           setSelectedEvaluation(null);
         }
         
-        // Exibir toast de sucesso
         toast({
           title: "Sucesso",
           description: "Avaliação excluída com sucesso.",
         });
         
-        // Verificar se precisamos desativar a visualização de histórico
-        const remainingEvaluations = evaluationHistory.filter(evaluation => evaluation.id !== evaluationId);
-        if (remainingEvaluations.length === 0) {
-          setShowingHistoryView(false);
-        }
-        
-        // Recarregar o histórico para garantir que os dados estejam sincronizados
+        // Recarregar histórico para garantir sincronização
         await loadEmployeeHistory();
       } else {
         console.error("Falha ao excluir avaliação");

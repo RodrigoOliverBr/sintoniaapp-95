@@ -291,78 +291,27 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
 
 export async function deleteFormEvaluation(evaluationId: string): Promise<boolean> {
   try {
-    console.log(`Iniciando processo de exclusão da avaliação: ${evaluationId}`);
+    console.log(`Iniciando exclusão da avaliação: ${evaluationId}`);
     
-    // 1. Delete resposta_opcoes entries first
-    const { data: respostasIds, error: fetchRespostasError } = await supabase
-      .from('respostas')
-      .select('id')
-      .eq('avaliacao_id', evaluationId);
-    
-    if (fetchRespostasError) {
-      console.error('Erro ao buscar IDs das respostas:', fetchRespostasError);
-      throw fetchRespostasError;
-    }
-    
-    if (respostasIds && respostasIds.length > 0) {
-      console.log(`Encontradas ${respostasIds.length} respostas para excluir`);
-      const respostaIds = respostasIds.map(r => r.id);
-      
-      // Delete resposta_opcoes
-      const { error: opcoesError } = await supabase
-        .from('resposta_opcoes')
-        .delete()
-        .in('resposta_id', respostaIds);
-      
-      if (opcoesError) {
-        console.error('Erro ao excluir opções de resposta:', opcoesError);
-        throw opcoesError;
-      }
-      console.log('Opções de resposta excluídas com sucesso');
-    }
-    
-    // 2. Delete respostas entries
-    const { error: respostasError } = await supabase
-      .from('respostas')
-      .delete()
-      .eq('avaliacao_id', evaluationId);
-    
-    if (respostasError) {
-      console.error('Erro ao excluir respostas:', respostasError);
-      throw respostasError;
-    }
-    console.log('Respostas excluídas com sucesso');
-    
-    // 3. Delete any related relatorios
-    const { error: relatoriosError } = await supabase
-      .from('relatorios')
-      .delete()
-      .eq('avaliacao_id', evaluationId);
-    
-    if (relatoriosError) {
-      console.error('Erro ao excluir relatórios relacionados:', relatoriosError);
-      // Continue even if there's an error with reports
-    } else {
-      console.log('Relatórios relacionados excluídos com sucesso');
-    }
-    
-    // 4. Finally delete the avaliacao itself
-    const { error: avaliacaoError, count } = await supabase
+    // Deleta diretamente a avaliação, confiando no trigger before_delete_avaliacao
+    // para lidar com as exclusões em cascata
+    const { error, count } = await supabase
       .from('avaliacoes')
       .delete()
       .eq('id', evaluationId)
       .select('count');
     
-    if (avaliacaoError) {
-      console.error('Erro ao excluir avaliação:', avaliacaoError);
-      throw avaliacaoError;
+    if (error) {
+      console.error('Erro ao excluir avaliação:', error);
+      return false;
     }
     
-    // Verify deletion was successful
-    console.log(`Avaliação ${evaluationId} excluída com sucesso`);
-    return true;
+    // Verificar se alguma linha foi deletada
+    const wasDeleted = count ? count > 0 : false;
+    console.log(`Avaliação ${wasDeleted ? 'excluída com sucesso' : 'não encontrada'}`);
+    return wasDeleted;
   } catch (error) {
     console.error('Erro completo no processo de exclusão da avaliação:', error);
-    throw error;
+    return false;
   }
 }
