@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           created_at: string
           empresa_id: string
+          formulario_id: string | null
           funcionario_id: string
           id: string
           is_complete: boolean | null
@@ -25,6 +26,7 @@ export type Database = {
         Insert: {
           created_at?: string
           empresa_id: string
+          formulario_id?: string | null
           funcionario_id: string
           id?: string
           is_complete?: boolean | null
@@ -37,6 +39,7 @@ export type Database = {
         Update: {
           created_at?: string
           empresa_id?: string
+          formulario_id?: string | null
           funcionario_id?: string
           id?: string
           is_complete?: boolean | null
@@ -52,6 +55,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "formularios"
             referencedColumns: ["id"]
           },
           {

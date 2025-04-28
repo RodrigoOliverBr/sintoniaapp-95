@@ -23,7 +23,6 @@ export function useFormQuestions(selectedFormId: string) {
     if (selectedFormId) {
       loadFormQuestions();
     } else {
-      // Clear data if no form is selected
       setQuestions([]);
       setFormSections([]);
       setCurrentSection("");

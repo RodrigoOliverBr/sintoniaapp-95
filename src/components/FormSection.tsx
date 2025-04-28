@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 
 interface FormSectionProps {
   section: {
-    id?: string;
+    id: string;
     title: string;
     questions: Question[];
   };
@@ -23,19 +23,14 @@ const FormSection: React.FC<FormSectionProps> = ({
   onObservationChange,
   onOptionsChange,
 }) => {
-  // Make sure questions exist before trying to sort them
   const questionsToShow = section.questions || [];
   
-  // Sort questions by the ordem_pergunta property
   const orderedQuestions = [...questionsToShow].sort((a, b) => {
-    // If both have order 0 or equal, don't change the order
     if ((a.ordem_pergunta === 0 && b.ordem_pergunta === 0) || a.ordem_pergunta === b.ordem_pergunta) {
       return 0;
     }
-    // If only one has order 0, put it last
     if (a.ordem_pergunta === 0) return 1;
     if (b.ordem_pergunta === 0) return -1;
-    // Sort normally by numbers
     return (a.ordem_pergunta || 0) - (b.ordem_pergunta || 0);
   });
 
