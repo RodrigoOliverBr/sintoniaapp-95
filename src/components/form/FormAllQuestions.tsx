@@ -1,15 +1,13 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import FormSection from "@/components/FormSection";
-import { FormAnswer, Question } from "@/types/form";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { Question } from "@/types/form";
+import QuestionComponent from "@/components/QuestionComponent";
 
 interface FormAllQuestionsProps {
   sections: any[];
   questions: Question[];
-  answers: Record<string, FormAnswer>;
+  answers: Record<string, any>;
   onAnswerChange: (questionId: string, answer: boolean | null) => void;
   onObservationChange: (questionId: string, observation: string) => void;
   onOptionsChange: (questionId: string, options: string[]) => void;
@@ -27,75 +25,84 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
   onSaveAndComplete,
   isSubmitting
 }) => {
-  // Count answered questions for progress calculation
-  const answeredCount = Object.values(answers).filter(a => a.answer !== null && a.answer !== undefined).length;
-  const totalQuestions = questions.length;
-  const progress = totalQuestions > 0 ? Math.floor((answeredCount / totalQuestions) * 100) : 0;
+  // Track if the button has been clicked to prevent double submissions
+  const [hasClicked, setHasClicked] = useState(false);
 
-  // Check if all questions are answered
-  const allAnswered = answeredCount === totalQuestions && totalQuestions > 0;
+  const handleSaveClick = () => {
+    // Set button as clicked to prevent double submissions
+    setHasClicked(true);
+    
+    // Call the actual save function
+    onSaveAndComplete();
+    
+    // Reset the button after a short delay (for cases where the submission fails)
+    setTimeout(() => {
+      setHasClicked(false);
+    }, 3000);
+  };
 
-  if (!sections || sections.length === 0 || !questions || questions.length === 0) {
-    return (
-      <div className="bg-white p-8 rounded-lg shadow-sm text-center">
-        <h3 className="text-lg font-medium text-gray-700 mb-2">
-          Nenhuma pergunta encontrada
-        </h3>
-        <p className="text-muted-foreground">
-          Não há perguntas configuradas para este formulário.
-        </p>
-      </div>
-    );
-  }
+  // Get questions for each section
+  const getQuestionsForSection = (sectionId: string) => {
+    return questions.filter(q => q.secao_id === sectionId);
+  };
+
+  // Sort sections by ordem field
+  const sortedSections = [...sections].sort((a, b) => {
+    // Handle cases where orden might be 0 or undefined
+    if (!a.ordem && !b.ordem) return 0;
+    if (!a.ordem) return 1;
+    if (!b.ordem) return -1;
+    return a.ordem - b.ordem;
+  });
 
   return (
-    <div className="space-y-8">
-      <div className="bg-white p-4 rounded-lg shadow-sm">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="font-medium">Progresso do formulário</h3>
-          <span className="text-sm font-medium">{progress}% completo</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
-          <div 
-            className="bg-primary h-2.5 rounded-full transition-all duration-300 ease-in-out" 
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
-        <div className="mt-2 text-sm text-muted-foreground">
-          {answeredCount} de {totalQuestions} perguntas respondidas
-        </div>
-      </div>
-
-      {sections.map((section) => (
-        <div key={section.id} className="border rounded-lg p-4 bg-white">
-          <FormSection
-            section={section}
-            answers={answers}
-            onAnswerChange={onAnswerChange}
-            onObservationChange={onObservationChange}
-            onOptionsChange={onOptionsChange}
-          />
-        </div>
-      ))}
-
-      <div className="flex justify-center mt-8 sticky bottom-0 bg-background p-4 border-t">
+    <div className="space-y-10">
+      {sortedSections.map(section => {
+        const sectionQuestions = getQuestionsForSection(section.id);
+        
+        if (sectionQuestions.length === 0) return null;
+        
+        return (
+          <div key={section.id} className="bg-white p-6 rounded-lg shadow-sm">
+            <h3 className="text-xl font-bold mb-2 text-primary">
+              {section.titulo}
+            </h3>
+            {section.descricao && (
+              <p className="text-muted-foreground mb-6">
+                {section.descricao}
+              </p>
+            )}
+            
+            <div className="space-y-6">
+              {sectionQuestions
+                .sort((a, b) => (a.ordem_pergunta || 0) - (b.ordem_pergunta || 0))
+                .map((question) => (
+                <QuestionComponent
+                  key={question.id}
+                  question={question}
+                  answer={answers[question.id]?.answer}
+                  observation={answers[question.id]?.observation || ""}
+                  selectedOptions={answers[question.id]?.selectedOptions || []}
+                  onAnswerChange={(answer) => onAnswerChange(question.id, answer)}
+                  onObservationChange={(observation) => onObservationChange(question.id, observation)}
+                  onOptionsChange={(options) => onOptionsChange(question.id, options)}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      
+      <div className="flex justify-end pb-8">
         <Button 
-          onClick={onSaveAndComplete} 
-          disabled={isSubmitting || !allAnswered}
-          className="w-full md:w-auto px-8"
+          onClick={handleSaveClick} 
+          size="lg" 
+          className="w-full md:w-auto"
+          disabled={isSubmitting || hasClicked}
         >
-          {isSubmitting ? "Salvando..." : "Salvar e Concluir"}
+          {isSubmitting ? "Salvando..." : "Concluir Avaliação"}
         </Button>
       </div>
-
-      {!allAnswered && (
-        <Alert variant="destructive" className="mt-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Por favor, responda todas as perguntas antes de concluir o formulário.
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 };

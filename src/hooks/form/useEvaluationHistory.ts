@@ -50,7 +50,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
     }
   };
 
-  // Completely redesigned delete implementation using transaction approach
+  // Modified delete implementation to handle the new two-step process
   const handleDeleteEvaluation = useCallback(async (evaluationId: string) => {
     if (!evaluationId) {
       sonnerToast.error("ID da avaliação não fornecido");
@@ -62,19 +62,9 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
     try {
       console.log(`Iniciando processo de exclusão para avaliação ID: ${evaluationId}`);
       
-      // Execute deletion in order that matches foreign key relationships
-      
-      // 1. Delete related reports first
-      const { error: reportsError } = await supabase
-        .from('relatorios')
-        .delete()
-        .eq('avaliacao_id', evaluationId);
-      
-      if (reportsError) {
-        console.error("Erro ao excluir relatórios:", reportsError);
-      }
-
-      // 2. Delete responses - responses_opcoes will be deleted via FK cascade
+      // Step 1 is implied to have happened already in the UI
+      // The user confirmed to delete questions, so we'll delete responses first
+      // 1. Delete responses - responses_opcoes will be deleted via FK cascade
       const { error: responsesError } = await supabase
         .from('respostas')
         .delete()
@@ -83,6 +73,20 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
       if (responsesError) {
         console.error("Erro ao excluir respostas:", responsesError);
         throw new Error(`Erro ao excluir respostas: ${responsesError.message}`);
+      }
+      
+      console.log("Respostas excluídas com sucesso");
+      
+      // Step 2: Delete related reports
+      // This happens only if user confirmed step 2 in the UI
+      const { error: reportsError } = await supabase
+        .from('relatorios')
+        .delete()
+        .eq('avaliacao_id', evaluationId);
+      
+      if (reportsError) {
+        console.error("Erro ao excluir relatórios:", reportsError);
+        // Continue even if reports deletion fails
       }
       
       // 3. Finally, delete the evaluation

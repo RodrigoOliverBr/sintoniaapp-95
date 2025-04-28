@@ -118,14 +118,14 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   // Get employee name safely
   const getEmployeeName = () => {
     if (!selectedEmployee) return "Funcionário não selecionado";
-    // Use the property name that is actually defined in the Employee type
+    // Use the property that is actually defined in the Employee type
     return selectedEmployee.nome || "Funcionário";
   };
   
   // Get employee role safely
   const getEmployeeRole = () => {
     if (!selectedEmployee) return "Não especificado";
-    // Check if the cargo_id exists (this is the property in the actual Employee type)
+    // Safely check cargo_id property 
     return selectedEmployee.cargo_id ? "Especificado" : "Não especificado";
   };
 

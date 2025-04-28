@@ -38,9 +38,20 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
 }) => {
   const [evaluationToDelete, setEvaluationToDelete] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isConfirmQuestionsOpen, setIsConfirmQuestionsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<'questions' | 'evaluation' | null>(null);
   const { toast } = useToast();
 
+  // Step 1: Ask about deleting questions
+  const handleConfirmDeleteQuestions = async () => {
+    setIsConfirmQuestionsOpen(false);
+    // Proceed to show evaluation deletion confirmation
+    setDeleteMode('evaluation');
+    setIsConfirmOpen(true);
+  };
+  
+  // Step 2: If confirmed to delete questions, now ask about deleting the evaluation
   const handleConfirmDelete = async () => {
     if (!evaluationToDelete) return;
     
@@ -49,6 +60,7 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
       await onDeleteEvaluation(evaluationToDelete);
       setIsConfirmOpen(false);
       setEvaluationToDelete(null);
+      setDeleteMode(null);
     } catch (error) {
       console.error("Error deleting evaluation:", error);
       toast({
@@ -63,7 +75,23 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
 
   const handleDelete = (evaluationId: string) => {
     setEvaluationToDelete(evaluationId);
-    setIsConfirmOpen(true);
+    // First ask about deleting questions
+    setDeleteMode('questions');
+    setIsConfirmQuestionsOpen(true);
+  };
+
+  // Handle canceling the question deletion process
+  const handleCancelQuestions = () => {
+    setIsConfirmQuestionsOpen(false);
+    setEvaluationToDelete(null);
+    setDeleteMode(null);
+  };
+
+  // Handle canceling the evaluation deletion process
+  const handleCancelEvaluation = () => {
+    setIsConfirmOpen(false);
+    setEvaluationToDelete(null);
+    setDeleteMode(null);
   };
 
   // Sort evaluations by date, most recent first
@@ -179,16 +207,43 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
         </div>
       )}
 
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+      {/* First confirmation dialog: Ask about deleting questions */}
+      <AlertDialog open={isConfirmQuestionsOpen} onOpenChange={setIsConfirmQuestionsOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogTitle>Excluir as respostas?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.
+              Você deseja excluir todas as 20 questões respondidas nesta avaliação? 
+              Isso não excluirá a avaliação em si, apenas limpará as respostas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleCancelQuestions} disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDeleteQuestions}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={isDeleting}
+            >
+              Sim, excluir respostas
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Second confirmation dialog: Ask about deleting the evaluation */}
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir avaliação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Agora, você deseja excluir a avaliação também? Se responder não, 
+              as perguntas estarão disponíveis para preenchimento novamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelEvaluation} disabled={isDeleting}>
+              Não, manter avaliação
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleConfirmDelete}
               className={`bg-red-600 hover:bg-red-700 text-white ${isDeleting ? 'opacity-80 cursor-not-allowed' : ''}`}
@@ -199,7 +254,7 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Excluindo...
                 </>
-              ) : "Excluir"}
+              ) : "Sim, excluir avaliação"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
