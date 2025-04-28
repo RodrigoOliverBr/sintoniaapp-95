@@ -67,7 +67,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
         console.log("Exclusão no banco de dados bem-sucedida, atualizando estado local");
         
         // Remover a avaliação do estado local
-        setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
+        setEvaluationHistory(prevEvaluations => prevEvaluations.filter(evaluation => evaluation.id !== evaluationId));
         
         // Limpar a avaliação selecionada se for a mesma que foi excluída
         if (selectedEvaluation?.id === evaluationId) {
@@ -81,7 +81,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
         });
         
         // Verificar se precisamos desativar a visualização de histórico
-        const remainingEvaluations = evaluationHistory.filter(eval => eval.id !== evaluationId);
+        const remainingEvaluations = evaluationHistory.filter(evaluation => evaluation.id !== evaluationId);
         if (remainingEvaluations.length === 0) {
           setShowingHistoryView(false);
         }
