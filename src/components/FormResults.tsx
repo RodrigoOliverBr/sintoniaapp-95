@@ -7,11 +7,14 @@ import { ResultsActions } from "./results/ResultsActions";
 import { AnswersChart } from "./charts/AnswersChart";
 import { SeverityChart } from "./charts/SeverityChart";
 import { RiskIndicator } from "./results/RiskIndicator";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface FormResultsProps {
   result: FormResult;
   questions?: Question[];
   onNotesChange: (notes: string) => void;
+  isReadOnly?: boolean;
 }
 
 function calculateSeverityCounts(result: FormResult, questions: Question[] = []): { light: number; medium: number; high: number } {
@@ -45,7 +48,7 @@ function calculateSeverityCounts(result: FormResult, questions: Question[] = [])
   return counts;
 }
 
-const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNotesChange }) => {
+const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNotesChange, isReadOnly = false }) => {
   const totalYes = result.total_sim || 0;
   const totalNo = result.total_nao || 0;
   const severityCounts = calculateSeverityCounts(result, questions);
@@ -57,6 +60,15 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   return (
     <div className="space-y-6 print:pt-0">
       <ResultsActions onPrint={handlePrint} />
+
+      {isReadOnly && (
+        <Alert variant="info" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Você está visualizando os resultados em modo somente leitura. Para fazer alterações, use o botão "Editar" ou clique em "Sair" para retornar ao formulário.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -97,6 +109,8 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
             className="min-h-[200px]"
             value={result.notas_analista || result.analyistNotes || ''}
             onChange={(e) => onNotesChange(e.target.value)}
+            readOnly={isReadOnly}
+            disabled={isReadOnly}
           />
         </CardContent>
       </Card>

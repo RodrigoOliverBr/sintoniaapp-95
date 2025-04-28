@@ -9,6 +9,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
   const [evaluationHistory, setEvaluationHistory] = useState<FormResult[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showingHistoryView, setShowingHistoryView] = useState(false);
+  const [isDeletingEvaluation, setIsDeletingEvaluation] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -30,7 +31,15 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
       console.log(`Histórico carregado: ${history.length} avaliações`);
       
       setEvaluationHistory(history);
-      setShowingHistoryView(history.length > 0);
+      
+      // Atualiza a visualização de histórico com base nos resultados
+      if (history.length > 0) {
+        console.log("Ativando visualização de histórico");
+        setShowingHistoryView(true);
+      } else {
+        console.log("Desativando visualização de histórico - sem avaliações");
+        setShowingHistoryView(false);
+      }
       
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
@@ -46,7 +55,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
 
   const handleDeleteEvaluation = async (evaluationId: string) => {
     try {
-      setIsLoadingHistory(true);
+      setIsDeletingEvaluation(true);
       console.log(`Iniciando exclusão da avaliação: ${evaluationId}`);
       
       const deleteSuccess = await deleteFormEvaluation(evaluationId);
@@ -59,6 +68,12 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
           const updatedEvaluations = prevEvaluations.filter(
             evaluation => evaluation.id !== evaluationId
           );
+          
+          // Se não houver mais avaliações, desativar a visualização
+          if (updatedEvaluations.length === 0) {
+            setShowingHistoryView(false);
+          }
+          
           return updatedEvaluations;
         });
         
@@ -78,7 +93,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
         console.error("Falha ao excluir avaliação");
         toast({
           title: "Erro",
-          description: "Não foi possível excluir a avaliação.",
+          description: "Não foi possível excluir a avaliação. Tente novamente mais tarde.",
           variant: "destructive",
         });
       }
@@ -86,11 +101,11 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
       console.error("Erro ao excluir avaliação:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível excluir a avaliação.",
+        description: "Não foi possível excluir a avaliação. Tente novamente mais tarde.",
         variant: "destructive",
       });
     } finally {
-      setIsLoadingHistory(false);
+      setIsDeletingEvaluation(false);
     }
   };
 
@@ -103,6 +118,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
     showingHistoryView,
     setShowingHistoryView,
     loadEmployeeHistory,
-    handleDeleteEvaluation
+    handleDeleteEvaluation,
+    isDeletingEvaluation
   };
 }

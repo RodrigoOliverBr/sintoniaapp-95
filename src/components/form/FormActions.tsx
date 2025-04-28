@@ -1,18 +1,19 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Check, ArrowRight, ClipboardCheck } from "lucide-react";
+import { Check, ArrowRight, ClipboardCheck, DoorOpen } from "lucide-react";
 
 interface FormActionsProps {
   showResults: boolean;
   formComplete: boolean;
   isSubmitting: boolean;
   isLastSection: boolean;
-  showingHistory: boolean; // New prop to determine if we're showing the history view
+  showingHistory: boolean;
   onNewEvaluation: () => void;
   onShowResults: () => void;
   onCompleteForm: () => void;
   onSaveForm: () => void;
+  onExitResults?: () => void;
 }
 
 const FormActions: React.FC<FormActionsProps> = ({
@@ -20,23 +21,36 @@ const FormActions: React.FC<FormActionsProps> = ({
   formComplete,
   isSubmitting,
   isLastSection,
-  showingHistory, // New prop
+  showingHistory,
   onNewEvaluation,
   onShowResults,
   onCompleteForm,
   onSaveForm,
+  onExitResults
 }) => {
   return (
     <div className="flex justify-end p-6 bg-muted/40 border-t">
       {showResults ? (
-        <Button 
-          onClick={onNewEvaluation}
-          variant="outline"
-          className="w-full sm:w-auto mr-2"
-        >
-          <ClipboardCheck className="h-4 w-4 mr-2" />
-          Nova Avaliação
-        </Button>
+        <div className="flex w-full justify-end gap-2">
+          <Button 
+            onClick={onNewEvaluation}
+            variant="outline"
+            className="sm:w-auto"
+          >
+            <ClipboardCheck className="h-4 w-4 mr-2" />
+            Nova Avaliação
+          </Button>
+          
+          {onExitResults && (
+            <Button 
+              onClick={onExitResults}
+              className="sm:w-auto"
+            >
+              <DoorOpen className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
+          )}
+        </div>
       ) : formComplete ? (
         <Button 
           onClick={onShowResults}

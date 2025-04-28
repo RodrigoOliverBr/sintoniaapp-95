@@ -1,8 +1,9 @@
+
 import React from "react";
 import FormContent from "@/components/form/FormContent";
 import EmployeeFormHistory from "@/components/form/EmployeeFormHistory";
 import FormActions from "@/components/form/FormActions";
-import { Employee, Form } from "@/types/cadastro";
+import { Employee } from "@/types/cadastro";
 import { FormResult, Question } from "@/types/form";
 
 interface FormContentSectionProps {
@@ -26,12 +27,14 @@ interface FormContentSectionProps {
   formComplete: boolean;
   isSubmitting: boolean;
   isLastSection: boolean;
+  isDeletingEvaluation?: boolean;
   onNewEvaluation: () => void;
   onShowResults: () => void;
   onCompleteForm: () => void;
   onSaveForm: () => void;
   onDeleteEvaluation: (evaluationId: string) => Promise<void>;
   onEditEvaluation?: (evaluation: FormResult) => void;
+  onExitResults?: () => void;
 }
 
 const FormContentSection: React.FC<FormContentSectionProps> = ({
@@ -55,24 +58,27 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   formComplete,
   isSubmitting,
   isLastSection,
+  isDeletingEvaluation,
   onNewEvaluation,
   onShowResults,
   onCompleteForm,
   onSaveForm,
   onDeleteEvaluation,
-  onEditEvaluation
+  onEditEvaluation,
+  onExitResults
 }) => {
   if (!showResults && showingHistoryView) {
     return (
       <EmployeeFormHistory
         evaluations={evaluationHistory}
         onShowResults={(evaluation) => {
-          onEditEvaluation(evaluation);
+          if (onEditEvaluation) onEditEvaluation(evaluation);
           onShowResults();
         }}
         onNewEvaluation={onNewEvaluation}
         onDeleteEvaluation={onDeleteEvaluation}
         onEditEvaluation={onEditEvaluation}
+        isDeletingEvaluation={isDeletingEvaluation}
       />
     );
   }
@@ -95,6 +101,7 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
         questions={questions}
         onNotesChange={onNotesChange}
         onSectionChange={onSectionChange}
+        isReadOnly={showResults && formComplete}
       />
       
       {selectedFormId && (
@@ -108,6 +115,7 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
           onShowResults={onShowResults}
           onCompleteForm={onCompleteForm}
           onSaveForm={onSaveForm}
+          onExitResults={onExitResults}
         />
       )}
     </>

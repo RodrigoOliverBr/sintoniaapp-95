@@ -54,7 +54,8 @@ export function useFormData() {
     showingHistoryView,
     setShowingHistoryView,
     loadEmployeeHistory,
-    handleDeleteEvaluation
+    handleDeleteEvaluation,
+    isDeletingEvaluation
   } = useEvaluationHistory(selectedEmployeeId);
 
   return {
@@ -100,6 +101,7 @@ export function useFormData() {
     showingHistoryView,
     setShowingHistoryView,
     loadEmployeeHistory,
-    handleDeleteEvaluation
+    handleDeleteEvaluation,
+    isDeletingEvaluation
   };
 }

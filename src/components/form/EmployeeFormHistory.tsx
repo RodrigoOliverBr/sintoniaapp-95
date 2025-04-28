@@ -4,10 +4,12 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, ClipboardCheck, Edit, Trash2 } from "lucide-react";
+import { FileText, ClipboardCheck, Edit, Trash2, Loader2 } from "lucide-react";
 import { FormResult } from "@/types/form";
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -15,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 interface EmployeeFormHistoryProps {
   evaluations: FormResult[];
@@ -22,6 +25,7 @@ interface EmployeeFormHistoryProps {
   onNewEvaluation: () => void;
   onDeleteEvaluation?: (evaluationId: string) => Promise<void>;
   onEditEvaluation?: (evaluation: FormResult) => void;
+  isDeletingEvaluation?: boolean;
 }
 
 const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
@@ -30,10 +34,12 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   onNewEvaluation,
   onDeleteEvaluation,
   onEditEvaluation,
+  isDeletingEvaluation = false
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [evaluationToDelete, setEvaluationToDelete] = useState<FormResult | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState(0);
   const { toast } = useToast();
 
   const handleDelete = (evaluation: FormResult) => {
@@ -47,12 +53,23 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
         setIsDeleting(true);
         console.log("Deletando avaliação:", evaluationToDelete.id);
         
+        // Simulação de progresso de exclusão
+        setDeleteProgress(25);
+        setTimeout(() => setDeleteProgress(50), 500);
+        setTimeout(() => setDeleteProgress(75), 1000);
+        
         // Chamar a função de deleção do componente pai
         await onDeleteEvaluation(evaluationToDelete.id);
         
+        // Completar o progresso
+        setDeleteProgress(100);
+        
         // Fechar o diálogo após a exclusão
-        setShowDeleteDialog(false);
-        setEvaluationToDelete(null);
+        setTimeout(() => {
+          setShowDeleteDialog(false);
+          setEvaluationToDelete(null);
+          setDeleteProgress(0);
+        }, 500);
       } catch (error) {
         console.error("Erro ao excluir avaliação:", error);
         toast({
@@ -60,6 +77,7 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
           description: "Falha ao excluir a avaliação. Tente novamente.",
           variant: "destructive",
         });
+        setDeleteProgress(0);
       } finally {
         setIsDeleting(false);
       }
@@ -112,6 +130,7 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
                         variant="outline" 
                         size="sm"
                         onClick={() => onEditEvaluation(evaluation)}
+                        disabled={isDeletingEvaluation}
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Editar
@@ -121,6 +140,7 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
                       variant="outline" 
                       size="sm"
                       onClick={() => handleDelete(evaluation)}
+                      disabled={isDeletingEvaluation}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Excluir
@@ -128,6 +148,7 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
                     <Button
                       onClick={() => onShowResults(evaluation)}
                       size="sm"
+                      disabled={isDeletingEvaluation}
                     >
                       <FileText className="h-4 w-4 mr-2" />
                       Ver Resultados
@@ -139,7 +160,7 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
           })}
         </div>
         <div className="flex justify-end mt-6">
-          <Button onClick={onNewEvaluation} variant="outline">
+          <Button onClick={onNewEvaluation} variant="outline" disabled={isDeletingEvaluation}>
             <ClipboardCheck className="h-4 w-4 mr-2" />
             Nova Avaliação
           </Button>
@@ -154,21 +175,33 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
               Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          
+          {isDeleting && (
+            <div className="py-2">
+              <p className="text-sm text-center mb-2">Excluindo dados relacionados...</p>
+              <Progress value={deleteProgress} className="h-2" />
+            </div>
+          )}
+          
           <AlertDialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteDialog(false)}
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
               disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Cancelar
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Excluindo..." : "Excluir"}
-            </Button>
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                "Excluir"
+              )}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

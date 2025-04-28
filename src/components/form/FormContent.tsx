@@ -22,6 +22,7 @@ interface FormContentProps {
   questions: any[];
   onNotesChange: (notes: string) => void;
   onSectionChange: (sectionTitle: string) => void;
+  isReadOnly?: boolean;
 }
 
 const FormContent: React.FC<FormContentProps> = ({
@@ -40,6 +41,7 @@ const FormContent: React.FC<FormContentProps> = ({
   questions,
   onNotesChange,
   onSectionChange,
+  isReadOnly = false,
 }) => {
   if (!showResults) {
     return (
@@ -81,6 +83,7 @@ const FormContent: React.FC<FormContentProps> = ({
       result={selectedEvaluation || formResult!}
       questions={questions}
       onNotesChange={onNotesChange}
+      isReadOnly={isReadOnly}
     />
   );
 };

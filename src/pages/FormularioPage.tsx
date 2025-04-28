@@ -37,7 +37,8 @@ const FormularioPage: React.FC = () => {
     showingHistoryView,
     setShowingHistoryView,
     loadEmployeeHistory,
-    handleDeleteEvaluation
+    handleDeleteEvaluation,
+    isDeletingEvaluation
   } = useFormData();
 
   const { isSubmitting, handleSaveForm } = useFormSubmission();
@@ -77,6 +78,15 @@ const FormularioPage: React.FC = () => {
       setCurrentSection(formSections[0].title);
     }
   };
+  
+  const handleExitResults = () => {
+    if (selectedEmployeeId) {
+      // Recarregar o histórico do funcionário
+      loadEmployeeHistory();
+    }
+    setShowResults(false);
+    setFormComplete(false);
+  };
 
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
   const selectedFormTitle = availableForms.find(f => f.id === selectedFormId)?.titulo || "Formulário";
@@ -98,6 +108,8 @@ const FormularioPage: React.FC = () => {
           setShowResults(true);
           setFormComplete(true);
           setSelectedEvaluation(updatedResult);
+          // Após completar o formulário, também recarregamos o histórico
+          loadEmployeeHistory();
         },
         moveToNextSection: () => {
           const currentIndex = formSections.findIndex(s => s.title === currentSection);
@@ -203,6 +215,7 @@ const FormularioPage: React.FC = () => {
             formComplete={formComplete}
             isSubmitting={isSubmitting}
             isLastSection={isLastSection}
+            isDeletingEvaluation={isDeletingEvaluation}
             onNewEvaluation={handleNewEvaluation}
             onShowResults={() => setShowResults(true)}
             onCompleteForm={handleSaveAndComplete}
@@ -217,6 +230,7 @@ const FormularioPage: React.FC = () => {
               }
               setShowingHistoryView(false);
             }}
+            onExitResults={handleExitResults}
           />
         )}
       </div>
