@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { Company, Employee } from "@/types/cadastro";
 import {
@@ -48,8 +49,8 @@ export const useEmployees = () => {
       
       const roleIds = Array.isArray(employeesData) 
         ? employeesData
-            .filter(emp => emp && emp.roleId)
-            .map(emp => emp.roleId as string)
+            .filter(emp => emp && emp.role)
+            .map(emp => emp.role as string)
         : [];
       
       const uniqueRoleIds = [...new Set(roleIds)];

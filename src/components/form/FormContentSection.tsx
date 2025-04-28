@@ -101,6 +101,7 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
         questions={questions}
         onNotesChange={onNotesChange}
         onSectionChange={onSectionChange}
+        onExitResults={onExitResults}
         isReadOnly={showResults && formComplete}
       />
       

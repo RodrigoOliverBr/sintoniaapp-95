@@ -35,6 +35,20 @@ export function useFormSubmission() {
       return;
     }
 
+    // Validate that all questions have been answered
+    const unansweredQuestions = Object.values(answers).filter(
+      answer => answer.answer === null || answer.answer === undefined
+    );
+
+    if (unansweredQuestions.length > 0) {
+      toast({
+        title: "Atenção",
+        description: "Por favor, responda todas as perguntas antes de prosseguir",
+        variant: "warning",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -83,6 +97,7 @@ export function useFormSubmission() {
       await saveFormResult(formResultData);
       
       console.log('Formulário salvo com sucesso');
+      sonnerToast.success("Formulário salvo com sucesso!");
       
       const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId, selectedFormId);
       

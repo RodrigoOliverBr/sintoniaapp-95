@@ -13,10 +13,14 @@ export const getEmployees = async (): Promise<Employee[]> => {
     return {
       id: employee.id,
       name: employee.nome,
+      email: employee.email || '',
       cpf: employee.cpf || '',
-      roleId: employee.cargo_id || '',
-      companyId: employee.empresa_id,
-      departmentIds: [] // Will be populated separately
+      role: employee.cargo_id || '',
+      department_id: employee.department_id || '',
+      company_id: employee.empresa_id,
+      created_at: employee.created_at,
+      updated_at: employee.updated_at,
+      status: employee.status || 'active'
     };
   });
 };
@@ -33,10 +37,14 @@ export const getEmployeesByCompany = async (companyId: string): Promise<Employee
     return {
       id: employee.id,
       name: employee.nome,
+      email: employee.email || '',
       cpf: employee.cpf || '',
-      roleId: employee.cargo_id || '',
-      companyId: employee.empresa_id,
-      departmentIds: [] // Will be populated separately
+      role: employee.cargo_id || '',
+      department_id: employee.department_id || '',
+      company_id: employee.empresa_id,
+      created_at: employee.created_at,
+      updated_at: employee.updated_at,
+      status: employee.status || 'active'
     };
   });
 };
@@ -45,8 +53,9 @@ export const addEmployee = async (employeeData: Partial<Employee>): Promise<Empl
   const dbData = {
     nome: employeeData.name,
     cpf: employeeData.cpf,
-    cargo_id: employeeData.roleId,
-    empresa_id: employeeData.companyId
+    cargo_id: employeeData.role,
+    empresa_id: employeeData.company_id,
+    email: employeeData.email || ''
   };
 
   const { data, error } = await supabase
@@ -60,10 +69,14 @@ export const addEmployee = async (employeeData: Partial<Employee>): Promise<Empl
   return {
     id: data.id,
     name: data.nome,
+    email: data.email || '',
     cpf: data.cpf || '',
-    roleId: data.cargo_id || '',
-    companyId: data.empresa_id,
-    departmentIds: employeeData.departmentIds || []
+    role: data.cargo_id || '',
+    department_id: data.department_id || '',
+    company_id: data.empresa_id,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    status: data.status || 'active'
   };
 };
 
@@ -72,8 +85,9 @@ export const updateEmployee = async (employeeId: string, employeeData: Partial<E
   
   if (employeeData.name) dbData.nome = employeeData.name;
   if (employeeData.cpf) dbData.cpf = employeeData.cpf;
-  if (employeeData.roleId) dbData.cargo_id = employeeData.roleId;
-  if (employeeData.companyId) dbData.empresa_id = employeeData.companyId;
+  if (employeeData.role) dbData.cargo_id = employeeData.role;
+  if (employeeData.company_id) dbData.empresa_id = employeeData.company_id;
+  if (employeeData.email) dbData.email = employeeData.email;
 
   const { data, error } = await supabase
     .from('funcionarios')
@@ -87,10 +101,14 @@ export const updateEmployee = async (employeeId: string, employeeData: Partial<E
   return {
     id: data.id,
     name: data.nome,
+    email: data.email || '',
     cpf: data.cpf || '',
-    roleId: data.cargo_id || '',
-    companyId: data.empresa_id,
-    departmentIds: employeeData.departmentIds || []
+    role: data.cargo_id || '',
+    department_id: data.department_id || '',
+    company_id: data.empresa_id,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    status: data.status || 'active'
   };
 };
 

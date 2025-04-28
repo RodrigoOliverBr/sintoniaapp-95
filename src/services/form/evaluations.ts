@@ -205,7 +205,6 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
     // Start a transaction for consistency
     let avaliacaoId = id;
     
-    // Begin transaction
     if (!avaliacaoId || avaliacaoId.trim() === '') {
       console.log('Creating new evaluation');
       // For INSERT operation, do not try to include formulario_id if it's not in the table schema
@@ -253,8 +252,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
         throw updateError;
       }
       
-      // Instead of deleting and re-inserting all responses, we'll update existing ones
-      // and only insert new ones
+      // First delete all existing responses for this evaluation to prevent duplicates
       console.log('Clearing previous responses');
       const { error: deleteError } = await supabase
         .from('respostas')
@@ -285,40 +283,6 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
       if (respostasError) {
         console.error('Erro ao salvar respostas:', respostasError);
         throw respostasError;
-      }
-    }
-
-    // Save options for responses
-    for (const [perguntaId, resposta] of Object.entries(answers)) {
-      if (resposta.selectedOptions && resposta.selectedOptions.length > 0) {
-        const { data: perguntaOpcoes } = await supabase
-          .from('pergunta_opcoes')
-          .select('id, texto')
-          .eq('pergunta_id', perguntaId);
-
-        if (perguntaOpcoes && perguntaOpcoes.length > 0) {
-          const opcoesRespostas = [];
-          for (const opcaoTexto of resposta.selectedOptions) {
-            const opcao = perguntaOpcoes.find(o => o.texto === opcaoTexto);
-            if (opcao) {
-              opcoesRespostas.push({
-                resposta_id: avaliacaoId,
-                opcao_id: opcao.id,
-                texto_outro: opcaoTexto === 'Outro' ? resposta.otherText : null
-              });
-            }
-          }
-
-          if (opcoesRespostas.length > 0) {
-            const { error: opcoesError } = await supabase
-              .from('resposta_opcoes')
-              .insert(opcoesRespostas);
-
-            if (opcoesError) {
-              console.error('Erro ao salvar opções de resposta:', opcoesError);
-            }
-          }
-        }
       }
     }
 

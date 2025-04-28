@@ -12,7 +12,9 @@ export const getJobRoles = async (): Promise<JobRole[]> => {
   return (data || []).map(role => ({
     id: role.id,
     name: role.nome,
-    companyId: role.empresa_id
+    company_id: role.empresa_id,
+    created_at: role.created_at,
+    updated_at: role.updated_at
   }));
 };
 
@@ -27,16 +29,18 @@ export const getJobRolesByCompany = async (companyId: string): Promise<JobRole[]
   return (data || []).map(role => ({
     id: role.id,
     name: role.nome,
-    companyId: role.empresa_id
+    company_id: role.empresa_id,
+    created_at: role.created_at,
+    updated_at: role.updated_at
   }));
 };
 
-export const getJobRoleById = async (jobRoleId: string): Promise<JobRole | null> => {
+export const getJobRoleById = async (roleId: string): Promise<JobRole | null> => {
   const { data, error } = await supabase
     .from('cargos')
     .select('*')
-    .eq('id', jobRoleId)
-    .single();
+    .eq('id', roleId)
+    .maybeSingle();
 
   if (error) throw error;
   
@@ -45,19 +49,19 @@ export const getJobRoleById = async (jobRoleId: string): Promise<JobRole | null>
   return {
     id: data.id,
     name: data.nome,
-    companyId: data.empresa_id
+    company_id: data.empresa_id,
+    created_at: data.created_at,
+    updated_at: data.updated_at
   };
 };
 
-export const addJobRole = async (companyId: string, roleData: Partial<JobRole>): Promise<JobRole> => {
-  const dbData = {
-    nome: roleData.name,
-    empresa_id: companyId
-  };
-
+export const addJobRole = async (roleData: Partial<JobRole>): Promise<JobRole> => {
   const { data, error } = await supabase
     .from('cargos')
-    .insert(dbData)
+    .insert({
+      nome: roleData.name,
+      empresa_id: roleData.company_id
+    })
     .select()
     .single();
 
@@ -66,6 +70,39 @@ export const addJobRole = async (companyId: string, roleData: Partial<JobRole>):
   return {
     id: data.id,
     name: data.nome,
-    companyId: data.empresa_id
+    company_id: data.empresa_id,
+    created_at: data.created_at,
+    updated_at: data.updated_at
   };
+};
+
+export const updateJobRole = async (roleId: string, roleData: Partial<JobRole>): Promise<JobRole> => {
+  const { data, error } = await supabase
+    .from('cargos')
+    .update({
+      nome: roleData.name,
+      empresa_id: roleData.company_id
+    })
+    .eq('id', roleId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  
+  return {
+    id: data.id,
+    name: data.nome,
+    company_id: data.empresa_id,
+    created_at: data.created_at,
+    updated_at: data.updated_at
+  };
+};
+
+export const deleteJobRole = async (roleId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('cargos')
+    .delete()
+    .eq('id', roleId);
+
+  if (error) throw error;
 };

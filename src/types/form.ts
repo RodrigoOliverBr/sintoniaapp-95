@@ -1,3 +1,4 @@
+
 export interface Question {
   id: string;
   texto: string;
@@ -9,6 +10,7 @@ export interface Question {
   observacao_obrigatoria?: boolean;
   risco?: Risk;
   pergunta_opcoes?: QuestionOption[];
+  secao?: Section; // Add reference to section for compatibility
 }
 
 export interface Section {
@@ -91,9 +93,9 @@ export interface SeverityLevel {
 }
 
 export interface FormData {
-  title: string;
   sections: {
     title: string;
+    description?: string;
     questions: {
       id: string;
       text: string;
@@ -101,14 +103,4 @@ export interface FormData {
       options?: { label: string; value: string; }[];
     }[];
   }[];
-}
-
-export interface Form {
-  id: string;
-  titulo: string;
-  descricao?: string;
-  version?: string;
-  ativo?: boolean;
-  created_at: string;
-  updated_at: string;
 }

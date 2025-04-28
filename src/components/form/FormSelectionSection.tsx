@@ -1,7 +1,9 @@
+
 import React from "react";
 import FormSelector from "@/components/form/FormSelector";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Form, Employee, Company } from "@/types/cadastro";
+import { Company, Employee } from "@/types/cadastro";
+import { Form } from "@/types/form";
 
 interface FormSelectionSectionProps {
   companies: Company[];

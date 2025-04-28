@@ -5,6 +5,8 @@ import FormResults from "@/components/FormResults";
 import ProgressHeader from "@/components/form/ProgressHeader";
 import FormNavigation from "@/components/form/FormNavigation";
 import { FormResult } from "@/types/form";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 interface FormContentProps {
   showResults: boolean;
@@ -22,6 +24,7 @@ interface FormContentProps {
   questions: any[];
   onNotesChange: (notes: string) => void;
   onSectionChange: (sectionTitle: string) => void;
+  onExitResults?: () => void;
   isReadOnly?: boolean;
 }
 
@@ -41,6 +44,7 @@ const FormContent: React.FC<FormContentProps> = ({
   questions,
   onNotesChange,
   onSectionChange,
+  onExitResults,
   isReadOnly = false,
 }) => {
   if (!showResults) {
@@ -79,12 +83,27 @@ const FormContent: React.FC<FormContentProps> = ({
   }
 
   return (
-    <FormResults 
-      result={selectedEvaluation || formResult!}
-      questions={questions}
-      onNotesChange={onNotesChange}
-      isReadOnly={isReadOnly || showingHistoryView} // Make fields read-only when viewing history
-    />
+    <div className="space-y-4">
+      {onExitResults && (
+        <div className="flex justify-between items-center mb-4">
+          <Button 
+            variant="outline" 
+            onClick={onExitResults}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft size={16} />
+            Voltar ao formulário
+          </Button>
+        </div>
+      )}
+      
+      <FormResults 
+        result={selectedEvaluation || formResult!}
+        questions={questions}
+        onNotesChange={onNotesChange}
+        isReadOnly={isReadOnly || showingHistoryView} // Make fields read-only when viewing history
+      />
+    </div>
   );
 };
 
