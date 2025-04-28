@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormResult } from "@/types/form";
@@ -16,8 +16,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 interface EmployeeFormHistoryProps {
   evaluations: FormResult[];
@@ -34,30 +34,30 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   onNewEvaluation,
   onDeleteEvaluation,
   onEditEvaluation,
-  isDeletingEvaluation
+  isDeletingEvaluation = false
 }) => {
   const [evaluationToDelete, setEvaluationToDelete] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const handleConfirmDelete = async () => {
-    if (evaluationToDelete) {
-      try {
-        await onDeleteEvaluation(evaluationToDelete);
-        toast({
-          title: "Avaliação excluída",
-          description: "A avaliação foi excluída com sucesso",
-        });
-        setIsConfirmOpen(false);
-        setEvaluationToDelete(null);
-      } catch (error) {
-        console.error("Error deleting evaluation:", error);
-        toast({
-          title: "Erro ao excluir",
-          description: "Não foi possível excluir a avaliação",
-          variant: "destructive"
-        });
-      }
+    if (!evaluationToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      await onDeleteEvaluation(evaluationToDelete);
+      setIsConfirmOpen(false);
+      setEvaluationToDelete(null);
+    } catch (error) {
+      console.error("Error deleting evaluation:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a avaliação",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -105,6 +105,8 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
               ? format(new Date(evaluation.created_at), "HH:mm", { locale: ptBR })
               : "";
 
+            const isCurrentlyDeleting = isDeleting && evaluationToDelete === evaluation.id;
+
             return (
               <Card key={evaluation.id} className="overflow-hidden">
                 <CardHeader className="bg-muted/40 py-3">
@@ -132,20 +134,20 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
                       )}
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
-                      {onEditEvaluation && (
-                        <Button 
-                          onClick={() => onEditEvaluation(evaluation)} 
-                          variant="outline" 
-                          className="w-full sm:w-auto"
-                        >
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Editar
-                        </Button>
-                      )}
+                      <Button 
+                        onClick={() => onEditEvaluation && onEditEvaluation(evaluation)} 
+                        variant="outline" 
+                        className="w-full sm:w-auto"
+                        disabled={isCurrentlyDeleting || isDeletingEvaluation}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
                       <Button 
                         onClick={() => onShowResults(evaluation)}
                         variant="outline"
                         className="w-full sm:w-auto"
+                        disabled={isCurrentlyDeleting || isDeletingEvaluation}
                       >
                         <FileText className="h-4 w-4 mr-2" />
                         Ver Resultados
@@ -154,10 +156,19 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
                         onClick={() => handleDelete(evaluation.id)}
                         variant="outline"
                         className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50"
-                        disabled={isDeletingEvaluation}
+                        disabled={isCurrentlyDeleting || isDeletingEvaluation}
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
+                        {isCurrentlyDeleting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Excluindo...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -177,12 +188,18 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className={`bg-red-600 hover:bg-red-700 text-white ${isDeleting ? 'opacity-80 cursor-not-allowed' : ''}`}
+              disabled={isDeleting}
             >
-              {isDeletingEvaluation ? "Excluindo..." : "Excluir"}
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Excluindo...
+                </>
+              ) : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

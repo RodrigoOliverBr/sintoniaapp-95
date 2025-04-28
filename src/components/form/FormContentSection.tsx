@@ -110,13 +110,13 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   // Get employee name safely
   const getEmployeeName = () => {
     if (!selectedEmployee) return "Funcionário não selecionado";
-    return selectedEmployee.name || selectedEmployee.nome || "Funcionário";
+    return selectedEmployee.nome || "Funcionário";
   };
   
   // Get employee role safely
   const getEmployeeRole = () => {
     if (!selectedEmployee) return "Não especificado";
-    return selectedEmployee.role || (selectedEmployee as any).cargo_id ? "Especificado" : "Não especificado";
+    return selectedEmployee.cargo_id ? "Especificado" : "Não especificado";
   };
 
   return (

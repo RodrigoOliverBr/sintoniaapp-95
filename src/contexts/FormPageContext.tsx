@@ -32,6 +32,8 @@ interface FormPageContextProps {
   setShowResults: React.Dispatch<React.SetStateAction<boolean>>;
   formComplete: boolean;
   setFormComplete: React.Dispatch<React.SetStateAction<boolean>>;
+  showForm: boolean;
+  setShowForm: React.Dispatch<React.SetStateAction<boolean>>;
   
   // History
   selectedEvaluation: FormResult | null;
@@ -55,8 +57,6 @@ interface FormPageContextProps {
   // Form state
   isSubmitting: boolean;
   isNewEvaluation: boolean;
-  showForm: boolean;
-  setShowForm: React.Dispatch<React.SetStateAction<boolean>>;
   
   // Derived data
   selectedEmployee: Employee | undefined;
@@ -71,18 +71,4 @@ export const useFormPageContext = () => {
     throw new Error("useFormPageContext must be used within a FormPageProvider");
   }
   return context;
-};
-
-interface FormPageProviderProps {
-  children: ReactNode;
-}
-
-export const FormPageProvider: React.FC<FormPageProviderProps> = ({ children }) => {
-  // The actual implementation will come from useFormPage hook, this is just the provider component
-  // that receives the values and passes them down in the context
-  return (
-    <FormPageContext.Provider value={{} as FormPageContextProps}>
-      {children}
-    </FormPageContext.Provider>
-  );
 };

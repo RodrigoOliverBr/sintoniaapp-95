@@ -3,6 +3,7 @@ import React from "react";
 import { useFormPageContext } from "@/contexts/FormPageContext";
 import FormSelectionSection from "@/components/form/FormSelectionSection";
 import FormContentSection from "@/components/form/FormContentSection";
+import { Button } from "@/components/ui/button";
 
 const FormPageWrapper: React.FC = () => {
   const {
@@ -46,6 +47,9 @@ const FormPageWrapper: React.FC = () => {
     setSelectedEvaluation,
     setFormResult,
     setAnswers,
+    setShowResults,
+    setShowingHistoryView,
+    setShowForm
   } = useFormPageContext();
 
   return (
@@ -176,7 +180,5 @@ const FormPageWrapper: React.FC = () => {
     </div>
   );
 };
-
-import { Button } from "@/components/ui/button";
 
 export default FormPageWrapper;

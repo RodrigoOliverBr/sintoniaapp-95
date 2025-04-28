@@ -89,12 +89,17 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     }
     
     setSeverityCounts(counts);
-  }, [questions, result.answers]);
+  }, [questions, result.answers, yesQuestions]);
 
   // Format date for display
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Data desconhecida";
-    return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm");
+    try {
+      return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm");
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Data inválida";
+    }
   };
 
   const handlePrint = () => {

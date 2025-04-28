@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { FormResult } from "@/types/form";
 
@@ -248,11 +247,13 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
   }
 }
 
-// Delete an evaluation and its associated data
+// IMPORTANT: This function is now primarily used in the direct implementation
+// in useEvaluationHistory.ts. This is kept for API compatibility.
 export async function deleteFormEvaluation(evaluationId: string): Promise<void> {
   try {
-    console.log(`Starting deletion process for evaluation: ${evaluationId}`);
+    console.log(`Calling deleteFormEvaluation for evaluation: ${evaluationId}`);
     
+    // This function is now a wrapper around the direct database operations
     // First check if the evaluation exists
     const { data: evaluationExists, error: checkError } = await supabase
       .from('avaliacoes')
@@ -283,8 +284,6 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
       throw responsesError;
     }
     
-    console.log('Successfully deleted associated responses');
-    
     // Delete reports linked to this evaluation
     const { error: reportsError } = await supabase
       .from('relatorios')
@@ -293,10 +292,8 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
       
     if (reportsError) {
       console.error('Error deleting reports:', reportsError);
-      throw reportsError;
+      // We continue even if reports deletion fails
     }
-    
-    console.log('Successfully deleted associated reports');
     
     // Finally delete the evaluation itself
     const { error: evaluationError } = await supabase
