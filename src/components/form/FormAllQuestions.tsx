@@ -2,12 +2,12 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import FormSection from "@/components/FormSection";
-import { FormAnswer, Question, Section } from "@/types/form";
+import { FormAnswer, Question } from "@/types/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 interface FormAllQuestionsProps {
-  sections: Section[];
+  sections: any[];
   questions: Question[];
   answers: Record<string, FormAnswer>;
   onAnswerChange: (questionId: string, answer: boolean | null) => void;
@@ -35,16 +35,18 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
   // Check if all questions are answered
   const allAnswered = answeredCount === totalQuestions && totalQuestions > 0;
 
-  // Group questions by section
-  const getSectionQuestions = (sectionId: string) => {
-    return questions.filter(q => q.secao_id === sectionId);
-  };
-
-  const formattedSections = sections.map(section => ({
-    title: section.titulo,
-    description: section.descricao,
-    questions: getSectionQuestions(section.id)
-  }));
+  if (!sections || sections.length === 0 || !questions || questions.length === 0) {
+    return (
+      <div className="bg-white p-8 rounded-lg shadow-sm text-center">
+        <h3 className="text-lg font-medium text-gray-700 mb-2">
+          Nenhuma pergunta encontrada
+        </h3>
+        <p className="text-muted-foreground">
+          Não há perguntas configuradas para este formulário.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -64,8 +66,8 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
         </div>
       </div>
 
-      {formattedSections.map((section) => (
-        section.questions.length > 0 && (
+      {sections.map((section) => (
+        section.questions && section.questions.length > 0 && (
           <div key={section.title} className="border rounded-lg p-4 bg-white">
             <FormSection
               section={section}

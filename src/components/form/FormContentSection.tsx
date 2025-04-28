@@ -4,7 +4,7 @@ import FormAllQuestions from "@/components/form/FormAllQuestions";
 import FormResults from "@/components/FormResults";
 import EmployeeFormHistory from "@/components/form/EmployeeFormHistory";
 import { Employee } from "@/types/cadastro";
-import { FormResult, Question, Section } from "@/types/form";
+import { FormResult, Question } from "@/types/form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -14,7 +14,7 @@ interface FormContentSectionProps {
   showResults: boolean;
   showingHistoryView: boolean;
   selectedFormTitle: string;
-  formSections: Section[];
+  formSections: any[];
   answers: Record<string, any>;
   onAnswerChange: (questionId: string, answer: boolean | null) => void;
   onObservationChange: (questionId: string, observation: string) => void;
@@ -110,23 +110,34 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
           Avaliação para: {selectedEmployee?.name}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Função: {selectedEmployee?.role || "Não especificada"}
+          Função: {selectedEmployee?.role_name || "Não especificada"}
         </p>
         <p className="text-sm text-muted-foreground">
           Formulário: {selectedFormTitle}
         </p>
       </div>
       
-      <FormAllQuestions 
-        sections={formSections}
-        questions={questions}
-        answers={answers}
-        onAnswerChange={onAnswerChange}
-        onObservationChange={onObservationChange}
-        onOptionsChange={onOptionsChange}
-        onSaveAndComplete={onSaveAndComplete}
-        isSubmitting={isSubmitting}
-      />
+      {formSections && formSections.length > 0 ? (
+        <FormAllQuestions 
+          sections={formSections}
+          questions={questions}
+          answers={answers}
+          onAnswerChange={onAnswerChange}
+          onObservationChange={onObservationChange}
+          onOptionsChange={onOptionsChange}
+          onSaveAndComplete={onSaveAndComplete}
+          isSubmitting={isSubmitting}
+        />
+      ) : (
+        <div className="bg-white p-8 rounded-lg shadow-sm text-center">
+          <h3 className="text-lg font-medium text-gray-700 mb-2">
+            Nenhuma pergunta encontrada
+          </h3>
+          <p className="text-muted-foreground">
+            Não há perguntas configuradas para este formulário.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

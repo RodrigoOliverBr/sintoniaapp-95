@@ -1,13 +1,20 @@
 
 import { useState, useEffect } from "react";
-import { Question, Section } from "@/types/form";
+import { Question } from "@/types/form";
 import { getFormQuestions } from "@/services/form";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+type FormSection = {
+  title: string;
+  description?: string;
+  ordem: number;
+  questions: Question[];
+};
+
 export function useFormQuestions(selectedFormId: string) {
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [formSections, setFormSections] = useState<{title: string, description?: string, ordem: number, questions: Question[]}[]>([]);
+  const [formSections, setFormSections] = useState<FormSection[]>([]);
   const [currentSection, setCurrentSection] = useState<string>("");
   const { toast } = useToast();
 
@@ -44,6 +51,7 @@ export function useFormQuestions(selectedFormId: string) {
         title: section.titulo,
         description: section.descricao,
         ordem: section.ordem || 0,
+        id: section.id,
         questions: questionsData.filter(q => q.secao_id === section.id)
       }));
       
