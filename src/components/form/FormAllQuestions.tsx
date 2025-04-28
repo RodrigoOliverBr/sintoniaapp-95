@@ -67,17 +67,15 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
       </div>
 
       {sections.map((section) => (
-        section.questions && section.questions.length > 0 && (
-          <div key={section.title} className="border rounded-lg p-4 bg-white">
-            <FormSection
-              section={section}
-              answers={answers}
-              onAnswerChange={onAnswerChange}
-              onObservationChange={onObservationChange}
-              onOptionsChange={onOptionsChange}
-            />
-          </div>
-        )
+        <div key={section.id || section.title} className="border rounded-lg p-4 bg-white">
+          <FormSection
+            section={section}
+            answers={answers}
+            onAnswerChange={onAnswerChange}
+            onObservationChange={onObservationChange}
+            onOptionsChange={onOptionsChange}
+          />
+        </div>
       ))}
 
       <div className="flex justify-center mt-8 sticky bottom-0 bg-background p-4 border-t">

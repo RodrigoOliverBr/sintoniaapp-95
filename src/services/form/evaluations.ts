@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, FormAnswer } from '@/types/form';
 
@@ -50,7 +49,7 @@ export async function getFormResults(companyId?: string): Promise<any[]> {
 export async function getFormResultByEmployeeId(employeeId: string, formId?: string): Promise<FormResult | null> {
   try {
     // Get the most recent evaluation for this employee
-    const { data: avaliacoes, error } = await supabase
+    let query = supabase
       .from('avaliacoes')
       .select(`
         *,
@@ -62,9 +61,13 @@ export async function getFormResultByEmployeeId(employeeId: string, formId?: str
         )
       `)
       .eq('funcionario_id', employeeId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order('created_at', { ascending: false });
+      
+    if (formId) {
+      query = query.eq('formulario_id', formId);
+    }
+    
+    const { data: avaliacoes, error } = await query.limit(1).maybeSingle();
 
     if (error) {
       console.error('Error fetching form result:', error);
@@ -97,7 +100,7 @@ export async function getFormResultByEmployeeId(employeeId: string, formId?: str
       id: avaliacoes.id,
       employeeId: avaliacoes.funcionario_id,
       empresa_id: avaliacoes.empresa_id,
-      formulario_id: formId || "",
+      formulario_id: avaliacoes.formulario_id || formId || "",
       answers,
       total_sim: avaliacoes.total_sim || 0,
       total_nao: avaliacoes.total_nao || 0,
@@ -190,7 +193,6 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
   }
 }
 
-// Create report entry in the database
 async function createReportForEvaluation(evaluationId: string, companyId: string): Promise<void> {
   try {
     console.log(`Creating report for evaluation ${evaluationId}`);
@@ -220,6 +222,8 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
   const { employeeId, answers, total_sim, total_nao, is_complete, empresa_id, formulario_id, id, notas_analista } = formData;
 
   console.log('Iniciando processo de salvamento do formulário');
+  console.log('Form ID:', formulario_id);
+  console.log('Respostas:', Object.keys(answers).length);
   
   try {
     let avaliacaoId = id;
@@ -313,7 +317,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
     }
 
     // First delete all existing responses for this evaluation to prevent duplicates
-    console.log('Clearing previous responses');
+    console.log('Clearing previous responses for evaluation:', avaliacaoId);
     const { error: deleteError } = await supabase
       .from('respostas')
       .delete()
@@ -335,13 +339,20 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
 
     console.log(`Inserting ${respostasToInsert.length} responses`);
     if (respostasToInsert.length > 0) {
-      const { error: respostasError } = await supabase
-        .from('respostas')
-        .insert(respostasToInsert);
+      // Insert in smaller batches to avoid any payload size issues
+      const batchSize = 50;
+      for (let i = 0; i < respostasToInsert.length; i += batchSize) {
+        const batch = respostasToInsert.slice(i, i + batchSize);
+        console.log(`Inserting batch ${i / batchSize + 1} with ${batch.length} responses`);
+        
+        const { error: respostasError } = await supabase
+          .from('respostas')
+          .insert(batch);
 
-      if (respostasError) {
-        console.error('Error saving responses:', respostasError);
-        throw respostasError;
+        if (respostasError) {
+          console.error('Error saving responses batch:', respostasError);
+          throw respostasError;
+        }
       }
     }
 

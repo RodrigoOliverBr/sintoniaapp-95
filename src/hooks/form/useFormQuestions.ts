@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 type FormSection = {
+  id: string;
   title: string;
   description?: string;
   ordem: number;
@@ -21,6 +22,11 @@ export function useFormQuestions(selectedFormId: string) {
   useEffect(() => {
     if (selectedFormId) {
       loadFormQuestions();
+    } else {
+      // Clear data if no form is selected
+      setQuestions([]);
+      setFormSections([]);
+      setCurrentSection("");
     }
   }, [selectedFormId]);
 
@@ -40,7 +46,7 @@ export function useFormQuestions(selectedFormId: string) {
       
       if (sectionsError) throw sectionsError;
       
-      console.log('Fetched sections:', sectionsData.length, sectionsData);
+      console.log('Fetched sections:', sectionsData.length);
       
       const questionsData = await getFormQuestions(selectedFormId);
       setQuestions(questionsData);
@@ -48,15 +54,15 @@ export function useFormQuestions(selectedFormId: string) {
       console.log('Fetched questions:', questionsData.length);
       
       const sectionGroups = sectionsData.map(section => ({
+        id: section.id,
         title: section.titulo,
         description: section.descricao,
         ordem: section.ordem || 0,
-        id: section.id,
         questions: questionsData.filter(q => q.secao_id === section.id)
       }));
       
       const orderedSections = sectionGroups.sort((a, b) => a.ordem - b.ordem);
-      console.log('Ordered sections:', orderedSections.length, orderedSections.map(s => s.title));
+      console.log('Ordered sections:', orderedSections.length);
       
       setFormSections(orderedSections);
       
@@ -78,5 +84,6 @@ export function useFormQuestions(selectedFormId: string) {
     formSections,
     currentSection,
     setCurrentSection,
+    loadFormQuestions,
   };
 }

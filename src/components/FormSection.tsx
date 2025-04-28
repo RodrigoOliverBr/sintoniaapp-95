@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 
 interface FormSectionProps {
   section: {
+    id?: string;
     title: string;
     questions: Question[];
   };
@@ -22,8 +23,11 @@ const FormSection: React.FC<FormSectionProps> = ({
   onObservationChange,
   onOptionsChange,
 }) => {
+  // Make sure questions exist before trying to sort them
+  const questionsToShow = section.questions || [];
+  
   // Sort questions by the ordem_pergunta property
-  const orderedQuestions = [...section.questions].sort((a, b) => {
+  const orderedQuestions = [...questionsToShow].sort((a, b) => {
     // If both have order 0 or equal, don't change the order
     if ((a.ordem_pergunta === 0 && b.ordem_pergunta === 0) || a.ordem_pergunta === b.ordem_pergunta) {
       return 0;
@@ -34,6 +38,14 @@ const FormSection: React.FC<FormSectionProps> = ({
     // Sort normally by numbers
     return (a.ordem_pergunta || 0) - (b.ordem_pergunta || 0);
   });
+
+  if (orderedQuestions.length === 0) {
+    return (
+      <div className="text-center p-4">
+        <p className="text-muted-foreground">Não há perguntas nesta seção.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
