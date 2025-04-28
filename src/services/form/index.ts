@@ -7,8 +7,7 @@ export * from './risks';
 
 // Re-export specific functions from files to maintain backward compatibility
 import { getFormResultByEmployeeId, saveFormResult, getEmployeeFormHistory, deleteFormEvaluation } from './evaluations';
-import { getFormResults } from './forms';
-import { getFormStatusByEmployeeId } from './forms';
+import { getFormResults, getFormStatusByEmployeeId } from './forms';
 
 export {
   getFormResultByEmployeeId,

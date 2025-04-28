@@ -20,7 +20,7 @@ export async function getFormStatusByEmployeeId(employeeId: string): Promise<any
 }
 
 // Get all form results
-export async function getFormResults(): Promise<FormResult[]> {
+export async function getFormResults(): Promise<any[]> {
   try {
     const { data, error } = await supabase
       .from('avaliacoes')

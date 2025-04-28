@@ -15,5 +15,7 @@ export {
   getDefaultRiskId,
   getAllRisksWithSeverity,
   getAllSeverities,
-  getFormResults
+  getFormResults,
+  deleteFormEvaluation
 } from './form';
+
