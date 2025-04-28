@@ -15,7 +15,6 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
     if (selectedEmployeeId) {
       loadEmployeeHistory();
     } else {
-      // Limpar o histórico quando nenhum funcionário estiver selecionado
       setEvaluationHistory([]);
       setShowingHistoryView(false);
     }
@@ -31,18 +30,8 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
       console.log(`Histórico carregado: ${history.length} avaliações`);
       
       setEvaluationHistory(history);
+      setShowingHistoryView(history.length > 0);
       
-      if (history.length > 0) {
-        if (showingHistoryView) {
-          console.log("Mantendo visualização de histórico");
-        } else {
-          console.log("Ativando visualização de histórico");
-          setShowingHistoryView(true);
-        }
-      } else {
-        console.log("Desativando visualização de histórico - sem avaliações");
-        setShowingHistoryView(false);
-      }
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
       toast({
@@ -65,17 +54,11 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
       if (deleteSuccess) {
         console.log("Exclusão bem-sucedida, atualizando estado local");
         
-        // Atualizar estado local primeiro para feedback imediato
+        // Atualizar estado local para feedback imediato
         setEvaluationHistory(prevEvaluations => {
           const updatedEvaluations = prevEvaluations.filter(
             evaluation => evaluation.id !== evaluationId
           );
-          
-          // Se não houver mais avaliações, desativar a visualização
-          if (updatedEvaluations.length === 0) {
-            setShowingHistoryView(false);
-          }
-          
           return updatedEvaluations;
         });
         

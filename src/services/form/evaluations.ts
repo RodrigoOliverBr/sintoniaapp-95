@@ -293,23 +293,18 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<boolea
   try {
     console.log(`Iniciando exclusão da avaliação: ${evaluationId}`);
     
-    // Deleta diretamente a avaliação, confiando no trigger before_delete_avaliacao
-    // para lidar com as exclusões em cascata
-    const { error, count } = await supabase
+    const { error } = await supabase
       .from('avaliacoes')
       .delete()
-      .eq('id', evaluationId)
-      .select('count');
+      .eq('id', evaluationId);
     
     if (error) {
       console.error('Erro ao excluir avaliação:', error);
       return false;
     }
     
-    // Verificar se alguma linha foi deletada
-    const wasDeleted = count ? count > 0 : false;
-    console.log(`Avaliação ${wasDeleted ? 'excluída com sucesso' : 'não encontrada'}`);
-    return wasDeleted;
+    console.log(`Avaliação ${evaluationId} excluída com sucesso`);
+    return true;
   } catch (error) {
     console.error('Erro completo no processo de exclusão da avaliação:', error);
     return false;
