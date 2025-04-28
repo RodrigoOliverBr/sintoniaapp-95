@@ -53,8 +53,9 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
     setIsDeletingEvaluation(true);
     try {
       console.log(`Deleting evaluation ID: ${evaluationId}`);
-      await deleteFormEvaluation(evaluationId);
+      const result = await deleteFormEvaluation(evaluationId);
       
+      // Successfully deleted
       sonnerToast.success("Avaliação excluída com sucesso");
       
       // Update the state locally by removing the deleted evaluation
@@ -62,10 +63,14 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
         prevHistory.filter(evaluation => evaluation.id !== evaluationId)
       );
       
-      // If no more items in history, hide history view
-      if (evaluationHistory.length <= 1) {
-        setShowingHistoryView(false);
-      }
+      // If after filtering there are no evaluations left, hide history view
+      setEvaluationHistory(current => {
+        const updated = current.filter(evaluation => evaluation.id !== evaluationId);
+        if (updated.length === 0) {
+          setShowingHistoryView(false);
+        }
+        return updated;
+      });
     } catch (error) {
       console.error("Error deleting evaluation:", error);
       sonnerToast.error("Erro ao excluir avaliação");

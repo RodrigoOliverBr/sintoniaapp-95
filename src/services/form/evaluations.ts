@@ -253,6 +253,25 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
   try {
     console.log(`Starting deletion process for evaluation: ${evaluationId}`);
     
+    // First check if the evaluation exists
+    const { data: evaluationExists, error: checkError } = await supabase
+      .from('avaliacoes')
+      .select('id')
+      .eq('id', evaluationId)
+      .single();
+      
+    if (checkError) {
+      console.error('Error checking if evaluation exists:', checkError);
+      throw checkError;
+    }
+    
+    if (!evaluationExists) {
+      console.error(`Evaluation ${evaluationId} not found`);
+      throw new Error(`Evaluation ${evaluationId} not found`);
+    }
+    
+    console.log(`Evaluation ${evaluationId} exists, proceeding with deletion`);
+    
     // Delete responses first (including cascading to resposta_opcoes via trigger)
     const { error: responsesError } = await supabase
       .from('respostas')

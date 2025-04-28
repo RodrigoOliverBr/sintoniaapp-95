@@ -48,6 +48,8 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
           title: "Avaliação excluída",
           description: "A avaliação foi excluída com sucesso",
         });
+        setIsConfirmOpen(false);
+        setEvaluationToDelete(null);
       } catch (error) {
         console.error("Error deleting evaluation:", error);
         toast({
@@ -55,9 +57,6 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
           description: "Não foi possível excluir a avaliação",
           variant: "destructive"
         });
-      } finally {
-        setEvaluationToDelete(null);
-        setIsConfirmOpen(false);
       }
     }
   };

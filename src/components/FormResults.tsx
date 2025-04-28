@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { FormResult, Question } from "@/types/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,6 @@ import { AnswersChart } from "./charts/AnswersChart";
 import { SeverityChart } from "./charts/SeverityChart";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 
 interface FormResultsProps {
@@ -19,13 +18,11 @@ interface FormResultsProps {
 }
 
 const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNotesChange, isReadOnly = false }) => {
-  // Make sure we're using the actual values from the result, not the default ones
-  const totalYes = result.total_sim || 0;
-  const totalNo = result.total_nao || 0;
-
-  const handlePrint = () => {
-    window.print();
-  };
+  const [severityCounts, setSeverityCounts] = useState({
+    light: 0,
+    medium: 0,
+    high: 0
+  });
 
   // Calculate the actual yes/no counts from the answers object
   const calculateActualCounts = () => {
@@ -68,10 +65,40 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   
   const yesQuestions = getYesQuestions();
   
+  // Calculate severity counts based on "Yes" answers
+  useEffect(() => {
+    const counts = {
+      light: 0,
+      medium: 0,
+      high: 0
+    };
+    
+    if (questions && result.answers) {
+      yesQuestions.forEach(question => {
+        if (question.risco?.severidade?.nivel) {
+          const level = question.risco.severidade.nivel;
+          if (level === "LEVEMENTE PREJUDICIAL") {
+            counts.light += 1;
+          } else if (level === "PREJUDICIAL") {
+            counts.medium += 1;
+          } else if (level === "EXTREMAMENTE PREJUDICIAL") {
+            counts.high += 1;
+          }
+        }
+      });
+    }
+    
+    setSeverityCounts(counts);
+  }, [questions, result.answers]);
+
   // Format date for display
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Data desconhecida";
     return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm");
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
@@ -112,48 +139,47 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
           </CardHeader>
           <CardContent>
             <AnswersChart yesCount={actualCounts.yes} noCount={actualCounts.no} />
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="bg-blue-50 p-4 rounded text-center">
-                <div className="text-lg font-medium text-blue-500">Sim</div>
-                <div className="text-3xl font-bold text-blue-700">{actualCounts.yes}</div>
-              </div>
-              <div className="bg-gray-100 p-4 rounded text-center">
-                <div className="text-lg font-medium text-gray-500">Não</div>
-                <div className="text-3xl font-bold text-gray-700">{actualCounts.no}</div>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Questões com Resposta "Sim"</CardTitle>
+            <CardTitle>Níveis de Severidade</CardTitle>
           </CardHeader>
-          <CardContent className="max-h-[300px] overflow-y-auto">
-            {yesQuestions.length > 0 ? (
-              <ul className="space-y-3">
-                {yesQuestions.map((question, index) => (
-                  <li key={question.id} className={index > 0 ? "pt-3 border-t" : ""}>
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                      <span>{question.texto}</span>
-                    </div>
-                    {result.answers?.[question.id]?.observation && (
-                      <div className="ml-7 mt-1 text-sm text-gray-600 italic">
-                        Observação: {result.answers[question.id].observation}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-muted-foreground text-center py-8">
-                Nenhuma questão foi respondida com "Sim".
-              </p>
-            )}
+          <CardContent>
+            <SeverityChart severityCounts={severityCounts} />
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Questões com Resposta "Sim"</CardTitle>
+        </CardHeader>
+        <CardContent className="max-h-[300px] overflow-y-auto">
+          {yesQuestions.length > 0 ? (
+            <ul className="space-y-3">
+              {yesQuestions.map((question, index) => (
+                <li key={question.id} className={index > 0 ? "pt-3 border-t" : ""}>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <span>{question.texto}</span>
+                  </div>
+                  {result.answers?.[question.id]?.observation && (
+                    <div className="ml-7 mt-1 text-sm text-gray-600 italic">
+                      Observação: {result.answers[question.id].observation}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">
+              Nenhuma questão foi respondida com "Sim".
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
