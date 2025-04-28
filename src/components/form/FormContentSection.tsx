@@ -78,6 +78,10 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   }
 
   if (showResults) {
+    // Determine if the form should be read-only:
+    // - If we're viewing from history AND the form is already complete
+    const shouldBeReadOnly = (showingHistoryView && formComplete);
+    
     return (
       <div className="space-y-4">
         {onExitResults && (
@@ -97,7 +101,7 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
           result={selectedEvaluation || formResult!}
           questions={questions}
           onNotesChange={onNotesChange}
-          isReadOnly={showingHistoryView || formComplete} // Make fields read-only when viewing history
+          isReadOnly={shouldBeReadOnly} 
         />
       </div>
     );

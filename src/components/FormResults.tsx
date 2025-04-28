@@ -57,6 +57,9 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     window.print();
   };
 
+  // Get the notes from either field (notas_analista or analyistNotes)
+  const notes = result.notas_analista || result.analyistNotes || '';
+
   return (
     <div className="space-y-6 print:pt-0">
       <ResultsActions onPrint={handlePrint} />
@@ -107,10 +110,9 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
           <Textarea
             placeholder="Digite aqui suas observações e recomendações para melhorar o ambiente psicossocial..."
             className="min-h-[200px]"
-            value={result.notas_analista || result.analyistNotes || ''}
+            value={notes}
             onChange={(e) => onNotesChange(e.target.value)}
             readOnly={isReadOnly}
-            disabled={isReadOnly}
           />
         </CardContent>
       </Card>

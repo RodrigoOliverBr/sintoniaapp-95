@@ -159,6 +159,9 @@ const FormularioPage: React.FC = () => {
         }
       }
       
+      // Make sure to save analyst notes that might have been added
+      const notesAnalista = formResult?.notas_analista || '';
+      
       // Prepare form result data - ensure is_complete is set to true
       const formResultData = {
         id: existingFormResult?.id || '',
@@ -168,7 +171,7 @@ const FormularioPage: React.FC = () => {
         answers,
         total_sim: totalYes,
         total_nao: totalNo,
-        notas_analista: existingFormResult?.notas_analista || '',
+        notas_analista: notesAnalista,
         is_complete: true, // Explicitly set to true to ensure report generation
         last_updated: new Date().toISOString(),
         created_at: existingFormResult?.created_at || new Date().toISOString(),
@@ -176,6 +179,7 @@ const FormularioPage: React.FC = () => {
       };
       
       console.log("Saving form with is_complete=true to trigger report generation");
+      console.log("Analyst notes:", notesAnalista);
       
       // Save form result
       await saveFormResult(formResultData);
