@@ -36,13 +36,13 @@ export interface JobRole {
 export interface Employee {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   cpf?: string;
   role?: string;
-  department_id: string;
+  department_id?: string;
   company_id: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   status?: string;
 }
 
@@ -74,12 +74,12 @@ export interface ClienteSistema {
   razaoSocial?: string;  // Alias para compatibilidade
   nome: string;
   tipo: TipoPessoa;
-  numeroEmpregados: number;
-  dataInclusao: number;
+  numeroEmpregados?: number;
+  dataInclusao?: number | string;
   situacao: ClienteStatus;
-  cnpj: string;
+  cnpj?: string;
   cpfCnpj?: string;
-  email: string;
+  email?: string;
   telefone?: string;
   responsavel?: string;
   contato?: string;

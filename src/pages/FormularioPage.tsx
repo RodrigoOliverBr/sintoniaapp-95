@@ -1,11 +1,11 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { useFormData } from "@/hooks/useFormData";
-import { useFormSubmission } from "@/hooks/useFormSubmission";
 import FormSelectionSection from "@/components/form/FormSelectionSection";
 import FormContentSection from "@/components/form/FormContentSection";
 import { toast as sonnerToast } from "sonner";
+import { saveFormResult, getFormResultByEmployeeId } from "@/services/form";
 
 const FormularioPage: React.FC = () => {
   const {
@@ -19,8 +19,6 @@ const FormularioPage: React.FC = () => {
     setFormResult,
     answers,
     setAnswers,
-    currentSection,
-    setCurrentSection,
     availableForms,
     selectedFormId,
     setSelectedFormId,
@@ -42,7 +40,8 @@ const FormularioPage: React.FC = () => {
     isDeletingEvaluation
   } = useFormData();
 
-  const { isSubmitting, handleSaveForm } = useFormSubmission();
+  // State for form submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form when switching between employees
   useEffect(() => {
@@ -65,16 +64,12 @@ const FormularioPage: React.FC = () => {
   const handleFormChange = (value: string) => {
     setSelectedFormId(value);
     setAnswers({});
-    setCurrentSection("");
     resetForm();
   };
 
   const handleNewEvaluation = () => {
     resetForm();
     setShowingHistoryView(false);
-    if (formSections.length > 0) {
-      setCurrentSection(formSections[0].title);
-    }
   };
   
   const handleExitResults = () => {
@@ -90,95 +85,78 @@ const FormularioPage: React.FC = () => {
 
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
   const selectedFormTitle = availableForms.find(f => f.id === selectedFormId)?.titulo || "Formulário";
-  const isLastSection = formSections.findIndex(section => section.title === currentSection) === formSections.length - 1;
 
-  const handleSaveAndComplete = () => {
-    // Verificar se há respostas para todas as perguntas
-    const allQuestionsAnswered = questions.every(q => answers[q.id] && answers[q.id].answer !== null);
+  const handleSaveAndComplete = async () => {
+    if (!selectedFormId || !selectedEmployeeId || !selectedCompanyId) {
+      sonnerToast.warning("Por favor, selecione empresa, funcionário e formulário antes de continuar");
+      return;
+    }
+
+    // Validate all questions are answered
+    const unansweredQuestions = questions.filter(q => 
+      !answers[q.id] || answers[q.id].answer === null || answers[q.id].answer === undefined
+    );
     
-    if (!allQuestionsAnswered) {
-      sonnerToast.warning("Por favor, responda todas as perguntas antes de concluir o formulário");
+    if (unansweredQuestions.length > 0) {
+      sonnerToast.warning(`Por favor, responda todas as ${unansweredQuestions.length} perguntas pendentes antes de concluir`);
       return;
     }
     
-    handleSaveForm(
-      {
-        selectedFormId,
-        selectedEmployeeId: selectedEmployeeId!,
-        selectedCompanyId: selectedCompanyId!,
-        answers,
-        formResult
-      },
-      {
-        completeForm: true,
-        onSuccess: (updatedResult) => {
-          setFormResult(updatedResult);
-          setShowResults(true);
-          setFormComplete(true);
-          setSelectedEvaluation(updatedResult);
-          
-          // Mostrar mensagem de sucesso
-          sonnerToast.success("Formulário concluído com sucesso!");
-          
-          // Após completar o formulário, também recarregamos o histórico
-          loadEmployeeHistory();
-        },
-        moveToNextSection: () => {
-          const currentIndex = formSections.findIndex(s => s.title === currentSection);
-          if (currentIndex < formSections.length - 1) {
-            setCurrentSection(formSections[currentIndex + 1].title);
-            return true;
-          }
-          return false;
-        }
-      }
-    );
-  };
+    setIsSubmitting(true);
 
-  const handleSaveAndContinue = () => {
-    // Verificar se há respostas para todas as perguntas da seção atual
-    const currentSectionQuestions = formSections
-      .find(s => s.title === currentSection)?.questions || [];
-    
-    const allCurrentSectionQuestionsAnswered = currentSectionQuestions
-      .every(q => answers[q.id] && answers[q.id].answer !== null);
-    
-    if (!allCurrentSectionQuestionsAnswered) {
-      sonnerToast.warning("Por favor, responda todas as perguntas desta seção antes de continuar");
-      return;
-    }
-    
-    handleSaveForm(
-      {
-        selectedFormId,
-        selectedEmployeeId: selectedEmployeeId!,
-        selectedCompanyId: selectedCompanyId!,
-        answers,
-        formResult
-      },
-      {
-        onSuccess: (updatedResult) => {
-          setFormResult(updatedResult);
-          
-          const currentIndex = formSections.findIndex(s => s.title === currentSection);
-          if (currentIndex < formSections.length - 1) {
-            setCurrentSection(formSections[currentIndex + 1].title);
-          } else {
-            setFormComplete(true);
-          }
-          
-          sonnerToast.success("Dados salvos com sucesso!");
-        },
-        moveToNextSection: () => {
-          const currentIndex = formSections.findIndex(s => s.title === currentSection);
-          if (currentIndex < formSections.length - 1) {
-            setCurrentSection(formSections[currentIndex + 1].title);
-            return true;
-          }
-          return false;
+    try {
+      // Count yes/no answers
+      let totalYes = 0;
+      let totalNo = 0;
+      
+      Object.values(answers).forEach(answer => {
+        if (answer.answer === true) {
+          totalYes++;
+        } else if (answer.answer === false) {
+          totalNo++;
         }
+      });
+      
+      console.log(`Total SIM: ${totalYes}, Total NÃO: ${totalNo}`);
+      
+      // Prepare form result data
+      const formResultData = {
+        id: formResult?.id || '',
+        employeeId: selectedEmployeeId,
+        empresa_id: selectedCompanyId,
+        formulario_id: selectedFormId,
+        answers,
+        total_sim: totalYes,
+        total_nao: totalNo,
+        notas_analista: formResult?.notas_analista || '',
+        is_complete: true,
+        last_updated: new Date().toISOString(),
+        created_at: formResult?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Save form result
+      await saveFormResult(formResultData);
+      sonnerToast.success("Formulário salvo com sucesso!");
+      
+      // Get updated result
+      const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId, selectedFormId);
+      
+      if (updatedResult) {
+        setFormResult(updatedResult);
+        setShowResults(true);
+        setFormComplete(true);
+        setSelectedEvaluation(updatedResult);
+        
+        // Reload history after completing
+        loadEmployeeHistory();
       }
-    );
+    } catch (error: any) {
+      console.error("Erro ao salvar o formulário:", error);
+      sonnerToast.error(`Erro ao salvar o formulário: ${error.message || "Erro desconhecido"}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -204,25 +182,36 @@ const FormularioPage: React.FC = () => {
             showResults={showResults}
             showingHistoryView={showingHistoryView}
             selectedFormTitle={selectedFormTitle}
-            currentSection={currentSection}
             formSections={formSections}
             answers={answers}
             onAnswerChange={(questionId, answer) => {
               setAnswers(prev => ({
                 ...prev,
-                [questionId]: { ...prev[questionId], questionId, answer: answer === null ? false : answer }
+                [questionId]: { 
+                  ...prev[questionId], 
+                  questionId, 
+                  answer: answer 
+                }
               }));
             }}
             onObservationChange={(questionId, observation) => {
               setAnswers(prev => ({
                 ...prev,
-                [questionId]: { ...prev[questionId], questionId, observation }
+                [questionId]: { 
+                  ...prev[questionId], 
+                  questionId, 
+                  observation 
+                }
               }));
             }}
             onOptionsChange={(questionId, selectedOptions) => {
               setAnswers(prev => ({
                 ...prev,
-                [questionId]: { ...prev[questionId], questionId, selectedOptions }
+                [questionId]: { 
+                  ...prev[questionId], 
+                  questionId, 
+                  selectedOptions 
+                }
               }));
             }}
             selectedEvaluation={selectedEvaluation}
@@ -237,24 +226,18 @@ const FormularioPage: React.FC = () => {
                 });
               }
             }}
-            onSectionChange={setCurrentSection}
             evaluationHistory={evaluationHistory || []}
             formComplete={formComplete}
             isSubmitting={isSubmitting}
-            isLastSection={isLastSection}
             isDeletingEvaluation={isDeletingEvaluation}
             onNewEvaluation={handleNewEvaluation}
             onShowResults={() => setShowResults(true)}
-            onCompleteForm={handleSaveAndComplete}
-            onSaveForm={handleSaveAndContinue}
+            onSaveAndComplete={handleSaveAndComplete}
             onDeleteEvaluation={handleDeleteEvaluation}
             onEditEvaluation={(evaluation) => {
               setSelectedEvaluation(evaluation);
               setShowResults(false);
               setAnswers(evaluation.answers || {});
-              if (formSections.length > 0) {
-                setCurrentSection(formSections[0].title);
-              }
               setShowingHistoryView(false);
             }}
             onExitResults={handleExitResults}

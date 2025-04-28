@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { Form } from "@/types/form";
-import { getAllForms } from "@/services/form";
+import { Form } from "@/types/cadastro";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export function useFormSelection() {
@@ -10,30 +10,39 @@ export function useFormSelection() {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadAvailableForms();
+    loadForms();
   }, []);
 
-  const loadAvailableForms = async () => {
+  const loadForms = async () => {
     try {
-      const forms = await getAllForms();
-      setAvailableForms(forms);
+      const { data, error } = await supabase
+        .from("formularios")
+        .select("*")
+        .eq("ativo", true);
+
+      if (error) throw error;
+
+      setAvailableForms(data || []);
       
-      if (forms.length > 0) {
-        setSelectedFormId(forms[0].id);
+      if (data && data.length > 0) {
+        // Automatically select the first form if none is selected
+        if (!selectedFormId) {
+          setSelectedFormId(data[0].id);
+        }
       }
     } catch (error) {
-      console.error("Erro ao carregar formulários:", error);
+      console.error("Error loading forms:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar os formulários disponíveis",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
 
   return {
     availableForms,
-    selectedFormId, 
-    setSelectedFormId,
+    selectedFormId,
+    setSelectedFormId
   };
 }

@@ -1,9 +1,7 @@
 
 import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Form } from "@/types/form";
-import { Company, Employee } from "@/types/cadastro";
+import { Company, Employee, Form } from "@/types/cadastro";
 
 interface FormSelectorProps {
   companies: Company[];
@@ -28,58 +26,77 @@ const FormSelector: React.FC<FormSelectorProps> = ({
   onEmployeeChange,
   onFormChange,
 }) => {
+  // Filter employees by company
+  const filteredEmployees = selectedCompanyId
+    ? employees.filter((employee) => employee.company_id === selectedCompanyId)
+    : [];
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className="grid gap-6 md:grid-cols-3">
       <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Empresa</label>
-        <Select onValueChange={onCompanyChange}>
+        <label className="block text-sm font-medium">Empresa</label>
+        <Select value={selectedCompanyId} onValueChange={onCompanyChange}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione a empresa" />
+            <SelectValue placeholder="Selecione uma empresa" />
           </SelectTrigger>
           <SelectContent>
-            <ScrollArea className="max-h-[200px]">
-              {companies.map((company) => (
-                <SelectItem key={company.id} value={company.id}>
-                  {company.name}
-                </SelectItem>
-              ))}
-            </ScrollArea>
+            {companies.map((company) => (
+              <SelectItem key={company.id} value={company.id}>
+                {company.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Funcionário</label>
-        <Select onValueChange={onEmployeeChange} value={selectedEmployeeId}>
+        <label className="block text-sm font-medium">Funcionário</label>
+        <Select
+          value={selectedEmployeeId}
+          onValueChange={onEmployeeChange}
+          disabled={!selectedCompanyId || filteredEmployees.length === 0}
+        >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione o funcionário" />
+            <SelectValue placeholder={
+              !selectedCompanyId
+                ? "Primeiro selecione uma empresa"
+                : filteredEmployees.length === 0
+                ? "Nenhum funcionário cadastrado"
+                : "Selecione um funcionário"
+            } />
           </SelectTrigger>
           <SelectContent>
-            <ScrollArea className="max-h-[200px]">
-              {employees.map((employee) => (
-                <SelectItem key={employee.id} value={employee.id}>
-                  {employee.name}
-                </SelectItem>
-              ))}
-            </ScrollArea>
+            {filteredEmployees.map((employee) => (
+              <SelectItem key={employee.id} value={employee.id}>
+                {employee.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Formulário</label>
-        <Select onValueChange={onFormChange} value={selectedFormId} disabled={availableForms.length <= 1}>
+        <label className="block text-sm font-medium">Formulário</label>
+        <Select
+          value={selectedFormId}
+          onValueChange={onFormChange}
+          disabled={!selectedEmployeeId}
+        >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione o formulário" />
+            <SelectValue placeholder={
+              !selectedEmployeeId
+                ? "Primeiro selecione um funcionário"
+                : availableForms.length === 0
+                ? "Nenhum formulário disponível"
+                : "Selecione um formulário"
+            } />
           </SelectTrigger>
           <SelectContent>
-            <ScrollArea className="max-h-[200px]">
-              {availableForms.map((form) => (
-                <SelectItem key={form.id} value={form.id}>
-                  {form.titulo}
-                </SelectItem>
-              ))}
-            </ScrollArea>
+            {availableForms.map((form) => (
+              <SelectItem key={form.id} value={form.id}>
+                {form.titulo}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

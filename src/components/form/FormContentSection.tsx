@@ -1,10 +1,12 @@
 
 import React from "react";
-import FormContent from "@/components/form/FormContent";
+import FormAllQuestions from "@/components/form/FormAllQuestions";
+import FormResults from "@/components/FormResults";
 import EmployeeFormHistory from "@/components/form/EmployeeFormHistory";
-import FormActions from "@/components/form/FormActions";
 import { Employee } from "@/types/cadastro";
-import { FormResult, Question } from "@/types/form";
+import { FormResult, Question, Section } from "@/types/form";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 interface FormContentSectionProps {
   selectedEmployee: Employee | undefined;
@@ -12,8 +14,7 @@ interface FormContentSectionProps {
   showResults: boolean;
   showingHistoryView: boolean;
   selectedFormTitle: string;
-  currentSection: string;
-  formSections: any[];
+  formSections: Section[];
   answers: Record<string, any>;
   onAnswerChange: (questionId: string, answer: boolean | null) => void;
   onObservationChange: (questionId: string, observation: string) => void;
@@ -22,16 +23,13 @@ interface FormContentSectionProps {
   formResult: FormResult | null;
   questions: Question[];
   onNotesChange: (notes: string) => void;
-  onSectionChange: (section: string) => void;
   evaluationHistory: FormResult[];
   formComplete: boolean;
   isSubmitting: boolean;
-  isLastSection: boolean;
   isDeletingEvaluation?: boolean;
   onNewEvaluation: () => void;
   onShowResults: () => void;
-  onCompleteForm: () => void;
-  onSaveForm: () => void;
+  onSaveAndComplete: () => void;
   onDeleteEvaluation: (evaluationId: string) => Promise<void>;
   onEditEvaluation?: (evaluation: FormResult) => void;
   onExitResults?: () => void;
@@ -43,7 +41,6 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   showResults,
   showingHistoryView,
   selectedFormTitle,
-  currentSection,
   formSections,
   answers,
   onAnswerChange,
@@ -53,16 +50,13 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   formResult,
   questions,
   onNotesChange,
-  onSectionChange,
   evaluationHistory,
   formComplete,
   isSubmitting,
-  isLastSection,
   isDeletingEvaluation,
   onNewEvaluation,
   onShowResults,
-  onCompleteForm,
-  onSaveForm,
+  onSaveAndComplete,
   onDeleteEvaluation,
   onEditEvaluation,
   onExitResults
@@ -83,43 +77,57 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
     );
   }
 
+  if (showResults) {
+    return (
+      <div className="space-y-4">
+        {onExitResults && (
+          <div className="flex justify-between items-center mb-4">
+            <Button 
+              variant="outline" 
+              onClick={onExitResults}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft size={16} />
+              Voltar
+            </Button>
+          </div>
+        )}
+        
+        <FormResults 
+          result={selectedEvaluation || formResult!}
+          questions={questions}
+          onNotesChange={onNotesChange}
+          isReadOnly={showingHistoryView || formComplete} // Make fields read-only when viewing history
+        />
+      </div>
+    );
+  }
+
   return (
-    <>
-      <FormContent
-        showResults={showResults}
-        showingHistoryView={showingHistoryView}
-        selectedEmployee={selectedEmployee}
-        selectedFormTitle={selectedFormTitle}
-        currentSection={currentSection}
-        formSections={formSections}
+    <div className="space-y-6">
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+        <h2 className="text-xl font-bold text-primary mb-1">
+          Avaliação para: {selectedEmployee?.name}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Função: {selectedEmployee?.role || "Não especificada"}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Formulário: {selectedFormTitle}
+        </p>
+      </div>
+      
+      <FormAllQuestions 
+        sections={formSections}
+        questions={questions}
         answers={answers}
         onAnswerChange={onAnswerChange}
         onObservationChange={onObservationChange}
         onOptionsChange={onOptionsChange}
-        selectedEvaluation={selectedEvaluation}
-        formResult={formResult}
-        questions={questions}
-        onNotesChange={onNotesChange}
-        onSectionChange={onSectionChange}
-        onExitResults={onExitResults}
-        isReadOnly={showResults && formComplete}
+        onSaveAndComplete={onSaveAndComplete}
+        isSubmitting={isSubmitting}
       />
-      
-      {selectedFormId && (
-        <FormActions
-          showResults={showResults}
-          formComplete={formComplete}
-          isSubmitting={isSubmitting}
-          isLastSection={isLastSection}
-          showingHistory={showingHistoryView && !showResults}
-          onNewEvaluation={onNewEvaluation}
-          onShowResults={onShowResults}
-          onCompleteForm={onCompleteForm}
-          onSaveForm={onSaveForm}
-          onExitResults={onExitResults}
-        />
-      )}
-    </>
+    </div>
   );
 };
 

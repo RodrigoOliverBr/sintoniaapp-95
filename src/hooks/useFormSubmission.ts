@@ -44,7 +44,7 @@ export function useFormSubmission() {
       toast({
         title: "Atenção",
         description: "Por favor, responda todas as perguntas antes de prosseguir",
-        variant: "warning",
+        variant: "destructive", // Changed from "warning" to "destructive"
       });
       return;
     }

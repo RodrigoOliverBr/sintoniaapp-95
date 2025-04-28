@@ -49,7 +49,8 @@ export async function getFormResults(companyId?: string): Promise<any[]> {
 
 export async function getFormResultByEmployeeId(employeeId: string, formId?: string): Promise<FormResult | null> {
   try {
-    let query = supabase
+    // Get the most recent evaluation for this employee
+    const { data: avaliacoes, error } = await supabase
       .from('avaliacoes')
       .select(`
         *,
@@ -61,9 +62,9 @@ export async function getFormResultByEmployeeId(employeeId: string, formId?: str
         )
       `)
       .eq('funcionario_id', employeeId)
-      .order('created_at', { ascending: false });
-    
-    const { data: avaliacoes, error } = await query.limit(1).maybeSingle();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching form result:', error);
@@ -72,6 +73,7 @@ export async function getFormResultByEmployeeId(employeeId: string, formId?: str
 
     if (!avaliacoes) return null;
 
+    // Convert responses to answers format
     const answers: Record<string, FormAnswer> = {};
     if (avaliacoes.respostas && Array.isArray(avaliacoes.respostas)) {
       avaliacoes.respostas.forEach((resposta: any) => {
@@ -117,6 +119,13 @@ export async function getFormResultByEmployeeId(employeeId: string, formId?: str
 
 export async function getEmployeeFormHistory(employeeId: string): Promise<FormResult[]> {
   try {
+    if (!employeeId) {
+      console.log('No employee ID provided for history');
+      return [];
+    }
+    
+    console.log(`Carregando histórico para o funcionário: ${employeeId}`);
+    
     const { data: avaliacoes, error } = await supabase
       .from('avaliacoes')
       .select(`
@@ -135,40 +144,49 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
       console.error('Error fetching form history:', error);
       throw error;
     }
+    
+    console.log(`Histórico carregado: ${avaliacoes.length} avaliações`);
 
-    return avaliacoes.map(avaliacao => ({
-      id: avaliacao.id,
-      employeeId: avaliacao.funcionario_id,
-      empresa_id: avaliacao.empresa_id,
-      formulario_id: "", // This field doesn't exist in database yet
-      answers: avaliacao.respostas?.reduce((acc: Record<string, any>, resposta: any) => {
-        acc[resposta.pergunta_id] = {
-          questionId: resposta.pergunta_id,
-          answer: resposta.resposta,
-          observation: resposta.observacao,
-          selectedOptions: resposta.opcoes_selecionadas
-        };
-        return acc;
-      }, {}),
-      total_sim: avaliacao.total_sim || 0,
-      total_nao: avaliacao.total_nao || 0,
-      notas_analista: avaliacao.notas_analista || '',
-      is_complete: avaliacao.is_complete || false,
-      last_updated: avaliacao.last_updated,
-      created_at: avaliacao.created_at,
-      updated_at: avaliacao.updated_at,
-      totalYes: avaliacao.total_sim || 0,
-      totalNo: avaliacao.total_nao || 0,
-      analyistNotes: avaliacao.notas_analista || '',
-      yesPerSeverity: {
-        "LEVEMENTE PREJUDICIAL": 0,
-        "PREJUDICIAL": 0,
-        "EXTREMAMENTE PREJUDICIAL": 0
+    return avaliacoes.map(avaliacao => {
+      // Convert responses to answers format
+      const answers: Record<string, FormAnswer> = {};
+      if (avaliacao.respostas && Array.isArray(avaliacao.respostas)) {
+        avaliacao.respostas.forEach((resposta: any) => {
+          answers[resposta.pergunta_id] = {
+            questionId: resposta.pergunta_id,
+            answer: resposta.resposta,
+            observation: resposta.observacao,
+            selectedOptions: resposta.opcoes_selecionadas
+          };
+        });
       }
-    }));
+      
+      return {
+        id: avaliacao.id,
+        employeeId: avaliacao.funcionario_id,
+        empresa_id: avaliacao.empresa_id,
+        formulario_id: avaliacao.formulario_id || "",
+        answers,
+        total_sim: avaliacao.total_sim || 0,
+        total_nao: avaliacao.total_nao || 0,
+        notas_analista: avaliacao.notas_analista || '',
+        is_complete: avaliacao.is_complete || false,
+        last_updated: avaliacao.last_updated || avaliacao.updated_at,
+        created_at: avaliacao.created_at,
+        updated_at: avaliacao.updated_at,
+        totalYes: avaliacao.total_sim || 0,
+        totalNo: avaliacao.total_nao || 0,
+        analyistNotes: avaliacao.notas_analista || '',
+        yesPerSeverity: {
+          "LEVEMENTE PREJUDICIAL": 0,
+          "PREJUDICIAL": 0,
+          "EXTREMAMENTE PREJUDICIAL": 0
+        }
+      };
+    });
   } catch (error) {
     console.error('Error in getEmployeeFormHistory:', error);
-    throw error;
+    return [];
   }
 }
 
@@ -201,44 +219,85 @@ async function createReportForEvaluation(evaluationId: string, companyId: string
 export async function saveFormResult(formData: FormResult): Promise<void> {
   const { employeeId, answers, total_sim, total_nao, is_complete, empresa_id, formulario_id, id, notas_analista } = formData;
 
+  console.log('Iniciando processo de salvamento do formulário');
+  
   try {
-    // Start a transaction for consistency
     let avaliacaoId = id;
     
     if (!avaliacaoId || avaliacaoId.trim() === '') {
       console.log('Creating new evaluation');
-      // For INSERT operation, do not try to include formulario_id if it's not in the table schema
-      const insertData: any = {
-        funcionario_id: employeeId,
-        empresa_id: empresa_id,
-        total_sim,
-        total_nao,
-        is_complete,
-        notas_analista,
-        last_updated: new Date().toISOString()
-      };
-      
-      const { data: avaliacao, error: avaliacaoError } = await supabase
+      // Check if there's an existing draft for this employee and form
+      const { data: existingDraft, error: findError } = await supabase
         .from('avaliacoes')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (avaliacaoError) {
-        console.error('Erro ao salvar avaliação:', avaliacaoError);
-        throw avaliacaoError;
+        .select('id')
+        .eq('funcionario_id', employeeId)
+        .eq('is_complete', false)
+        .eq('formulario_id', formulario_id)
+        .maybeSingle();
+        
+      if (findError) {
+        console.error('Error checking for existing draft:', findError);
       }
       
-      avaliacaoId = avaliacao.id;
-      console.log(`Created new evaluation with ID: ${avaliacaoId}`);
+      if (existingDraft) {
+        // Use the existing draft instead of creating a new one
+        avaliacaoId = existingDraft.id;
+        console.log(`Found existing draft: ${avaliacaoId}, will update it instead`);
+        
+        const updateData = {
+          total_sim,
+          total_nao,
+          is_complete,
+          notas_analista,
+          formulario_id,
+          last_updated: new Date().toISOString()
+        };
+        
+        const { error: updateError } = await supabase
+          .from('avaliacoes')
+          .update(updateData)
+          .eq('id', avaliacaoId);
+          
+        if (updateError) {
+          console.error('Error updating existing draft:', updateError);
+          throw updateError;
+        }
+      } else {
+        // Insert new evaluation
+        const insertData = {
+          funcionario_id: employeeId,
+          empresa_id,
+          formulario_id,
+          total_sim,
+          total_nao,
+          is_complete,
+          notas_analista,
+          last_updated: new Date().toISOString()
+        };
+        
+        const { data: avaliacao, error: avaliacaoError } = await supabase
+          .from('avaliacoes')
+          .insert(insertData)
+          .select()
+          .single();
+
+        if (avaliacaoError) {
+          console.error('Error saving new evaluation:', avaliacaoError);
+          throw avaliacaoError;
+        }
+        
+        avaliacaoId = avaliacao.id;
+        console.log(`Created new evaluation with ID: ${avaliacaoId}`);
+      }
     } else {
       console.log(`Updating existing evaluation with ID: ${avaliacaoId}`);
-      // For UPDATE operation, do not try to update formulario_id if it's not in the table schema
-      const updateData: any = {
+      // Update existing evaluation
+      const updateData = {
         total_sim,
         total_nao,
         is_complete,
         notas_analista,
+        formulario_id,
         last_updated: new Date().toISOString()
       };
       
@@ -248,24 +307,24 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
         .eq('id', id);
         
       if (updateError) {
-        console.error('Erro ao atualizar avaliação:', updateError);
+        console.error('Error updating evaluation:', updateError);
         throw updateError;
-      }
-      
-      // First delete all existing responses for this evaluation to prevent duplicates
-      console.log('Clearing previous responses');
-      const { error: deleteError } = await supabase
-        .from('respostas')
-        .delete()
-        .eq('avaliacao_id', id);
-        
-      if (deleteError) {
-        console.error('Erro ao deletar respostas antigas:', deleteError);
-        throw deleteError;
       }
     }
 
-    // Now insert all answers - this fixes the duplication issue
+    // First delete all existing responses for this evaluation to prevent duplicates
+    console.log('Clearing previous responses');
+    const { error: deleteError } = await supabase
+      .from('respostas')
+      .delete()
+      .eq('avaliacao_id', avaliacaoId);
+      
+    if (deleteError) {
+      console.error('Error deleting previous responses:', deleteError);
+      throw deleteError;
+    }
+
+    // Insert all answers - this fixes the duplication issue
     const respostasToInsert = Object.entries(answers).map(([perguntaId, answer]) => ({
       avaliacao_id: avaliacaoId,
       pergunta_id: perguntaId,
@@ -281,7 +340,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
         .insert(respostasToInsert);
 
       if (respostasError) {
-        console.error('Erro ao salvar respostas:', respostasError);
+        console.error('Error saving responses:', respostasError);
         throw respostasError;
       }
     }
@@ -294,16 +353,16 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
     
     console.log('Form data saved successfully');
   } catch (error) {
-    console.error('Erro no processo de salvamento do formulário:', error);
+    console.error('Error in saving form:', error);
     throw error;
   }
 }
 
 export async function deleteFormEvaluation(evaluationId: string): Promise<boolean> {
   try {
-    console.log(`Iniciando processo de exclusão da avaliação: ${evaluationId}`);
+    console.log(`Starting deletion process for evaluation: ${evaluationId}`);
     
-    // 1. Primeiro, verifica se a avaliação existe
+    // 1. First, check if the evaluation exists
     const { data: existingEvaluation, error: checkError } = await supabase
       .from('avaliacoes')
       .select('id')
@@ -311,77 +370,52 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<boolea
       .single();
     
     if (checkError || !existingEvaluation) {
-      console.error('Avaliação não encontrada ou erro ao verificar:', checkError);
+      console.error('Evaluation not found or error checking:', checkError);
       return false;
     }
     
-    console.log(`Avaliação ${evaluationId} encontrada, prosseguindo com exclusão`);
+    console.log(`Evaluation ${evaluationId} found, proceeding with deletion`);
     
-    // 2. Exclui relatórios associados (se existirem)
-    console.log('Excluindo relatórios');
-    const { error: deleteRelatoriosError } = await supabase
+    // 2. Delete related reports (if any)
+    console.log('Deleting reports');
+    const { error: deleteReportsError } = await supabase
       .from('relatorios')
       .delete()
       .eq('avaliacao_id', evaluationId);
       
-    if (deleteRelatoriosError) {
-      console.error('Erro ao excluir relatórios:', deleteRelatoriosError);
+    if (deleteReportsError) {
+      console.error('Error deleting reports:', deleteReportsError);
       // Continue with the deletion process even if this step fails
     }
     
-    // 3. Buscar todas as respostas para esta avaliação
-    const { data: respostas, error: respostasError } = await supabase
-      .from('respostas')
-      .select('id')
-      .eq('avaliacao_id', evaluationId);
-      
-    if (respostasError) {
-      console.error('Erro ao buscar respostas para exclusão:', respostasError);
-    } else if (respostas && respostas.length > 0) {
-      const respostaIds = respostas.map(r => r.id);
-      
-      console.log(`Excluindo opções de ${respostaIds.length} respostas`);
-      
-      // 4. Exclui as opções de resposta para cada resposta
-      const { error: deleteOpcoesError } = await supabase
-        .from('resposta_opcoes')
-        .delete()
-        .in('resposta_id', respostaIds);
-      
-      if (deleteOpcoesError) {
-        console.error('Erro ao excluir opções de respostas:', deleteOpcoesError);
-        // Continue with the deletion process even if this step fails
-      }
-    }
-    
-    // 5. Exclui as respostas
-    console.log('Excluindo respostas');
-    const { error: deleteRespostasError } = await supabase
+    // 3. Delete all responses for this evaluation
+    console.log('Deleting responses');
+    const { error: deleteResponsesError } = await supabase
       .from('respostas')
       .delete()
       .eq('avaliacao_id', evaluationId);
       
-    if (deleteRespostasError) {
-      console.error('Erro ao excluir respostas:', deleteRespostasError);
+    if (deleteResponsesError) {
+      console.error('Error deleting responses:', deleteResponsesError);
       return false;
     }
     
-    // 6. Finalmente, exclui a avaliação
-    console.log('Excluindo a avaliação');
-    const { error: deleteAvaliacaoError } = await supabase
+    // 4. Finally, delete the evaluation itself
+    console.log('Deleting the evaluation');
+    const { error: deleteEvaluationError } = await supabase
       .from('avaliacoes')
       .delete()
       .eq('id', evaluationId);
     
-    if (deleteAvaliacaoError) {
-      console.error('Erro ao excluir avaliação:', deleteAvaliacaoError);
+    if (deleteEvaluationError) {
+      console.error('Error deleting evaluation:', deleteEvaluationError);
       return false;
     }
     
-    console.log(`Avaliação ${evaluationId} excluída com sucesso`);
+    console.log(`Evaluation ${evaluationId} deleted successfully`);
     return true;
   } catch (error) {
-    console.error('Erro completo no processo de exclusão da avaliação:', error);
+    console.error('Complete error in the evaluation deletion process:', error);
     return false;
   }
 }
