@@ -64,7 +64,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
       await deleteFormEvaluation(evaluationId);
       
       // Atualizar o estado local para remover a avaliação excluída
-      setEvaluationHistory(prev => prev.filter(eval => eval.id !== evaluationId));
+      setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
       
       // Limpar a avaliação selecionada se for a mesma que foi excluída
       if (selectedEvaluation?.id === evaluationId) {
