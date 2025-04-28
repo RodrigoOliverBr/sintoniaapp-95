@@ -1,8 +1,18 @@
 
 import { useState, useEffect } from "react";
-import { Form } from "@/types/form";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+// Define the Form interface to match what's coming from the database
+interface Form {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  version?: string;
+  ativo?: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export function useFormSelection() {
   const [availableForms, setAvailableForms] = useState<Form[]>([]);

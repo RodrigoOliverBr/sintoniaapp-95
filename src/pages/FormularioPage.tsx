@@ -146,31 +146,32 @@ const FormularioPage: React.FC = () => {
       });
       
       // Check if we already have an evaluation result with the same employee and form
+      let existingFormResult = formResult;
       if (evaluationHistory && evaluationHistory.length > 0) {
         // Don't create duplicate evaluations
         const existingEvaluation = evaluationHistory.find(
-          eval => eval.formulario_id === selectedFormId && !eval.is_complete
+          evaluation => evaluation.formulario_id === selectedFormId && !evaluation.is_complete
         );
         
         if (existingEvaluation) {
           // Update existing evaluation instead of creating a new one
-          formResult = existingEvaluation;
+          existingFormResult = existingEvaluation;
         }
       }
       
       // Prepare form result data
       const formResultData = {
-        id: formResult?.id || '',
+        id: existingFormResult?.id || '',
         employeeId: selectedEmployeeId,
         empresa_id: selectedCompanyId,
         formulario_id: selectedFormId,
         answers,
         total_sim: totalYes,
         total_nao: totalNo,
-        notas_analista: formResult?.notas_analista || '',
+        notas_analista: existingFormResult?.notas_analista || '',
         is_complete: true,
         last_updated: new Date().toISOString(),
-        created_at: formResult?.created_at || new Date().toISOString(),
+        created_at: existingFormResult?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
       
