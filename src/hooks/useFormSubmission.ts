@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { FormResult, Question } from "@/types/form";
+import { FormResult } from "@/types/form";
 import { saveFormResult, getFormResultByEmployeeId } from "@/services/form";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
@@ -38,6 +38,10 @@ export function useFormSubmission() {
     setIsSubmitting(true);
     
     try {
+      console.log('Iniciando salvamento do formulário');
+      console.log(`FormID: ${selectedFormId}, EmployeeID: ${selectedEmployeeId}, CompanyID: ${selectedCompanyId}`);
+      console.log(`Respostas: ${Object.keys(answers).length}`);
+      
       let totalYes = 0;
       let totalNo = 0;
       
@@ -48,6 +52,8 @@ export function useFormSubmission() {
           totalNo++;
         }
       });
+      
+      console.log(`Total SIM: ${totalYes}, Total NÃO: ${totalNo}, Completo: ${completeForm}`);
       
       const isComplete = completeForm;
       
@@ -63,27 +69,40 @@ export function useFormSubmission() {
         is_complete: isComplete,
         last_updated: new Date().toISOString(),
         created_at: formResult?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        totalYes,
+        totalNo,
+        analyistNotes: formResult?.analyistNotes || '',
+        yesPerSeverity: formResult?.yesPerSeverity || {
+          "LEVEMENTE PREJUDICIAL": 0,
+          "PREJUDICIAL": 0,
+          "EXTREMAMENTE PREJUDICIAL": 0
+        }
       };
       
       await saveFormResult(formResultData);
       
-      sonnerToast.success("Formulário salvo com sucesso!");
+      console.log('Formulário salvo com sucesso');
       
       const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId, selectedFormId);
       
       if (updatedResult) {
+        console.log('Resultado atualizado recebido');
         onSuccess(updatedResult);
 
         if (!completeForm) {
           moveToNextSection();
         }
+      } else {
+        console.warn('Não foi possível obter o resultado atualizado');
+        // Se não conseguir obter o resultado atualizado, use o formResultData como um backup
+        onSuccess(formResultData);
       }
     } catch (error: any) {
       console.error("Erro ao salvar o formulário:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível salvar o formulário",
+        description: "Não foi possível salvar o formulário: " + (error.message || "Erro desconhecido"),
         variant: "destructive",
       });
     } finally {

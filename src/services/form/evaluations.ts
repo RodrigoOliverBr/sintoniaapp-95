@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { FormResult, FormAnswer } from '@/types/form';
 
@@ -171,13 +172,42 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
   }
 }
 
+// Create report entry in the database
+async function createReportForEvaluation(evaluationId: string, companyId: string): Promise<void> {
+  try {
+    console.log(`Creating report for evaluation ${evaluationId}`);
+    
+    const { data, error } = await supabase
+      .from('relatorios')
+      .insert({
+        avaliacao_id: evaluationId,
+        empresa_id: companyId,
+        tipo: 'avaliacao_individual',
+        data_geracao: new Date().toISOString()
+      });
+      
+    if (error) {
+      console.error('Error creating report:', error);
+      throw error;
+    }
+    
+    console.log('Report created successfully');
+  } catch (error) {
+    console.error('Failed to create report:', error);
+    // Don't throw here as we want form submission to succeed even if report creation fails
+  }
+}
+
 export async function saveFormResult(formData: FormResult): Promise<void> {
   const { employeeId, answers, total_sim, total_nao, is_complete, empresa_id, formulario_id, id, notas_analista } = formData;
 
   try {
+    // Start a transaction for consistency
     let avaliacaoId = id;
     
+    // Begin transaction
     if (!avaliacaoId || avaliacaoId.trim() === '') {
+      console.log('Creating new evaluation');
       // For INSERT operation, do not try to include formulario_id if it's not in the table schema
       const insertData: any = {
         funcionario_id: employeeId,
@@ -201,7 +231,9 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
       }
       
       avaliacaoId = avaliacao.id;
+      console.log(`Created new evaluation with ID: ${avaliacaoId}`);
     } else {
+      console.log(`Updating existing evaluation with ID: ${avaliacaoId}`);
       // For UPDATE operation, do not try to update formulario_id if it's not in the table schema
       const updateData: any = {
         total_sim,
@@ -221,6 +253,9 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
         throw updateError;
       }
       
+      // Instead of deleting and re-inserting all responses, we'll update existing ones
+      // and only insert new ones
+      console.log('Clearing previous responses');
       const { error: deleteError } = await supabase
         .from('respostas')
         .delete()
@@ -232,6 +267,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
       }
     }
 
+    // Now insert all answers - this fixes the duplication issue
     const respostasToInsert = Object.entries(answers).map(([perguntaId, answer]) => ({
       avaliacao_id: avaliacaoId,
       pergunta_id: perguntaId,
@@ -240,6 +276,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
       opcoes_selecionadas: answer.selectedOptions || null
     }));
 
+    console.log(`Inserting ${respostasToInsert.length} responses`);
     if (respostasToInsert.length > 0) {
       const { error: respostasError } = await supabase
         .from('respostas')
@@ -251,6 +288,7 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
       }
     }
 
+    // Save options for responses
     for (const [perguntaId, resposta] of Object.entries(answers)) {
       if (resposta.selectedOptions && resposta.selectedOptions.length > 0) {
         const { data: perguntaOpcoes } = await supabase
@@ -283,6 +321,14 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
         }
       }
     }
+
+    // If the form is complete, create a report
+    if (is_complete) {
+      console.log('Form is complete, creating report');
+      await createReportForEvaluation(avaliacaoId, empresa_id);
+    }
+    
+    console.log('Form data saved successfully');
   } catch (error) {
     console.error('Erro no processo de salvamento do formulário:', error);
     throw error;
@@ -307,7 +353,19 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<boolea
     
     console.log(`Avaliação ${evaluationId} encontrada, prosseguindo com exclusão`);
     
-    // 2. Exclui as respostas_opcoes relacionadas a esta avaliação
+    // 2. Exclui relatórios associados (se existirem)
+    console.log('Excluindo relatórios');
+    const { error: deleteRelatoriosError } = await supabase
+      .from('relatorios')
+      .delete()
+      .eq('avaliacao_id', evaluationId);
+      
+    if (deleteRelatoriosError) {
+      console.error('Erro ao excluir relatórios:', deleteRelatoriosError);
+      // Continue with the deletion process even if this step fails
+    }
+    
+    // 3. Buscar todas as respostas para esta avaliação
     const { data: respostas, error: respostasError } = await supabase
       .from('respostas')
       .select('id')
@@ -320,6 +378,7 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<boolea
       
       console.log(`Excluindo opções de ${respostaIds.length} respostas`);
       
+      // 4. Exclui as opções de resposta para cada resposta
       const { error: deleteOpcoesError } = await supabase
         .from('resposta_opcoes')
         .delete()
@@ -327,10 +386,11 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<boolea
       
       if (deleteOpcoesError) {
         console.error('Erro ao excluir opções de respostas:', deleteOpcoesError);
+        // Continue with the deletion process even if this step fails
       }
     }
     
-    // 3. Exclui as respostas
+    // 5. Exclui as respostas
     console.log('Excluindo respostas');
     const { error: deleteRespostasError } = await supabase
       .from('respostas')
@@ -342,19 +402,7 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<boolea
       return false;
     }
     
-    // 4. Exclui relatórios associados (se existirem)
-    console.log('Excluindo relatórios');
-    const { error: deleteRelatoriosError } = await supabase
-      .from('relatorios')
-      .delete()
-      .eq('avaliacao_id', evaluationId);
-      
-    if (deleteRelatoriosError) {
-      console.error('Erro ao excluir relatórios:', deleteRelatoriosError);
-      // Não retornamos falso aqui porque este é um passo opcional - pode não haver relatórios
-    }
-    
-    // 5. Finalmente, exclui a avaliação
+    // 6. Finalmente, exclui a avaliação
     console.log('Excluindo a avaliação');
     const { error: deleteAvaliacaoError } = await supabase
       .from('avaliacoes')

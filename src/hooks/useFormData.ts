@@ -58,6 +58,13 @@ export function useFormData() {
     isDeletingEvaluation
   } = useEvaluationHistory(selectedEmployeeId);
 
+  const resetForm = () => {
+    setAnswers({});
+    setFormComplete(false);
+    setShowResults(false);
+    setSelectedEvaluation(null);
+  };
+
   return {
     // Company selection
     companies,
@@ -91,6 +98,7 @@ export function useFormData() {
     setFormComplete,
     showResults,
     setShowResults,
+    resetForm,
 
     // Evaluation history
     selectedEvaluation,

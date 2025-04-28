@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { toast as sonnerToast } from "sonner";
 
 interface EmployeeFormHistoryProps {
   evaluations: FormResult[];
@@ -43,20 +44,26 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   const { toast } = useToast();
 
   const handleDelete = (evaluation: FormResult) => {
+    if (!evaluation || !evaluation.id) {
+      sonnerToast.error("Erro: Avaliação inválida");
+      return;
+    }
+    
     setEvaluationToDelete(evaluation);
     setShowDeleteDialog(true);
   };
 
   const confirmDelete = async () => {
-    if (evaluationToDelete && onDeleteEvaluation) {
+    if (evaluationToDelete && evaluationToDelete.id && onDeleteEvaluation) {
       try {
         setIsDeleting(true);
         console.log("Deletando avaliação:", evaluationToDelete.id);
         
-        // Simulação de progresso de exclusão
-        setDeleteProgress(25);
-        setTimeout(() => setDeleteProgress(50), 500);
-        setTimeout(() => setDeleteProgress(75), 1000);
+        // Demonstração visual do progresso de exclusão
+        setDeleteProgress(10);
+        setTimeout(() => setDeleteProgress(30), 300); // Relatórios
+        setTimeout(() => setDeleteProgress(60), 600); // Respostas
+        setTimeout(() => setDeleteProgress(80), 900); // Avaliação
         
         // Chamar a função de deleção do componente pai
         await onDeleteEvaluation(evaluationToDelete.id);
@@ -81,6 +88,9 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
       } finally {
         setIsDeleting(false);
       }
+    } else {
+      sonnerToast.error("Dados da avaliação inválidos ou função de exclusão não disponível");
+      setShowDeleteDialog(false);
     }
   };
 
@@ -111,17 +121,17 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
           {evaluations.map((evaluation) => {
             const { level, color } = getRiskLevel(evaluation);
             return (
-              <Card key={evaluation.id}>
+              <Card key={evaluation.id || `evaluation-${Math.random()}`}>
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="space-y-1 flex-1">
                     <p className="font-medium">
-                      Avaliação {format(new Date(evaluation.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      Avaliação {evaluation.created_at ? format(new Date(evaluation.created_at), "dd/MM/yyyy", { locale: ptBR }) : 'Data desconhecida'}
                     </p>
                     <p className={`${color} font-medium`}>
                       Nível de Risco: {level}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Última atualização: {format(new Date(evaluation.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      Última atualização: {evaluation.updated_at ? format(new Date(evaluation.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data desconhecida'}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -178,7 +188,25 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
           
           {isDeleting && (
             <div className="py-2">
-              <p className="text-sm text-center mb-2">Excluindo dados relacionados...</p>
+              <p className="text-sm mb-1">Excluindo dados relacionados:</p>
+              <div className="space-y-1 mb-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span>Relatórios</span>
+                  <span>{deleteProgress >= 30 ? '✓' : '...'}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span>Opções de respostas</span>
+                  <span>{deleteProgress >= 60 ? '✓' : '...'}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span>Respostas</span>
+                  <span>{deleteProgress >= 80 ? '✓' : '...'}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span>Avaliação</span>
+                  <span>{deleteProgress >= 100 ? '✓' : '...'}</span>
+                </div>
+              </div>
               <Progress value={deleteProgress} className="h-2" />
             </div>
           )}
@@ -220,7 +248,7 @@ const getRiskLevel = (evaluation: FormResult) => {
 };
 
 const calculateRiskScore = (evaluation: FormResult): number => {
-  if (!evaluation.total_sim && !evaluation.totalYes) return 0;
+  if (!evaluation) return 0;
   
   const totalYes = evaluation.total_sim || evaluation.totalYes || 0;
   const totalQuestions = 

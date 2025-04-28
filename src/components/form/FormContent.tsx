@@ -83,7 +83,7 @@ const FormContent: React.FC<FormContentProps> = ({
       result={selectedEvaluation || formResult!}
       questions={questions}
       onNotesChange={onNotesChange}
-      isReadOnly={isReadOnly}
+      isReadOnly={isReadOnly || showingHistoryView} // Make fields read-only when viewing history
     />
   );
 };

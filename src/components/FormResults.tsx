@@ -62,7 +62,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
       <ResultsActions onPrint={handlePrint} />
 
       {isReadOnly && (
-        <Alert variant="info" className="mb-4">
+        <Alert variant="default" className="mb-4 bg-blue-50 border-blue-200">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Você está visualizando os resultados em modo somente leitura. Para fazer alterações, use o botão "Editar" ou clique em "Sair" para retornar ao formulário.

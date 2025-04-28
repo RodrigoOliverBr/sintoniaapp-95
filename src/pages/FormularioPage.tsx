@@ -1,10 +1,11 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import Layout from "@/components/Layout";
 import { useFormData } from "@/hooks/useFormData";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import FormSelectionSection from "@/components/form/FormSelectionSection";
 import FormContentSection from "@/components/form/FormContentSection";
+import { toast as sonnerToast } from "sonner";
 
 const FormularioPage: React.FC = () => {
   const {
@@ -32,7 +33,7 @@ const FormularioPage: React.FC = () => {
     selectedEvaluation,
     setSelectedEvaluation,
     evaluationHistory,
-    setEvaluationHistory,
+    resetForm,
     isLoadingHistory,
     showingHistoryView,
     setShowingHistoryView,
@@ -43,20 +44,21 @@ const FormularioPage: React.FC = () => {
 
   const { isSubmitting, handleSaveForm } = useFormSubmission();
 
+  // Reset form when switching between employees
+  useEffect(() => {
+    resetForm();
+  }, [selectedEmployeeId]);
+
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value);
     setSelectedEmployeeId(undefined);
-    setShowResults(false);
-    setFormComplete(false);
+    resetForm();
     setShowingHistoryView(false);
   };
 
   const handleEmployeeChange = (value: string) => {
     setSelectedEmployeeId(value);
-    setShowResults(false);
-    setSelectedEvaluation(null);
-    setFormComplete(false);
-    setAnswers({});
+    resetForm();
     setShowingHistoryView(false);
   };
 
@@ -64,15 +66,11 @@ const FormularioPage: React.FC = () => {
     setSelectedFormId(value);
     setAnswers({});
     setCurrentSection("");
-    setShowResults(false);
-    setFormComplete(false);
+    resetForm();
   };
 
   const handleNewEvaluation = () => {
-    setSelectedEvaluation(null);
-    setShowResults(false);
-    setFormComplete(false);
-    setAnswers({});
+    resetForm();
     setShowingHistoryView(false);
     if (formSections.length > 0) {
       setCurrentSection(formSections[0].title);
@@ -84,8 +82,10 @@ const FormularioPage: React.FC = () => {
       // Recarregar o histórico do funcionário
       loadEmployeeHistory();
     }
+    
     setShowResults(false);
     setFormComplete(false);
+    setSelectedEvaluation(null);
   };
 
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
@@ -93,6 +93,14 @@ const FormularioPage: React.FC = () => {
   const isLastSection = formSections.findIndex(section => section.title === currentSection) === formSections.length - 1;
 
   const handleSaveAndComplete = () => {
+    // Verificar se há respostas para todas as perguntas
+    const allQuestionsAnswered = questions.every(q => answers[q.id] && answers[q.id].answer !== null);
+    
+    if (!allQuestionsAnswered) {
+      sonnerToast.warning("Por favor, responda todas as perguntas antes de concluir o formulário");
+      return;
+    }
+    
     handleSaveForm(
       {
         selectedFormId,
@@ -108,6 +116,10 @@ const FormularioPage: React.FC = () => {
           setShowResults(true);
           setFormComplete(true);
           setSelectedEvaluation(updatedResult);
+          
+          // Mostrar mensagem de sucesso
+          sonnerToast.success("Formulário concluído com sucesso!");
+          
           // Após completar o formulário, também recarregamos o histórico
           loadEmployeeHistory();
         },
@@ -124,6 +136,18 @@ const FormularioPage: React.FC = () => {
   };
 
   const handleSaveAndContinue = () => {
+    // Verificar se há respostas para todas as perguntas da seção atual
+    const currentSectionQuestions = formSections
+      .find(s => s.title === currentSection)?.questions || [];
+    
+    const allCurrentSectionQuestionsAnswered = currentSectionQuestions
+      .every(q => answers[q.id] && answers[q.id].answer !== null);
+    
+    if (!allCurrentSectionQuestionsAnswered) {
+      sonnerToast.warning("Por favor, responda todas as perguntas desta seção antes de continuar");
+      return;
+    }
+    
     handleSaveForm(
       {
         selectedFormId,
@@ -135,12 +159,15 @@ const FormularioPage: React.FC = () => {
       {
         onSuccess: (updatedResult) => {
           setFormResult(updatedResult);
+          
           const currentIndex = formSections.findIndex(s => s.title === currentSection);
           if (currentIndex < formSections.length - 1) {
             setCurrentSection(formSections[currentIndex + 1].title);
           } else {
             setFormComplete(true);
           }
+          
+          sonnerToast.success("Dados salvos com sucesso!");
         },
         moveToNextSection: () => {
           const currentIndex = formSections.findIndex(s => s.title === currentSection);
@@ -211,7 +238,7 @@ const FormularioPage: React.FC = () => {
               }
             }}
             onSectionChange={setCurrentSection}
-            evaluationHistory={evaluationHistory}
+            evaluationHistory={evaluationHistory || []}
             formComplete={formComplete}
             isSubmitting={isSubmitting}
             isLastSection={isLastSection}

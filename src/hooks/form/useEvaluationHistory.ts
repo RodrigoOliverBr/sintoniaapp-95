@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { FormResult } from "@/types/form";
 import { getEmployeeFormHistory, deleteFormEvaluation } from "@/services/form";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 
 export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
   const [selectedEvaluation, setSelectedEvaluation] = useState<FormResult | null>(null);
@@ -18,6 +19,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
     } else {
       setEvaluationHistory([]);
       setShowingHistoryView(false);
+      setSelectedEvaluation(null);
     }
   }, [selectedEmployeeId]);
 
@@ -39,6 +41,7 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
       } else {
         console.log("Desativando visualização de histórico - sem avaliações");
         setShowingHistoryView(false);
+        setSelectedEvaluation(null);
       }
       
     } catch (error) {
@@ -54,6 +57,11 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
   };
 
   const handleDeleteEvaluation = async (evaluationId: string) => {
+    if (!evaluationId) {
+      sonnerToast.error("ID de avaliação inválido");
+      return;
+    }
+    
     try {
       setIsDeletingEvaluation(true);
       console.log(`Iniciando exclusão da avaliação: ${evaluationId}`);
@@ -82,28 +90,17 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
           setSelectedEvaluation(null);
         }
         
-        toast({
-          title: "Sucesso",
-          description: "Avaliação excluída com sucesso.",
-        });
+        sonnerToast.success("Avaliação excluída com sucesso.");
         
-        // Recarregar histórico para garantir sincronização
+        // Recarregar histórico para garantir sincronização com o servidor
         await loadEmployeeHistory();
       } else {
         console.error("Falha ao excluir avaliação");
-        toast({
-          title: "Erro",
-          description: "Não foi possível excluir a avaliação. Tente novamente mais tarde.",
-          variant: "destructive",
-        });
+        sonnerToast.error("Não foi possível excluir a avaliação. Tente novamente mais tarde.");
       }
     } catch (error) {
       console.error("Erro ao excluir avaliação:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir a avaliação. Tente novamente mais tarde.",
-        variant: "destructive",
-      });
+      sonnerToast.error("Não foi possível excluir a avaliação. Tente novamente mais tarde.");
     } finally {
       setIsDeletingEvaluation(false);
     }
