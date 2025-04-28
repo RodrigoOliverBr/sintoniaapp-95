@@ -12,6 +12,7 @@ import { useFormSelection } from "@/hooks/form/useFormSelection";
 import { useFormQuestions } from "@/hooks/form/useFormQuestions";
 import { useFormAnswers } from "@/hooks/form/useFormAnswers";
 import { useEvaluationHistory } from "@/hooks/form/useEvaluationHistory";
+import { Button } from "@/components/ui/button";
 
 const FormularioPage: React.FC = () => {
   // Custom hooks for forms
