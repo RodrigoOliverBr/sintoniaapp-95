@@ -193,25 +193,42 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
   }
 }
 
-async function createReportForEvaluation(evaluationId: string, companyId: string): Promise<void> {
+async function createReportForEvaluation(evaluationId: string, companyId: string, formId: string): Promise<void> {
   try {
     console.log(`Creating report for evaluation ${evaluationId}`);
     
-    const { data, error } = await supabase
+    // Check if a report already exists for this evaluation
+    const { data: existingReport, error: checkError } = await supabase
       .from('relatorios')
-      .insert({
-        avaliacao_id: evaluationId,
-        empresa_id: companyId,
-        tipo: 'avaliacao_individual',
-        data_geracao: new Date().toISOString()
-      });
-      
-    if (error) {
-      console.error('Error creating report:', error);
-      throw error;
+      .select('id')
+      .eq('avaliacao_id', evaluationId)
+      .maybeSingle();
+    
+    if (checkError) {
+      console.error('Error checking for existing report:', checkError);
     }
     
-    console.log('Report created successfully');
+    // Only create a new report if one doesn't already exist
+    if (!existingReport) {
+      const { data, error } = await supabase
+        .from('relatorios')
+        .insert({
+          avaliacao_id: evaluationId,
+          empresa_id: companyId,
+          tipo: 'avaliacao_individual',
+          data_geracao: new Date().toISOString(),
+          observacoes: `Relatório gerado automaticamente para a avaliação ${evaluationId} do formulário ${formId}`
+        });
+        
+      if (error) {
+        console.error('Error creating report:', error);
+        throw error;
+      }
+      
+      console.log('Report created successfully');
+    } else {
+      console.log(`Report for evaluation ${evaluationId} already exists, not creating a new one`);
+    }
   } catch (error) {
     console.error('Failed to create report:', error);
     // Don't throw here as we want form submission to succeed even if report creation fails
@@ -359,7 +376,8 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
     // If the form is complete, create a report
     if (is_complete) {
       console.log('Form is complete, creating report');
-      await createReportForEvaluation(avaliacaoId, empresa_id);
+      // Pass the formulario_id to createReportForEvaluation
+      await createReportForEvaluation(avaliacaoId, empresa_id, formulario_id);
     }
     
     console.log('Form data saved successfully');

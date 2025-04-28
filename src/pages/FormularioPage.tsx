@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
@@ -158,7 +159,7 @@ const FormularioPage: React.FC = () => {
         }
       }
       
-      // Prepare form result data
+      // Prepare form result data - ensure is_complete is set to true
       const formResultData = {
         id: existingFormResult?.id || '',
         employeeId: selectedEmployeeId,
@@ -168,11 +169,13 @@ const FormularioPage: React.FC = () => {
         total_sim: totalYes,
         total_nao: totalNo,
         notas_analista: existingFormResult?.notas_analista || '',
-        is_complete: true,
+        is_complete: true, // Explicitly set to true to ensure report generation
         last_updated: new Date().toISOString(),
         created_at: existingFormResult?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+      
+      console.log("Saving form with is_complete=true to trigger report generation");
       
       // Save form result
       await saveFormResult(formResultData);

@@ -67,7 +67,7 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
       </div>
 
       {sections.map((section) => (
-        <div key={section.id || section.title} className="border rounded-lg p-4 bg-white">
+        <div key={section.id} className="border rounded-lg p-4 bg-white">
           <FormSection
             section={section}
             answers={answers}
