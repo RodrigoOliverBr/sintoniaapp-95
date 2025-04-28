@@ -1,44 +1,65 @@
 
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
-import { useFormData } from "@/hooks/useFormData";
-import FormSelectionSection from "@/components/form/FormSelectionSection";
-import FormContentSection from "@/components/form/FormContentSection";
+import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { saveFormResult, getFormResultByEmployeeId } from "@/services/form";
+import FormSelectionSection from "@/components/form/FormSelectionSection";
+import FormContentSection from "@/components/form/FormContentSection";
+import { useCompanySelection } from "@/hooks/form/useCompanySelection";
+import { useEmployeeSelection } from "@/hooks/form/useEmployeeSelection";
+import { useFormSelection } from "@/hooks/form/useFormSelection";
+import { useFormQuestions } from "@/hooks/form/useFormQuestions";
+import { useFormAnswers } from "@/hooks/form/useFormAnswers";
+import { useEvaluationHistory } from "@/hooks/form/useEvaluationHistory";
 
 const FormularioPage: React.FC = () => {
-  const {
+  // Custom hooks for forms
+  const { 
     companies,
+    selectedCompanyId, 
+    setSelectedCompanyId 
+  } = useCompanySelection();
+
+  const {
     employees,
-    selectedCompanyId,
-    setSelectedCompanyId,
     selectedEmployeeId,
-    setSelectedEmployeeId,
-    formResult,
-    setFormResult,
-    answers,
-    setAnswers,
+    setSelectedEmployeeId
+  } = useEmployeeSelection(selectedCompanyId);
+
+  const {
     availableForms,
     selectedFormId,
-    setSelectedFormId,
+    setSelectedFormId
+  } = useFormSelection();
+
+  const {
     questions,
     formSections,
+  } = useFormQuestions(selectedFormId);
+
+  const {
+    answers,
+    setAnswers,
+    formResult,
+    setFormResult,
     showResults,
     setShowResults,
     formComplete,
     setFormComplete,
+  } = useFormAnswers();
+
+  const {
     selectedEvaluation,
     setSelectedEvaluation,
     evaluationHistory,
-    resetForm,
     isLoadingHistory,
     showingHistoryView,
     setShowingHistoryView,
     loadEmployeeHistory,
     handleDeleteEvaluation,
     isDeletingEvaluation
-  } = useFormData();
+  } = useEvaluationHistory(selectedEmployeeId);
 
   // State for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +68,13 @@ const FormularioPage: React.FC = () => {
   useEffect(() => {
     resetForm();
   }, [selectedEmployeeId]);
+
+  const resetForm = () => {
+    setAnswers({});
+    setFormComplete(false);
+    setShowResults(false);
+    setSelectedEvaluation(null);
+  };
 
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value);
@@ -117,7 +145,18 @@ const FormularioPage: React.FC = () => {
         }
       });
       
-      console.log(`Total SIM: ${totalYes}, Total NÃO: ${totalNo}`);
+      // Check if we already have an evaluation result with the same employee and form
+      if (evaluationHistory && evaluationHistory.length > 0) {
+        // Don't create duplicate evaluations
+        const existingEvaluation = evaluationHistory.find(
+          eval => eval.formulario_id === selectedFormId && !eval.is_complete
+        );
+        
+        if (existingEvaluation) {
+          // Update existing evaluation instead of creating a new one
+          formResult = existingEvaluation;
+        }
+      }
       
       // Prepare form result data
       const formResultData = {

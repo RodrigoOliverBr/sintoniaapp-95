@@ -6,110 +6,13 @@ import { useFormQuestions } from "./form/useFormQuestions";
 import { useFormAnswers } from "./form/useFormAnswers";
 import { useEvaluationHistory } from "./form/useEvaluationHistory";
 
-export function useFormData() {
-  const { 
-    companies,
-    selectedCompanyId, 
-    setSelectedCompanyId 
-  } = useCompanySelection();
-
-  const {
-    employees,
-    selectedEmployeeId,
-    setSelectedEmployeeId
-  } = useEmployeeSelection(selectedCompanyId);
-
-  const {
-    availableForms,
-    selectedFormId,
-    setSelectedFormId
-  } = useFormSelection();
-
-  const {
-    questions,
-    formSections,
-    currentSection,
-    setCurrentSection
-  } = useFormQuestions(selectedFormId);
-
-  const {
-    answers,
-    setAnswers,
-    formResult,
-    setFormResult,
-    isSubmitting,
-    setIsSubmitting,
-    formComplete,
-    setFormComplete,
-    showResults,
-    setShowResults
-  } = useFormAnswers();
-
-  const {
-    selectedEvaluation,
-    setSelectedEvaluation,
-    evaluationHistory,
-    setEvaluationHistory,
-    isLoadingHistory,
-    showingHistoryView,
-    setShowingHistoryView,
-    loadEmployeeHistory,
-    handleDeleteEvaluation,
-    isDeletingEvaluation
-  } = useEvaluationHistory(selectedEmployeeId);
-
-  const resetForm = () => {
-    setAnswers({});
-    setFormComplete(false);
-    setShowResults(false);
-    setSelectedEvaluation(null);
-  };
-
-  return {
-    // Company selection
-    companies,
-    selectedCompanyId,
-    setSelectedCompanyId,
-
-    // Employee selection
-    employees,
-    selectedEmployeeId,
-    setSelectedEmployeeId,
-
-    // Form selection
-    availableForms,
-    selectedFormId,
-    setSelectedFormId,
-
-    // Questions and sections
-    questions,
-    formSections,
-    currentSection,
-    setCurrentSection,
-
-    // Form answers and state
-    answers,
-    setAnswers,
-    formResult,
-    setFormResult,
-    isSubmitting,
-    setIsSubmitting,
-    formComplete,
-    setFormComplete,
-    showResults,
-    setShowResults,
-    resetForm,
-
-    // Evaluation history
-    selectedEvaluation,
-    setSelectedEvaluation,
-    evaluationHistory,
-    setEvaluationHistory,
-    isLoadingHistory,
-    showingHistoryView,
-    setShowingHistoryView,
-    loadEmployeeHistory,
-    handleDeleteEvaluation,
-    isDeletingEvaluation
-  };
-}
+// This file is now just a re-export to make imports cleaner
+// But we're not using the hook directly anymore to avoid the invalid hook calls
+export {
+  useCompanySelection,
+  useEmployeeSelection,
+  useFormSelection,
+  useFormQuestions,
+  useFormAnswers,
+  useEvaluationHistory
+};

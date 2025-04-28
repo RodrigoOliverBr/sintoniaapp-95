@@ -104,13 +104,3 @@ export interface FormData {
     }[];
   }[];
 }
-
-export interface Form {
-  id: string;
-  titulo: string;
-  descricao?: string;
-  version?: string;
-  ativo?: boolean;
-  created_at: string;
-  updated_at: string;
-}

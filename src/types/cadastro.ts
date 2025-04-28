@@ -105,7 +105,7 @@ export interface Contrato {
   valorMensal: number;
   taxaImplantacao: number;
   observacoes?: string;
-  cicloFaturamento?: string;
+  cicloFaturamento?: CicloFaturamento;
   proximaRenovacao?: number;
   ciclosGerados?: number;
 }
