@@ -1,25 +1,25 @@
 
 import { useState, useEffect } from "react";
 import { FormResult } from "@/types/form";
-import { getEmployeeFormHistory, deleteFormEvaluation } from "@/services/form";
+import { getEmployeeFormHistory, deleteFormEvaluation } from "@/services";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 
 export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
-  const [selectedEvaluation, setSelectedEvaluation] = useState<FormResult | null>(null);
   const [evaluationHistory, setEvaluationHistory] = useState<FormResult[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [showingHistoryView, setShowingHistoryView] = useState(false);
-  const [isDeletingEvaluation, setIsDeletingEvaluation] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
+  const [showingHistoryView, setShowingHistoryView] = useState<boolean>(false);
+  const [selectedEvaluation, setSelectedEvaluation] = useState<FormResult | null>(null);
+  const [isDeletingEvaluation, setIsDeletingEvaluation] = useState<boolean>(false);
   const { toast } = useToast();
 
+  // Load employee evaluation history when employee ID changes
   useEffect(() => {
     if (selectedEmployeeId) {
       loadEmployeeHistory();
     } else {
       setEvaluationHistory([]);
       setShowingHistoryView(false);
-      setSelectedEvaluation(null);
     }
   }, [selectedEmployeeId]);
 
@@ -28,24 +28,17 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
 
     setIsLoadingHistory(true);
     try {
-      console.log(`Carregando histórico para o funcionário: ${selectedEmployeeId}`);
       const history = await getEmployeeFormHistory(selectedEmployeeId);
-      console.log(`Histórico carregado: ${history.length} avaliações`);
-      
       setEvaluationHistory(history);
       
-      // Atualiza a visualização de histórico com base nos resultados
-      if (history.length > 0) {
-        console.log("Ativando visualização de histórico");
+      // If there's history, show the history view
+      if (history && history.length > 0) {
         setShowingHistoryView(true);
       } else {
-        console.log("Desativando visualização de histórico - sem avaliações");
         setShowingHistoryView(false);
-        setSelectedEvaluation(null);
       }
-      
     } catch (error) {
-      console.error("Erro ao carregar histórico:", error);
+      console.error("Error loading employee history:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar o histórico de avaliações",
@@ -57,65 +50,36 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
   };
 
   const handleDeleteEvaluation = async (evaluationId: string) => {
-    if (!evaluationId) {
-      sonnerToast.error("ID de avaliação inválido");
-      return;
-    }
-    
+    setIsDeletingEvaluation(true);
     try {
-      setIsDeletingEvaluation(true);
-      console.log(`Iniciando exclusão da avaliação: ${evaluationId}`);
+      await deleteFormEvaluation(evaluationId);
       
-      const deleteSuccess = await deleteFormEvaluation(evaluationId);
+      sonnerToast.success("Avaliação excluída com sucesso");
       
-      if (deleteSuccess) {
-        console.log("Exclusão bem-sucedida, atualizando estado local");
-        
-        // Atualizar estado local para feedback imediato
-        setEvaluationHistory(prevEvaluations => {
-          const updatedEvaluations = prevEvaluations.filter(
-            evaluation => evaluation.id !== evaluationId
-          );
-          
-          // Se não houver mais avaliações, desativar a visualização
-          if (updatedEvaluations.length === 0) {
-            setShowingHistoryView(false);
-          }
-          
-          return updatedEvaluations;
-        });
-        
-        // Limpar avaliação selecionada se necessário
-        if (selectedEvaluation?.id === evaluationId) {
-          setSelectedEvaluation(null);
-        }
-        
-        sonnerToast.success("Avaliação excluída com sucesso.");
-        
-        // Recarregar histórico para garantir sincronização com o servidor
-        await loadEmployeeHistory();
-      } else {
-        console.error("Falha ao excluir avaliação");
-        sonnerToast.error("Não foi possível excluir a avaliação. Tente novamente mais tarde.");
+      // Refresh the history list
+      await loadEmployeeHistory();
+      
+      // If no more items in history, hide history view
+      if (evaluationHistory.length <= 1) {
+        setShowingHistoryView(false);
       }
     } catch (error) {
-      console.error("Erro ao excluir avaliação:", error);
-      sonnerToast.error("Não foi possível excluir a avaliação. Tente novamente mais tarde.");
+      console.error("Error deleting evaluation:", error);
+      sonnerToast.error("Erro ao excluir avaliação");
     } finally {
       setIsDeletingEvaluation(false);
     }
   };
 
   return {
-    selectedEvaluation,
-    setSelectedEvaluation,
     evaluationHistory,
-    setEvaluationHistory,
     isLoadingHistory,
     showingHistoryView,
     setShowingHistoryView,
+    selectedEvaluation,
+    setSelectedEvaluation,
+    isDeletingEvaluation,
     loadEmployeeHistory,
-    handleDeleteEvaluation,
-    isDeletingEvaluation
+    handleDeleteEvaluation
   };
 }

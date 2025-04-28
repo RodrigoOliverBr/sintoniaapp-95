@@ -1,27 +1,51 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
+import { FormResult } from "@/types/form";
 
-// Define the Form interface to match what's coming from the database
-interface Form {
-  id: string;
-  titulo: string;
-  descricao?: string;
-  version?: string;
-  ativo?: boolean;
-  created_at: string;
-  updated_at: string;
+// Get form status by employee ID
+export async function getFormStatusByEmployeeId(employeeId: string): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('avaliacoes')
+      .select('*')
+      .eq('funcionario_id', employeeId);
+      
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error getting form status:', error);
+    throw error;
+  }
 }
 
-export async function getAllForms(): Promise<Form[]> {
+// Get all form results
+export async function getFormResults(): Promise<FormResult[]> {
+  try {
+    const { data, error } = await supabase
+      .from('avaliacoes')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error getting form results:', error);
+    throw error;
+  }
+}
+
+// Get all available forms
+export async function getAllForms() {
   try {
     const { data, error } = await supabase
       .from('formularios')
       .select('*')
-      .eq('ativo', true)
-      .order('titulo');
-    
+      .eq('ativo', true);
+
     if (error) throw error;
-    
+
     return data || [];
   } catch (error) {
     console.error('Error fetching forms:', error);

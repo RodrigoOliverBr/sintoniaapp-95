@@ -49,7 +49,7 @@ const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
                 : "Selecione a empresa, o funcionário e o formulário para preencher."}
             </CardDescription>
           </div>
-          {showNewEvaluationButton && onNewEvaluation && (
+          {showNewEvaluationButton && onNewEvaluation && selectedEmployeeId && (
             <Button 
               onClick={onNewEvaluation}
               variant="outline" 

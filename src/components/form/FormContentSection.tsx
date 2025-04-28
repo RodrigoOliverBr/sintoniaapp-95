@@ -111,7 +111,7 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
     <div className="space-y-6">
       <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
         <h2 className="text-xl font-bold text-primary mb-1">
-          Avaliação para: {selectedEmployee?.nome}
+          Avaliação para: {selectedEmployee?.nome || "Funcionário não selecionado"}
         </h2>
         <p className="text-sm text-muted-foreground">
           Cargo: {selectedEmployee?.cargo_id ? "Especificado" : "Não especificado"}

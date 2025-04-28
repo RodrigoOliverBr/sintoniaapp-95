@@ -112,7 +112,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
             className="min-h-[200px]"
             value={notes}
             onChange={(e) => onNotesChange(e.target.value)}
-            readOnly={false} 
+            readOnly={isReadOnly}
           />
         </CardContent>
       </Card>

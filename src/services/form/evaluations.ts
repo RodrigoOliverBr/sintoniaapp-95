@@ -1,4 +1,7 @@
 
+import { supabase } from "@/integrations/supabase/client";
+import { FormResult } from "@/types/form";
+
 async function createReportForEvaluation(evaluationId: string, companyId: string, formId: string): Promise<void> {
   try {
     console.log(`Checking if a report is needed for evaluation ${evaluationId}`);
@@ -200,6 +203,178 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
     console.log('Form data saved successfully');
   } catch (error) {
     console.error('Error in saving form:', error);
+    throw error;
+  }
+}
+
+// Get evaluation by employee ID and form ID
+export async function getFormResultByEmployeeId(employeeId: string, formId: string): Promise<FormResult | null> {
+  try {
+    // First check for completed evaluations
+    const { data: completedEvaluation, error: completedError } = await supabase
+      .from('avaliacoes')
+      .select('*')
+      .eq('funcionario_id', employeeId)
+      .eq('formulario_id', formId)
+      .eq('is_complete', true)
+      .order('created_at', { ascending: false })
+      .maybeSingle();
+      
+    if (completedError) {
+      console.error('Error fetching completed evaluations:', completedError);
+      throw completedError;
+    }
+    
+    if (completedEvaluation) {
+      return await getFullEvaluation(completedEvaluation);
+    }
+
+    // No completed evaluation found, check for drafts
+    const { data: draftEvaluation, error: draftError } = await supabase
+      .from('avaliacoes')
+      .select('*')
+      .eq('funcionario_id', employeeId)
+      .eq('formulario_id', formId)
+      .eq('is_complete', false)
+      .order('created_at', { ascending: false })
+      .maybeSingle();
+      
+    if (draftError) {
+      console.error('Error fetching draft evaluations:', draftError);
+      throw draftError;
+    }
+    
+    if (draftEvaluation) {
+      return await getFullEvaluation(draftEvaluation);
+    }
+      
+    // No evaluations found
+    return null;
+  } catch (error) {
+    console.error('Error in getFormResultByEmployeeId:', error);
+    throw error;
+  }
+}
+
+// Get employee evaluation history
+export async function getEmployeeFormHistory(employeeId: string): Promise<FormResult[]> {
+  try {
+    const { data: evaluations, error } = await supabase
+      .from('avaliacoes')
+      .select('*')
+      .eq('funcionario_id', employeeId)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error('Error fetching employee evaluation history:', error);
+      throw error;
+    }
+    
+    if (!evaluations || evaluations.length === 0) {
+      return [];
+    }
+
+    // Get full evaluation data for each evaluation
+    const fullEvaluations = await Promise.all(
+      evaluations.map((evaluation) => getFullEvaluation(evaluation))
+    );
+    
+    return fullEvaluations;
+  } catch (error) {
+    console.error('Error in getEmployeeFormHistory:', error);
+    throw error;
+  }
+}
+
+// Delete an evaluation and its associated data
+export async function deleteFormEvaluation(evaluationId: string): Promise<void> {
+  try {
+    // Delete responses first
+    const { error: responsesError } = await supabase
+      .from('respostas')
+      .delete()
+      .eq('avaliacao_id', evaluationId);
+      
+    if (responsesError) {
+      console.error('Error deleting responses:', responsesError);
+      throw responsesError;
+    }
+    
+    // Delete reports linked to this evaluation
+    const { error: reportsError } = await supabase
+      .from('relatorios')
+      .delete()
+      .eq('avaliacao_id', evaluationId);
+      
+    if (reportsError) {
+      console.error('Error deleting reports:', reportsError);
+      throw reportsError;
+    }
+    
+    // Finally delete the evaluation itself
+    const { error: evaluationError } = await supabase
+      .from('avaliacoes')
+      .delete()
+      .eq('id', evaluationId);
+      
+    if (evaluationError) {
+      console.error('Error deleting evaluation:', evaluationError);
+      throw evaluationError;
+    }
+    
+    console.log(`Evaluation ${evaluationId} deleted successfully`);
+  } catch (error) {
+    console.error('Error in deleteFormEvaluation:', error);
+    throw error;
+  }
+}
+
+// Helper function to get the full evaluation data with answers
+async function getFullEvaluation(evaluation: any): Promise<FormResult> {
+  try {
+    // Get all responses for this evaluation
+    const { data: responses, error: responsesError } = await supabase
+      .from('respostas')
+      .select('*')
+      .eq('avaliacao_id', evaluation.id);
+      
+    if (responsesError) {
+      console.error('Error fetching responses:', responsesError);
+      throw responsesError;
+    }
+    
+    // Format responses into the answers object expected by FormResult
+    const answers: Record<string, any> = {};
+    
+    if (responses) {
+      responses.forEach((response) => {
+        answers[response.pergunta_id] = {
+          questionId: response.pergunta_id,
+          answer: response.resposta,
+          observation: response.observacao || '',
+          selectedOptions: response.opcoes_selecionadas || []
+        };
+      });
+    }
+    
+    // Return the full evaluation object
+    return {
+      id: evaluation.id,
+      employeeId: evaluation.funcionario_id,
+      empresa_id: evaluation.empresa_id,
+      formulario_id: evaluation.formulario_id,
+      total_sim: evaluation.total_sim || 0,
+      total_nao: evaluation.total_nao || 0,
+      notas_analista: evaluation.notas_analista || '',
+      analyistNotes: evaluation.notas_analista || '',
+      answers,
+      is_complete: evaluation.is_complete || false,
+      created_at: evaluation.created_at,
+      updated_at: evaluation.updated_at,
+      last_updated: evaluation.last_updated || evaluation.updated_at
+    };
+  } catch (error) {
+    console.error('Error in getFullEvaluation:', error);
     throw error;
   }
 }
