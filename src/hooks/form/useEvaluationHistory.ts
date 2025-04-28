@@ -61,27 +61,41 @@ export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
       console.log(`Iniciando exclusão da avaliação: ${evaluationId}`);
       
       // Chamar o serviço para excluir a avaliação no banco de dados
-      await deleteFormEvaluation(evaluationId);
+      const deleteSuccess = await deleteFormEvaluation(evaluationId);
       
-      // Atualizar o estado local para remover a avaliação excluída
-      setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
-      
-      // Limpar a avaliação selecionada se for a mesma que foi excluída
-      if (selectedEvaluation?.id === evaluationId) {
-        setSelectedEvaluation(null);
+      if (deleteSuccess) {
+        console.log("Exclusão no banco de dados bem-sucedida, atualizando estado local");
+        
+        // Remover a avaliação do estado local
+        setEvaluationHistory(prev => prev.filter(evaluation => evaluation.id !== evaluationId));
+        
+        // Limpar a avaliação selecionada se for a mesma que foi excluída
+        if (selectedEvaluation?.id === evaluationId) {
+          setSelectedEvaluation(null);
+        }
+        
+        // Exibir toast de sucesso
+        toast({
+          title: "Sucesso",
+          description: "Avaliação excluída com sucesso.",
+        });
+        
+        // Verificar se precisamos desativar a visualização de histórico
+        const remainingEvaluations = evaluationHistory.filter(eval => eval.id !== evaluationId);
+        if (remainingEvaluations.length === 0) {
+          setShowingHistoryView(false);
+        }
+        
+        // Recarregar o histórico para garantir que os dados estejam sincronizados
+        await loadEmployeeHistory();
+      } else {
+        console.error("Falha ao excluir avaliação");
+        toast({
+          title: "Erro",
+          description: "Não foi possível excluir a avaliação.",
+          variant: "destructive",
+        });
       }
-      
-      // Exibir toast de sucesso
-      toast({
-        title: "Sucesso",
-        description: "Avaliação excluída com sucesso.",
-      });
-
-      // Verificar se precisamos desativar a visualização de histórico
-      if (evaluationHistory.length <= 1) {
-        setShowingHistoryView(false);
-      }
-      
     } catch (error) {
       console.error("Erro ao excluir avaliação:", error);
       toast({

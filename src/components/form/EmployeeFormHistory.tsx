@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,9 +31,9 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   onDeleteEvaluation,
   onEditEvaluation,
 }) => {
-  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
-  const [evaluationToDelete, setEvaluationToDelete] = React.useState<FormResult | null>(null);
-  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [evaluationToDelete, setEvaluationToDelete] = useState<FormResult | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const handleDelete = (evaluation: FormResult) => {
@@ -49,13 +50,18 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
         // Chamar a função de deleção do componente pai
         await onDeleteEvaluation(evaluationToDelete.id);
         
-        // O toast e atualização do estado são agora responsabilidade do hook useEvaluationHistory
-      } catch (error) {
-        console.error("Erro ao excluir avaliação:", error);
-      } finally {
-        setIsDeleting(false);
+        // Fechar o diálogo após a exclusão
         setShowDeleteDialog(false);
         setEvaluationToDelete(null);
+      } catch (error) {
+        console.error("Erro ao excluir avaliação:", error);
+        toast({
+          title: "Erro",
+          description: "Falha ao excluir a avaliação. Tente novamente.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsDeleting(false);
       }
     }
   };
@@ -78,27 +84,6 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
       </Card>
     );
   }
-
-  const getRiskLevel = (evaluation: FormResult) => {
-    const score = calculateRiskScore(evaluation);
-    if (score < 20) return { level: "Baixo", color: "text-green-600" };
-    if (score < 40) return { level: "Moderado", color: "text-yellow-600" };
-    if (score < 60) return { level: "Considerável", color: "text-orange-600" };
-    if (score < 80) return { level: "Alto", color: "text-red-600" };
-    return { level: "Extremo", color: "text-red-800" };
-  };
-
-  const calculateRiskScore = (evaluation: FormResult): number => {
-    if (!evaluation.total_sim && !evaluation.totalYes) return 0;
-    
-    const totalYes = evaluation.total_sim || evaluation.totalYes || 0;
-    const totalQuestions = 
-      (evaluation.total_sim || 0) + (evaluation.total_nao || 0) || 
-      (evaluation.totalYes || 0) + (evaluation.totalNo || 0);
-    
-    if (totalQuestions === 0) return 0;
-    return (totalYes / totalQuestions) * 100;
-  };
 
   return (
     <>
