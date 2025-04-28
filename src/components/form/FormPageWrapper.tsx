@@ -52,6 +52,23 @@ const FormPageWrapper: React.FC = () => {
     setShowForm
   } = useFormPageContext();
 
+  // Handler to view results in read-only mode
+  const handleViewResults = () => {
+    setShowResults(true);
+    // Don't change other state - just show the results view
+  };
+
+  // Handler to edit an evaluation
+  const handleEditEvaluation = (evaluation) => {
+    console.log("Editing evaluation:", evaluation.id);
+    setSelectedEvaluation(evaluation);
+    setFormResult(evaluation);
+    setAnswers(evaluation.answers || {});
+    setShowResults(false);  // Turn off results view
+    setShowingHistoryView(false);  // Exit history view
+    setShowForm(true);  // Show the form for editing
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-8">
       <FormSelectionSection
@@ -160,18 +177,10 @@ const FormPageWrapper: React.FC = () => {
               isSubmitting={isSubmitting}
               isDeletingEvaluation={isDeletingEvaluation}
               onNewEvaluation={handleNewEvaluation}
-              onShowResults={() => setShowResults(true)}
+              onShowResults={handleViewResults}
               onSaveAndComplete={handleSaveAndComplete}
               onDeleteEvaluation={handleDeleteEvaluation}
-              onEditEvaluation={(evaluation) => {
-                console.log("Editing evaluation:", evaluation.id);
-                setSelectedEvaluation(evaluation);
-                setFormResult(evaluation);
-                setAnswers(evaluation.answers || {});
-                setShowResults(false);
-                setShowingHistoryView(false);
-                setShowForm(true);
-              }}
+              onEditEvaluation={handleEditEvaluation}
               onExitResults={handleExitResults}
             />
           )}

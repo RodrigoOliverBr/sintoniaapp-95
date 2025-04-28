@@ -113,42 +113,123 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
       console.log(`Successfully updated evaluation: ${avaliacaoId}`);
     }
 
-    // First delete all existing responses for this evaluation to prevent duplicates
-    console.log('Clearing previous responses for evaluation:', avaliacaoId);
-    const { error: deleteError } = await supabase
+    // First check existing responses to perform update or insert strategy
+    console.log('Fetching existing responses for evaluation:', avaliacaoId);
+    const { data: existingResponses, error: fetchError } = await supabase
       .from('respostas')
-      .delete()
+      .select('id, pergunta_id')
       .eq('avaliacao_id', avaliacaoId);
       
-    if (deleteError) {
-      console.error('Error deleting previous responses:', deleteError);
-      throw deleteError;
+    if (fetchError) {
+      console.error('Error fetching existing responses:', fetchError);
+      throw fetchError;
     }
-
-    // Insert all answers - this fixes the duplication issue
-    const respostasToInsert = Object.entries(answers).map(([perguntaId, answer]) => ({
-      avaliacao_id: avaliacaoId,
-      pergunta_id: perguntaId,
-      resposta: answer.answer,
-      observacao: answer.observation || null,
-      opcoes_selecionadas: answer.selectedOptions || null
-    }));
-
-    console.log(`Inserting ${respostasToInsert.length} responses`);
-    if (respostasToInsert.length > 0) {
-      // Insert in smaller batches to avoid any payload size issues
+      
+    // Create a map of existing responses by question ID
+    const existingResponsesMap = new Map();
+    existingResponses?.forEach(response => {
+      existingResponsesMap.set(response.pergunta_id, response.id);
+    });
+    
+    console.log(`Found ${existingResponsesMap.size} existing responses`);
+    
+    // Track which questions have been processed
+    const processedQuestionIds = new Set<string>();
+    
+    // Prepare arrays for inserts and updates
+    const responsesToInsert: any[] = [];
+    const responsesToUpdate: any[] = [];
+    
+    // Process each answer - either update existing or insert new
+    Object.entries(answers).forEach(([perguntaId, answer]) => {
+      processedQuestionIds.add(perguntaId);
+      
+      const responseData = {
+        avaliacao_id: avaliacaoId,
+        pergunta_id: perguntaId,
+        resposta: answer.answer,
+        observacao: answer.observation || null,
+        opcoes_selecionadas: answer.selectedOptions || null
+      };
+      
+      // If a response for this question already exists, update it
+      if (existingResponsesMap.has(perguntaId)) {
+        const responseId = existingResponsesMap.get(perguntaId);
+        responsesToUpdate.push({
+          id: responseId,
+          ...responseData
+        });
+      } else {
+        // Otherwise insert a new response
+        responsesToInsert.push(responseData);
+      }
+    });
+    
+    // Find responses that need to be deleted (no longer in answers)
+    const responsesToDelete = existingResponses
+      ?.filter(response => !processedQuestionIds.has(response.pergunta_id))
+      .map(response => response.id) || [];
+      
+    console.log(`Will update ${responsesToUpdate.length} responses`);
+    console.log(`Will insert ${responsesToInsert.length} responses`);
+    console.log(`Will delete ${responsesToDelete.length} responses`);
+    
+    // Process updates in batches
+    if (responsesToUpdate.length > 0) {
       const batchSize = 50;
-      for (let i = 0; i < respostasToInsert.length; i += batchSize) {
-        const batch = respostasToInsert.slice(i, i + batchSize);
+      for (let i = 0; i < responsesToUpdate.length; i += batchSize) {
+        const batch = responsesToUpdate.slice(i, i + batchSize);
+        console.log(`Updating batch ${i / batchSize + 1} with ${batch.length} responses`);
+        
+        for (const response of batch) {
+          const { error: updateError } = await supabase
+            .from('respostas')
+            .update({
+              resposta: response.resposta,
+              observacao: response.observacao,
+              opcoes_selecionadas: response.opcoes_selecionadas
+            })
+            .eq('id', response.id);
+            
+          if (updateError) {
+            console.error(`Error updating response ${response.id}:`, updateError);
+            throw updateError;
+          }
+        }
+      }
+    }
+    
+    // Process inserts in batches
+    if (responsesToInsert.length > 0) {
+      const batchSize = 50;
+      for (let i = 0; i < responsesToInsert.length; i += batchSize) {
+        const batch = responsesToInsert.slice(i, i + batchSize);
         console.log(`Inserting batch ${i / batchSize + 1} with ${batch.length} responses`);
         
-        const { error: respostasError } = await supabase
+        const { error: insertError } = await supabase
           .from('respostas')
           .insert(batch);
-
-        if (respostasError) {
-          console.error('Error saving responses batch:', respostasError);
-          throw respostasError;
+          
+        if (insertError) {
+          console.error('Error inserting responses batch:', insertError);
+          throw insertError;
+        }
+      }
+    }
+    
+    // Process deletes if any
+    if (responsesToDelete.length > 0) {
+      console.log(`Deleting ${responsesToDelete.length} outdated responses`);
+      
+      for (const responseId of responsesToDelete) {
+        const { error: deleteError } = await supabase
+          .from('respostas')
+          .delete()
+          .eq('id', responseId);
+          
+        if (deleteError) {
+          console.error(`Error deleting response ${responseId}:`, deleteError);
+          throw deleteError;
         }
       }
     }
@@ -247,33 +328,12 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
   }
 }
 
-// IMPORTANT: This function is now primarily used in the direct implementation
-// in useEvaluationHistory.ts. This is kept for API compatibility.
+// The delete method is now only a wrapper, the main implementation is in useEvaluationHistory
 export async function deleteFormEvaluation(evaluationId: string): Promise<void> {
   try {
-    console.log(`Calling deleteFormEvaluation for evaluation: ${evaluationId}`);
+    console.log(`Legacy deleteFormEvaluation called for ID: ${evaluationId}`);
     
-    // This function is now a wrapper around the direct database operations
-    // First check if the evaluation exists
-    const { data: evaluationExists, error: checkError } = await supabase
-      .from('avaliacoes')
-      .select('id')
-      .eq('id', evaluationId)
-      .single();
-      
-    if (checkError) {
-      console.error('Error checking if evaluation exists:', checkError);
-      throw checkError;
-    }
-    
-    if (!evaluationExists) {
-      console.error(`Evaluation ${evaluationId} not found`);
-      throw new Error(`Evaluation ${evaluationId} not found`);
-    }
-    
-    console.log(`Evaluation ${evaluationId} exists, proceeding with deletion`);
-    
-    // Delete responses first (including cascading to resposta_opcoes via trigger)
+    // Delete responses first (and resposta_opcoes via cascade)
     const { error: responsesError } = await supabase
       .from('respostas')
       .delete()
@@ -292,7 +352,7 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
       
     if (reportsError) {
       console.error('Error deleting reports:', reportsError);
-      // We continue even if reports deletion fails
+      // Continue even if reports deletion fails
     }
     
     // Finally delete the evaluation itself

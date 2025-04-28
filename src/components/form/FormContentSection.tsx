@@ -66,7 +66,14 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
       <EmployeeFormHistory
         evaluations={evaluationHistory}
         onShowResults={(evaluation) => {
-          if (onEditEvaluation) onEditEvaluation(evaluation);
+          // This is the key fix - show results in read-only mode
+          if (selectedEvaluation?.id !== evaluation.id || !showResults) {
+            if (onEditEvaluation) {
+              // Set the selected evaluation but don't enter edit mode
+              onEditEvaluation(evaluation);
+              onShowResults(); // Show results view with the selected evaluation
+            }
+          }
         }}
         onNewEvaluation={onNewEvaluation}
         onDeleteEvaluation={onDeleteEvaluation}
@@ -79,8 +86,9 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   }
 
   if (showResults) {
-    // When viewing results, only make the form read-only if specified
-    const shouldBeReadOnly = false;
+    // When viewing results from history, make it read-only
+    // When viewing results after completing a form or editing, allow editing notes
+    const shouldBeReadOnly = selectedEvaluation !== null && showingHistoryView;
     
     return (
       <div className="space-y-4">
