@@ -1,26 +1,31 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ClienteSistema } from "@/types/admin";
+import { ClienteSistema } from "@/types/cadastro";
 
 // Get the currently active client ID (either real or impersonated)
 export const getClienteIdAtivo = (): string | null => {
+  // Primeiro tenta obter o ID do cliente impersonado (quando o admin acessa como cliente)
   const impersonatedClientId = sessionStorage.getItem("impersonatedClientId");
   
   if (impersonatedClientId) {
+    console.log("Usando cliente impersonado:", impersonatedClientId);
     return impersonatedClientId;
   }
   
+  // Se não estiver impersonando, tenta obter o cliente atual do localStorage
   const currentClienteData = localStorage.getItem("sintonia:currentCliente");
   if (currentClienteData) {
     try {
       const currentCliente = JSON.parse(currentClienteData);
+      console.log("Usando cliente do localStorage:", currentCliente.id);
       return currentCliente.id;
     } catch (error) {
-      console.error("Error parsing current cliente data:", error);
+      console.error("Erro ao analisar dados do cliente atual:", error);
     }
   }
 
+  console.log("Nenhum cliente ativo encontrado");
   return null;
 };
 

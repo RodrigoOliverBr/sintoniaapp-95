@@ -1,52 +1,54 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  getJobRolesByCompany, 
-  addJobRole 
-} from "@/services"; // Updated import path
-import { useToast } from "@/hooks/use-toast";
-import { JobRole } from "@/types/cadastro";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
+import { addJobRole, getJobRolesByCompany } from "@/services";
+import { JobRole } from "@/types/cadastro";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface JobRolesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  companyId: string;
   onRolesUpdated?: () => void;
+  companyId: string;
 }
 
 const JobRolesModal: React.FC<JobRolesModalProps> = ({
   open,
   onOpenChange,
-  companyId,
   onRolesUpdated,
+  companyId,
 }) => {
-  const [roles, setRoles] = useState<JobRole[]>([]);
+  const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
   const [newRoleName, setNewRoleName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const loadRoles = async () => {
+  useEffect(() => {
+    if (open && companyId) {
+      loadJobRoles();
+    }
+  }, [open, companyId]);
+
+  const loadJobRoles = async () => {
     if (!companyId) return;
-    
-    setIsLoading(true);
+
     try {
-      const loadedRoles = await getJobRolesByCompany(companyId);
-      setRoles(loadedRoles);
+      setIsLoading(true);
+      const roles = await getJobRolesByCompany(companyId);
+      setJobRoles(roles);
     } catch (error) {
-      console.error("Erro ao carregar cargos:", error);
+      console.error("Error loading job roles:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar os cargos",
@@ -57,110 +59,137 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (open) {
-      loadRoles();
-    }
-  }, [open, companyId]);
-
-  const handleAddRole = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newRoleName.trim()) {
+  const handleAddRole = async () => {
+    if (!newRoleName.trim() || !companyId) {
       toast({
         title: "Erro",
-        description: "O nome do cargo é obrigatório",
+        description: "Nome do cargo é obrigatório",
         variant: "destructive",
       });
       return;
     }
 
-    setIsSubmitting(true);
-    
     try {
-      await addJobRole(companyId, { name: newRoleName.trim() });
-      
+      setIsLoading(true);
+      await addJobRole(companyId, newRoleName.trim());
       toast({
         title: "Sucesso",
-        description: "Cargo cadastrado com sucesso!",
+        description: "Cargo adicionado com sucesso!",
       });
-      
       setNewRoleName("");
-      loadRoles();
-      if (onRolesUpdated) onRolesUpdated();
+      
+      // Reload the job roles list
+      await loadJobRoles();
+      
+      if (onRolesUpdated) {
+        onRolesUpdated();
+      }
     } catch (error) {
-      console.error("Erro ao adicionar cargo:", error);
+      console.error("Error adding job role:", error);
       toast({
         title: "Erro",
         description: "Não foi possível adicionar o cargo",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteRole = async (roleId: string) => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase
+        .from("cargos")
+        .delete()
+        .eq("id", roleId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Cargo removido com sucesso!",
+      });
+      
+      // Reload the job roles list
+      await loadJobRoles();
+      
+      if (onRolesUpdated) {
+        onRolesUpdated();
+      }
+    } catch (error) {
+      console.error("Error deleting job role:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o cargo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Gerenciar Cargos</DialogTitle>
-          <DialogDescription>
-            Adicione ou remova cargos desta empresa
-          </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-4 my-4 overflow-auto max-h-[40vh]">
-          {isLoading ? (
-            <p className="text-center text-gray-500">Carregando...</p>
-          ) : roles.length === 0 ? (
-            <p className="text-center text-gray-500">Nenhum cargo cadastrado</p>
+        <div className="space-y-4">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Label htmlFor="newRoleName">Nome do Cargo</Label>
+              <Input
+                id="newRoleName"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                disabled={isLoading || !companyId}
+              />
+            </div>
+            <Button 
+              onClick={handleAddRole}
+              disabled={isLoading || !companyId || !newRoleName.trim()}
+            >
+              Adicionar
+            </Button>
+          </div>
+
+          {jobRoles.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead className="w-[100px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {jobRoles.map((role) => (
+                  <TableRow key={role.id}>
+                    <TableCell className="font-medium">{role.name}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteRole(role.id)}
+                        disabled={isLoading}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
-            <div className="space-y-2">
-              {roles.map((role) => (
-                <div
-                  key={role.id}
-                  className="flex items-center justify-between p-2 rounded border"
-                >
-                  <span>{role.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    // Esta função seria implementada se houvesse necessidade de remover cargos
-                    // onClick={() => handleDeleteRole(role.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+            <div className="text-center py-4 text-muted-foreground">
+              {companyId ? "Nenhum cargo cadastrado" : "Selecione uma empresa para gerenciar os cargos"}
             </div>
           )}
         </div>
-        
-        <form onSubmit={handleAddRole}>
-          <div className="grid grid-cols-4 items-center gap-4 mb-4">
-            <Label htmlFor="roleName" className="text-right">
-              Novo Cargo
-            </Label>
-            <div className="col-span-3 flex">
-              <Input
-                id="roleName"
-                value={newRoleName}
-                onChange={(e) => setNewRoleName(e.target.value)}
-                placeholder="Nome do cargo"
-                className="flex-1 mr-2"
-                disabled={isSubmitting}
-              />
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Salvando..." : "Adicionar"}
-              </Button>
-            </div>
-          </div>
-        </form>
-        
         <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>Fechar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

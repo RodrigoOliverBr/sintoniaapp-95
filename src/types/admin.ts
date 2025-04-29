@@ -3,7 +3,7 @@ export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'e
 
 // Add missing type definitions
 export type TipoPessoa = 'juridica' | 'fisica';
-export type StatusContrato = 'ativo' | 'cancelado' | 'em-analise' | 'sem-contrato';
+export type StatusContrato = 'ativo' | 'cancelado' | 'em-analise' | 'sem-contrato' | 'vencimento-proximo';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
 export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
 
@@ -35,7 +35,7 @@ export interface Contrato {
   valorMensal: number;
   taxaImplantacao: number;
   observacoes?: string;
-  cicloFaturamento?: string;
+  cicloFaturamento?: CicloFaturamento;
   proximaRenovacao?: number;
   ciclosGerados?: number;
 }
@@ -60,7 +60,7 @@ export interface BatchSelection {
 }
 
 export interface ClienteComContrato extends ClienteSistema {
-  statusContrato?: StatusContrato | 'vencimento-proximo';
+  statusContrato?: StatusContrato;
   diasParaVencimento?: number;
   contrato?: Contrato;
 }
@@ -72,12 +72,12 @@ export interface ClienteSistema {
   razaoSocial?: string;  // Alias para compatibilidade
   nome: string;
   tipo: TipoPessoa;
-  numeroEmpregados: number;
-  dataInclusao: number;
+  numeroEmpregados?: number;
+  dataInclusao?: number | string;
   situacao: ClienteStatus;
-  cnpj: string;
+  cnpj?: string;
   cpfCnpj?: string;
-  email: string;
+  email?: string;
   telefone?: string;
   responsavel?: string;
   contato?: string;
