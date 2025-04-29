@@ -113,6 +113,7 @@ export function useFormPage() {
   };
 
   const handleNewEvaluation = () => {
+    console.log("handleNewEvaluation called, resetting form and showing new form");
     resetForm();
     setShowingHistoryView(false);
     setIsNewEvaluation(true);

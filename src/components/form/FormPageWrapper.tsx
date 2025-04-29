@@ -69,6 +69,12 @@ const FormPageWrapper: React.FC = () => {
     setShowForm(true);  // Show the form for editing
   };
 
+  // Explicit handler for the new evaluation button
+  const handleStartNewEvaluation = () => {
+    console.log("Starting new evaluation from the button");
+    handleNewEvaluation();
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-8">
       <FormSelectionSection
@@ -83,7 +89,7 @@ const FormPageWrapper: React.FC = () => {
         onFormChange={handleFormChange}
         isLoadingHistory={isLoadingHistory}
         showNewEvaluationButton={selectedEmployeeId !== undefined}
-        onNewEvaluation={handleNewEvaluation}
+        onNewEvaluation={handleStartNewEvaluation}
       />
 
       {selectedEmployeeId && selectedEmployee && selectedFormId && (
@@ -106,7 +112,7 @@ const FormPageWrapper: React.FC = () => {
                     Ver Histórico
                   </Button>
                 )}
-                <Button onClick={handleNewEvaluation}>
+                <Button onClick={handleStartNewEvaluation}>
                   Nova Avaliação
                 </Button>
               </div>
@@ -176,7 +182,7 @@ const FormPageWrapper: React.FC = () => {
               formComplete={formComplete}
               isSubmitting={isSubmitting}
               isDeletingEvaluation={isDeletingEvaluation}
-              onNewEvaluation={handleNewEvaluation}
+              onNewEvaluation={handleStartNewEvaluation}
               onShowResults={handleViewResults}
               onSaveAndComplete={handleSaveAndComplete}
               onDeleteEvaluation={handleDeleteEvaluation}

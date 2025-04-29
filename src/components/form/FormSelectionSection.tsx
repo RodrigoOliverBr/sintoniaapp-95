@@ -35,6 +35,14 @@ const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
   showNewEvaluationButton,
   onNewEvaluation
 }) => {
+  // This function will be called when the Nova Avaliação button is clicked
+  const handleNewEvaluationClick = () => {
+    if (onNewEvaluation) {
+      console.log("Nova Avaliação button clicked");
+      onNewEvaluation();
+    }
+  };
+
   return (
     <Card className="shadow-lg">
       <CardHeader className="border-b bg-muted/40">
@@ -47,9 +55,9 @@ const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
               Selecione a empresa, o funcionário e o formulário para preencher.
             </CardDescription>
           </div>
-          {showNewEvaluationButton && onNewEvaluation && selectedEmployeeId && (
+          {showNewEvaluationButton && selectedEmployeeId && (
             <Button 
-              onClick={onNewEvaluation}
+              onClick={handleNewEvaluationClick}
               variant="outline" 
               className="flex items-center gap-2"
             >

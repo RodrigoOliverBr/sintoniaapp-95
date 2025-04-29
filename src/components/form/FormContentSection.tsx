@@ -127,7 +127,7 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   const getEmployeeRole = () => {
     if (!selectedEmployee) return "Não especificado";
     // Check for both 'role' and 'cargo_id' properties
-    return selectedEmployee.role || (selectedEmployee.cargo_id ? "Especificado" : "Não especificado");
+    return selectedEmployee.role || (selectedEmployee.cargo_id ? "Cargo especificado" : "Não especificado");
   };
 
   return (
