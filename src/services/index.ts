@@ -9,12 +9,12 @@ export {
   getFormResultByEmployeeId, 
   saveFormResult,
   getMitigationsByRiskId,
-  getFormStatusByEmployeeId,
   getEmployeeFormHistory,
   getAllForms,
   getDefaultRiskId,
   getAllRisksWithSeverity,
   getAllSeverities,
   getFormResults,
-  deleteFormEvaluation
+  deleteFormEvaluation,
+  updateAnalystNotes
 } from './form';

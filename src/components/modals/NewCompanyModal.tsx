@@ -53,7 +53,11 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       });
       
       setName("");
+      
+      // Automatically close the modal after success
       onOpenChange(false);
+      
+      // Refresh the companies list if callback provided
       if (onCompanyAdded) onCompanyAdded();
     } catch (error) {
       console.error("Erro ao cadastrar empresa:", error);
@@ -79,14 +83,14 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
+              <Label htmlFor="name" className="text-right text-sm">
                 Nome
               </Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="col-span-3"
+                className="col-span-3 text-sm"
                 autoFocus
                 disabled={isSubmitting}
               />

@@ -61,7 +61,7 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading, isEditing }: C
             <FormItem>
               <FormLabel>Razão Social</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input {...field} className="text-sm" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -75,7 +75,7 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading, isEditing }: C
             <FormItem>
               <FormLabel>CNPJ</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input {...field} className="text-sm" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -96,9 +96,9 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading, isEditing }: C
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" {...field} />
+                    <Input type="email" {...field} className="text-sm" />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-sm">
                     Este email será usado para acessar o sistema
                   </FormDescription>
                   <FormMessage />
@@ -115,7 +115,7 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading, isEditing }: C
                     <FormItem>
                       <FormLabel>Senha</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input type="password" {...field} className="text-sm" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -129,7 +129,7 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading, isEditing }: C
                     <FormItem>
                       <FormLabel>Confirmar Senha</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input type="password" {...field} className="text-sm" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -147,7 +147,7 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading, isEditing }: C
             <FormItem>
               <FormLabel>Telefone</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input {...field} className="text-sm" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -161,7 +161,7 @@ export const ClienteForm = ({ onSubmit, defaultValues, isLoading, isEditing }: C
             <FormItem>
               <FormLabel>Nome do Responsável</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input {...field} className="text-sm" />
               </FormControl>
               <FormMessage />
             </FormItem>
