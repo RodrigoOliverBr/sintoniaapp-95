@@ -1,212 +1,168 @@
-
+// UserAccountPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { supabase } from '@/integrations/supabase/client';
-import Layout from '@/components/Layout';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useUser } from '@auth0/nextjs-auth0/client';
+import { useRouter } from 'next/router';
 import { toast } from 'sonner';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import PasswordChangeForm from '@/components/auth/PasswordChangeForm';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ReloadIcon } from "@radix-ui/react-icons"
 
-// Schema simplificado para evitar problemas de tipagem
-const profileFormSchema = z.object({
-  nome: z.string().min(1, "Nome é obrigatório"),
-  email: z.string().email("Email inválido").optional(),
-  telefone: z.string().optional(),
-});
+interface Perfil {
+  id: string;
+  nome: string;
+  email: string;
+  telefone?: string;
+  // Adicione outros campos conforme necessário
+}
 
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
-
-const UserAccountPage = () => {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      nome: '',
-      email: '',
-      telefone: '',
-    },
-    mode: 'onChange',
-  });
+const UserAccountPage: React.FC = () => {
+  const { user, isLoading } = useUser();
+  const router = useRouter();
+  const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [nome, setNome] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          const { data: profile, error } = await supabase
-            .from('perfis')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (error) throw error;
-          
-          const userProfile = {
-            ...profile,
-            email: session.user.email,
-          };
-          
-          setUser(userProfile);
-          
-          form.reset({
-            nome: profile?.nome || '',
-            email: session.user.email || '',
-            telefone: profile?.telefone || '',
-          });
-        }
-      } catch (error) {
-        console.error('Erro ao carregar usuário:', error);
-        toast.error('Não foi possível carregar os dados do usuário');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchUser();
-  }, [form]);
-  
-  const onSubmit = async (data: ProfileFormValues) => {
+    if (!isLoading && !user) {
+      router.push('/api/auth/login');
+    } else if (user) {
+      fetchPerfil(user.email);
+    }
+  }, [user, isLoading, router]);
+
+  const fetchPerfil = async (email: string) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Atualiza o perfil no banco de dados
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('perfis')
-        .update({
-          nome: data.nome,
-          telefone: data.telefone,
-        })
-        .eq('id', user.id);
-      
-      if (error) throw error;
-      
-      toast.success('Perfil atualizado com sucesso');
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar perfil:', error);
+        toast.error('Erro ao carregar informações do perfil.');
+      }
+
+      if (data) {
+        setPerfil(data);
+        setNome(data.nome);
+        setTelefone(data.telefone || '');
+      }
     } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      toast.error('Erro ao atualizar perfil');
+      console.error('Erro ao buscar perfil:', error);
+      toast.error('Erro ao carregar informações do perfil.');
     } finally {
       setLoading(false);
     }
   };
-  
+
+  const handleEditarClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleSalvarClick = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('perfis')
+        .update({ nome, telefone })
+        .eq('id', perfil?.id);
+
+      if (error) {
+        console.error('Erro ao atualizar perfil:', error);
+        toast.error('Erro ao atualizar informações do perfil.');
+        return;
+      }
+
+      // Atualiza o estado local com os novos dados
+      setPerfil({ ...perfil!, nome, telefone });
+      setIsEditing(false);
+      toast.success('Perfil atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast.error('Erro ao atualizar informações do perfil.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen">Carregando...</div>;
+  }
+
+  if (!user) {
+    return <div className="flex justify-center items-center h-screen">Redirecionando para login...</div>;
+  }
+
   return (
-    <Layout>
-      <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-6">Minha Conta</h1>
-        
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Meu Perfil</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center">
-                <Avatar className="w-24 h-24 mb-4">
-                  <AvatarFallback>{user?.nome?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="text-center">
-                  <h3 className="text-lg font-medium">{user?.nome}</h3>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
-                  <p className="text-sm text-muted-foreground">{user?.tipo}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="md:col-span-2">
-            <Tabs defaultValue="informacoes">
-              <TabsList className="mb-4">
-                <TabsTrigger value="informacoes">Informações Pessoais</TabsTrigger>
-                <TabsTrigger value="senha">Alterar Senha</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="informacoes">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Informações Pessoais</CardTitle>
-                    <CardDescription>Atualize suas informações pessoais</CardDescription>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="nome"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Nome</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl>
-                                <Input {...field} disabled />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="telefone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Telefone</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button type="submit" disabled={loading}>
-                          {loading ? "Salvando..." : "Salvar Alterações"}
-                        </Button>
-                      </form>
-                    </Form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="senha">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Alterar Senha</CardTitle>
-                    <CardDescription>Atualize sua senha de acesso</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <PasswordChangeForm />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-      </div>
-    </Layout>
+    <div className="container mx-auto py-10">
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Minha Conta</CardTitle>
+          <CardDescription>Gerencie suas informações de perfil.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loading ? (
+            <div className="flex justify-center items-center">
+              <ReloadIcon className="mr-2 h-4 w-4 animate-spin" /> Carregando...
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" value={user.email} readOnly />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome</Label>
+                {isEditing ? (
+                  <Input
+                    id="nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                  />
+                ) : (
+                  <Input id="nome" value={perfil?.nome || ''} readOnly />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                {isEditing ? (
+                  <Input
+                    id="telefone"
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                  />
+                ) : (
+                  <Input id="telefone" value={(perfil as any).telefone || 'Não informado'} readOnly />
+                )}
+              </div>
+              <div className="flex justify-end">
+                {isEditing ? (
+                  <>
+                    <Button variant="outline" onClick={() => setIsEditing(false)} disabled={loading}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSalvarClick} disabled={loading}>
+                      Salvar
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={handleEditarClick} disabled={loading}>
+                    Editar Perfil
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

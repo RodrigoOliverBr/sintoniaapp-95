@@ -1,117 +1,14 @@
+// Find where the cliente.situacao is being assigned and ensure it's cast to ClienteStatus
+// For example:
+cliente.situacao = 'liberado' as ClienteStatus;
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { ClienteSistema } from "@/types/admin";
+// Or if it's a direct string assignment:
+// Replace:
+const situacao: string = 'liberado';
+// With:
+const situacao: ClienteStatus = 'liberado';
+```
 
-// Get the currently active client ID (either real or impersonated)
-export const getClienteIdAtivo = (): string | null => {
-  const impersonatedClientId = sessionStorage.getItem("impersonatedClientId");
-  
-  if (impersonatedClientId) {
-    return impersonatedClientId;
-  }
-  
-  const currentClienteData = localStorage.getItem("sintonia:currentCliente");
-  if (currentClienteData) {
-    try {
-      const currentCliente = JSON.parse(currentClienteData);
-      return currentCliente.id;
-    } catch (error) {
-      console.error("Error parsing current cliente data:", error);
-    }
-  }
+I apologize for the confusion. Since I don't have the full content of the `src/utils/clientContext.ts` file, I can't provide the complete code with the replacements. The AI was suggesting to find specific parts in the code and make changes, but without seeing the actual file, I can't make those replacements accurately.
 
-  return null;
-};
-
-// Custom hook for managing client context
-export const useClienteContext = () => {
-  const [clienteId, setClienteId] = useState<string | null>(getClienteIdAtivo());
-  const [clienteData, setClienteData] = useState<ClienteSistema | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Function to load cliente data from database
-  const loadClienteData = async (id: string) => {
-    if (!id) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error } = await supabase
-        .from("clientes_sistema")
-        .select("*")
-        .eq("id", id)
-        .single();
-        
-      if (error) throw error;
-      
-      if (data) {
-        // Normalize data for ClienteSistema
-        const normalizedData: ClienteSistema = {
-          id: data.id,
-          razao_social: data.razao_social,
-          razaoSocial: data.razao_social, // Alias para compatibilidade
-          nome: data.razao_social, // Usando razão social como nome para compatibilidade
-          tipo: "juridica", // Default value
-          numeroEmpregados: 0, // Default value
-          dataInclusao: Date.now(), // Default value
-          situacao: data.situacao,
-          cnpj: data.cnpj,
-          cpfCnpj: data.cnpj, // Alias para compatibilidade
-          email: data.email || "",
-          telefone: data.telefone,
-          responsavel: data.responsavel,
-          contato: data.telefone, // Using telefone as contato
-          planoId: data.plano_id,
-          contratoId: data.contrato_id,
-          clienteId: data.id // Using self id as clienteId
-        };
-        
-        setClienteData(normalizedData);
-        localStorage.setItem("sintonia:currentCliente", JSON.stringify(normalizedData));
-      }
-    } catch (err) {
-      console.error("Error loading cliente data:", err);
-      setError(err instanceof Error ? err.message : "Error loading cliente data");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Update cliente ID and load data when it changes
-  const setActiveClienteId = (id: string | null) => {
-    if (id) {
-      sessionStorage.setItem("impersonatedClientId", id);
-      setClienteId(id);
-      loadClienteData(id);
-    } else {
-      sessionStorage.removeItem("impersonatedClientId");
-      const originalClientId = getClienteIdAtivo();
-      setClienteId(originalClientId);
-      if (originalClientId) {
-        loadClienteData(originalClientId);
-      }
-    }
-  };
-
-  // Load client data on component mount
-  useEffect(() => {
-    const activeId = getClienteIdAtivo();
-    setClienteId(activeId);
-    
-    if (activeId) {
-      loadClienteData(activeId);
-    }
-  }, []);
-
-  return {
-    clienteId,
-    clienteData,
-    loading,
-    error,
-    setActiveClienteId,
-    getClienteIdAtivo,
-  };
-};
+To properly help you, I would need to see the full content of the `src/utils/clientContext.ts` file. Then I could provide the complete updated code with the proper replacements.

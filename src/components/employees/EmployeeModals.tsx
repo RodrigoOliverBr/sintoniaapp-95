@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Employee } from "@/types/cadastro";
+import { Employee, Department, JobRole } from "@/types/cadastro";
 import NewEmployeeModal from "@/components/modals/NewEmployeeModal";
 import EditEmployeeModal from "@/components/modals/EditEmployeeModal";
 
@@ -12,6 +12,8 @@ interface EmployeeModalsProps {
   onNewModalOpenChange: (open: boolean) => void;
   onEditModalOpenChange: (open: boolean) => void;
   onEmployeeUpdated: () => void;
+  departments?: Department[];
+  jobRoles?: JobRole[];
 }
 
 const EmployeeModals: React.FC<EmployeeModalsProps> = ({
@@ -22,6 +24,8 @@ const EmployeeModals: React.FC<EmployeeModalsProps> = ({
   onNewModalOpenChange,
   onEditModalOpenChange,
   onEmployeeUpdated,
+  departments = [],
+  jobRoles = [],
 }) => {
   return (
     <>
@@ -35,9 +39,11 @@ const EmployeeModals: React.FC<EmployeeModalsProps> = ({
       {selectedEmployee && (
         <EditEmployeeModal
           open={openEditModal}
-          onOpenChange={onEditModalOpenChange}
+          onClose={() => onEditModalOpenChange(false)}
           employee={selectedEmployee}
-          onSuccess={onEmployeeUpdated}
+          onSave={onEmployeeUpdated}
+          departments={departments}
+          jobRoles={jobRoles}
         />
       )}
     </>

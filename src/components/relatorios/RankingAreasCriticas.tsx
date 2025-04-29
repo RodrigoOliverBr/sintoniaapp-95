@@ -1,87 +1,69 @@
-
-import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart } from "@/components/ui/BarChart";
-import { getFormResults } from "@/services/form";
-import { formSections } from "@/data/formData";
+import React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getRankingAreasCriticas } from "@/services/relatorios/relatoriosService";
+import { Company } from '@/types/cadastro';
 
 interface RankingAreasCriticasProps {
-  companyId: string;
+  selectedCompanyId?: string;
+  companies: Company[];
 }
 
-const RankingAreasCriticas: React.FC<RankingAreasCriticasProps> = ({ companyId }) => {
-  const [rankingData, setRankingData] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface AreaCriticaData {
+  area: string;
+  total: number;
+}
+
+const RankingAreasCriticas: React.FC<RankingAreasCriticasProps> = ({ selectedCompanyId, companies }) => {
+  const [data, setData] = useState<AreaCriticaData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAreas = async () => {
       setIsLoading(true);
+      setError(null);
       try {
-        // In a real implementation, you would filter by company ID
-        const results = await getFormResults(companyId);
-        
-        // Process the results to calculate the ranking data
-        const areaScores: Record<string, number> = {};
-        
-        formSections.forEach((section) => {
-          areaScores[section.title] = 0;
-        });
-        
-        // This is a simplified calculation - in a real app, you'd need to
-        // process actual form results based on your data structure
-        results.forEach((result: any) => {
-          formSections.forEach((section) => {
-            // Simulate adding a score for this section
-            areaScores[section.title] += Math.floor(Math.random() * 30) + 10;
-          });
-        });
-        
-        // Convert areaScores to the desired ranking data format
-        const ranking = Object.keys(areaScores).map((area) => ({
-          area,
-          value: areaScores[area]
-        }));
-        
-        // Sort the ranking data by value in descending order
-        ranking.sort((a, b) => b.value - a.value);
-        
-        setRankingData(ranking);
-      } catch (error) {
-        console.error("Erro ao buscar resultados:", error);
+        if (selectedCompanyId) {
+          const areas = await getRankingAreasCriticas(selectedCompanyId);
+          setData(areas);
+        } else {
+          setData([]);
+        }
+      } catch (err) {
+        setError('Erro ao carregar o ranking das áreas críticas.');
+        console.error('Erro ao carregar o ranking das áreas críticas:', err);
       } finally {
         setIsLoading(false);
       }
     };
-    
-    fetchData();
-  }, [companyId]);
 
-  const chartData = rankingData.map((item) => ({
-    name: item.area,
-    value: item.value
-  }));
+    fetchAreas();
+  }, [selectedCompanyId]);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Ranking de Áreas Críticas</CardTitle>
+        <CardDescription>
+          Exibe o ranking das áreas mais críticas da empresa.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <p>Carregando...</p>
-        ) : chartData.length > 0 ? (
-          <div style={{ height: '400px' }}>
-            <BarChart
-              data={chartData}
-              index="name"
-              categories={["value"]}
-              colors={["#f87171"]} // Red color for critical areas
-              valueFormatter={(value) => `${value} pontos`}
-              className="w-full h-full"
-            />
-          </div>
-        ) : (
-          <p>Nenhum dado disponível para o ranking.</p>
+        {isLoading && <p>Carregando...</p>}
+        {error && <p className="text-red-500">{error}</p>}
+        {!isLoading && !error && data.length === 0 && <p>Nenhum dado disponível para a empresa selecionada.</p>}
+        {!isLoading && !error && data.length > 0 && (
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="area" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="total" fill="#8884d8" />
+            </BarChart>
+          </ResponsiveContainer>
         )}
       </CardContent>
     </Card>

@@ -86,28 +86,29 @@ const ClientesPage = () => {
 
       if (error) throw error;
       
-      const mappedClientes: ClienteSistema[] = data?.map(item => ({
+      const transformedClientes: ClienteSistema[] = data.map(item => ({
         id: item.id,
+        razao_social: item.razao_social,
         razaoSocial: item.razao_social,
-        nome: item.razao_social,
-        tipo: 'juridica' as TipoPessoa,
-        numeroEmpregados: 0,
-        dataInclusao: Date.now(),
+        nome: item.razao_social, // Using razao_social as nome
+        tipo: item.tipo as TipoPessoa,
+        numeroEmpregados: item.numero_empregados || 0,
+        dataInclusao: item.data_inclusao ? new Date(item.data_inclusao).getTime() : Date.now(),
         situacao: item.situacao as ClienteStatus,
-        cnpj: item.cnpj,
-        cpfCnpj: item.cnpj,
+        cnpj: item.cnpj || '',
+        cpfCnpj: item.cnpj || '',
         email: item.email || '',
         telefone: item.telefone || '',
         responsavel: item.responsavel || '',
-        contato: item.responsavel,
-        planoId: item.plano_id || undefined,
-        contratoId: item.contrato_id || undefined,
-      })) || [];
+        contato: item.contato || '',
+        planoId: item.plano_id || '',
+        contratoId: item.contrato_id || '',
+      }));
       
       const contratos = await fetchContratos();
       console.log("Contratos obtidos:", contratos);
       
-      const clientesComContrato: ClienteComContrato[] = mappedClientes.map(cliente => {
+      const clientesComContrato: ClienteComContrato[] = transformedClientes.map(cliente => {
         const contratosDoCliente = contratos.filter(c => 
           c.clienteSistemaId === cliente.id || c.clienteId === cliente.id
         );
