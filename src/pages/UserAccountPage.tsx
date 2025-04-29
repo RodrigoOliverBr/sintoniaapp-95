@@ -1,14 +1,13 @@
-// UserAccountPage.tsx
+
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@auth0/nextjs-auth0/client';
-import { useRouter } from 'next/router';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ReloadIcon } from "@radix-ui/react-icons"
+import { ReloadIcon } from "@radix-ui/react-icons";
 
 interface Perfil {
   id: string;
@@ -19,8 +18,9 @@ interface Perfil {
 }
 
 const UserAccountPage: React.FC = () => {
-  const { user, isLoading } = useUser();
-  const router = useRouter();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [nome, setNome] = useState('');
@@ -28,12 +28,28 @@ const UserAccountPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/api/auth/login');
-    } else if (user) {
-      fetchPerfil(user.email);
-    }
-  }, [user, isLoading, router]);
+    const checkAuth = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          navigate('/login');
+          return;
+        }
+        
+        setUser(session.user);
+        await fetchPerfil(session.user.email);
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        navigate('/login');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   const fetchPerfil = async (email: string) => {
     setLoading(true);
@@ -42,7 +58,7 @@ const UserAccountPage: React.FC = () => {
         .from('perfis')
         .select('*')
         .eq('email', email)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
@@ -81,7 +97,11 @@ const UserAccountPage: React.FC = () => {
       }
 
       // Atualiza o estado local com os novos dados
-      setPerfil({ ...perfil!, nome, telefone });
+      setPerfil({
+        ...perfil!,
+        nome,
+        telefone
+      });
       setIsEditing(false);
       toast.success('Perfil atualizado com sucesso!');
     } catch (error) {
@@ -139,13 +159,13 @@ const UserAccountPage: React.FC = () => {
                     onChange={(e) => setTelefone(e.target.value)}
                   />
                 ) : (
-                  <Input id="telefone" value={(perfil as any).telefone || 'Não informado'} readOnly />
+                  <Input id="telefone" value={perfil?.telefone || 'Não informado'} readOnly />
                 )}
               </div>
               <div className="flex justify-end">
                 {isEditing ? (
                   <>
-                    <Button variant="outline" onClick={() => setIsEditing(false)} disabled={loading}>
+                    <Button variant="outline" onClick={() => setIsEditing(false)} disabled={loading} className="mr-2">
                       Cancelar
                     </Button>
                     <Button onClick={handleSalvarClick} disabled={loading}>

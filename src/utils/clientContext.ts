@@ -1,14 +1,42 @@
-// Find where the cliente.situacao is being assigned and ensure it's cast to ClienteStatus
-// For example:
-cliente.situacao = 'liberado' as ClienteStatus;
 
-// Or if it's a direct string assignment:
-// Replace:
-const situacao: string = 'liberado';
-// With:
-const situacao: ClienteStatus = 'liberado';
-```
+// Define the client status type
+export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente';
 
-I apologize for the confusion. Since I don't have the full content of the `src/utils/clientContext.ts` file, I can't provide the complete code with the replacements. The AI was suggesting to find specific parts in the code and make changes, but without seeing the actual file, I can't make those replacements accurately.
+// This utility file contains helper functions and types related to client context
+// You can add any client-related utility functions here
 
-To properly help you, I would need to see the full content of the `src/utils/clientContext.ts` file. Then I could provide the complete updated code with the proper replacements.
+/**
+ * Function to format client status to display text
+ * @param status ClienteStatus
+ * @returns Formatted status text
+ */
+export const formatClientStatus = (status: ClienteStatus): string => {
+  switch (status) {
+    case 'liberado':
+      return 'Liberado';
+    case 'bloqueado':
+      return 'Bloqueado';
+    case 'pendente':
+      return 'Pendente';
+    default:
+      return 'Desconhecido';
+  }
+};
+
+/**
+ * Function to get status color based on client status
+ * @param status ClienteStatus
+ * @returns CSS color class
+ */
+export const getStatusColor = (status: ClienteStatus): string => {
+  switch (status) {
+    case 'liberado':
+      return 'text-green-500';
+    case 'bloqueado':
+      return 'text-red-500';
+    case 'pendente':
+      return 'text-yellow-500';
+    default:
+      return 'text-gray-500';
+  }
+};

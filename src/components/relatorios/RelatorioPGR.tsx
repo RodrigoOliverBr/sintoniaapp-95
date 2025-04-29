@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useRef } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Button } from "@/components/ui/button";
@@ -10,25 +11,39 @@ import { generateTableData } from '@/utils/relatorios/tableDataUtils';
 import { formatDate } from '@/utils/formatDate';
 
 interface RelatorioPGRProps {
-  company: Company;
-  employee: Employee;
-  form: Form;
-  questions: Question[];
-  answers: Record<string, any>;
+  companyId: string;
 }
 
-const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ company, employee, form, questions, answers }) => {
+// Placeholder components and data until we integrate with real API
+const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ companyId }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const componentRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (componentRef.current) {
-      console.log('Component dimensions:', {
-        width: componentRef.current.offsetWidth,
-        height: componentRef.current.offsetHeight,
-      });
-    }
-  }, []);
+  // Using placeholders for these objects until we fetch real data
+  const mockCompany: Company = { 
+    id: companyId, 
+    name: 'Empresa de Exemplo', 
+    cnpj: '12.345.678/0001-99',
+    address: 'Endereço de Exemplo' 
+  };
+  
+  const mockEmployee: Employee = { 
+    id: '1', 
+    name: 'Funcionário de Exemplo',
+    department_id: '1',
+    job_role_id: '1',
+    email: 'exemplo@empresa.com'
+  };
+  
+  const mockForm: Form = { 
+    id: '1', 
+    titulo: 'Formulário de Exemplo',
+    descricao: 'Descrição do formulário',
+    ativo: true
+  };
+
+  const mockQuestions: Question[] = [];
+  const mockAnswers: Record<string, any> = {};
 
   const generatePDF = async () => {
     setIsGenerating(true);
@@ -81,13 +96,13 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ company, employee, form, qu
 
       // Company and Employee Information
       doc.setFontSize(12);
-      doc.text(`Empresa: ${company.name}`, 20, 40);
-      doc.text(`Funcionário: ${employee.name}`, 20, 48);
-      doc.text(`Formulário: ${form.titulo}`, 20, 56);
+      doc.text(`Empresa: ${mockCompany.name}`, 20, 40);
+      doc.text(`Funcionário: ${mockEmployee.name}`, 20, 48);
+      doc.text(`Formulário: ${mockForm.titulo}`, 20, 56);
 
       let currentY = 70;
 
-      const pgrData = generatePGRData(questions, answers);
+      const pgrData = generatePGRData(mockQuestions, mockAnswers);
 
       // Function to render a section with a table
       const renderTable = (sectionIndex: number) => {
@@ -100,7 +115,7 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ company, employee, form, qu
         doc.text(section.title, 20, currentY);
         currentY += 8;
 
-        const tableData = generateTableData(section.questions, answers);
+        const tableData = generateTableData(section.questions, mockAnswers);
 
         if (tableData.length === 0) {
           doc.setFontSize(10);
@@ -145,7 +160,7 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ company, employee, form, qu
       }
 
       // Save the PDF
-      doc.save(`Relatorio_PGR_${employee.name}.pdf`);
+      doc.save(`Relatorio_PGR_${mockCompany.name}.pdf`);
     } catch (error) {
       console.error("Erro ao gerar o PDF:", error);
     } finally {
