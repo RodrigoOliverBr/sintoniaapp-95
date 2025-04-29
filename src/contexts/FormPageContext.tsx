@@ -57,6 +57,7 @@ interface FormPageContextProps {
   // Form state
   isSubmitting: boolean;
   isNewEvaluation: boolean;
+  setIsNewEvaluation: React.Dispatch<React.SetStateAction<boolean>>;
   
   // Derived data
   selectedEmployee: Employee | undefined;

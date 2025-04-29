@@ -83,6 +83,9 @@ export function useFormPage() {
     if (selectedEmployeeId) {
       // Load history when an employee is selected, don't show the form yet
       setShowForm(false);
+      
+      // Make sure to load the employee history
+      loadEmployeeHistory();
     }
   }, [selectedEmployeeId]);
 
@@ -203,6 +206,8 @@ export function useFormPage() {
     setShowResults,
     formComplete,
     setFormComplete,
+    showForm,
+    setShowForm,
     
     // History
     selectedEvaluation,
@@ -222,5 +227,10 @@ export function useFormPage() {
     handleNewEvaluation,
     handleExitResults,
     handleSaveAndComplete: handleSaveAndCompleteForm,
+    
+    // Form state
+    isSubmitting,
+    isNewEvaluation,
+    setIsNewEvaluation
   };
 }

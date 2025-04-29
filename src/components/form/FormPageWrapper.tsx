@@ -112,7 +112,7 @@ const FormPageWrapper: React.FC = () => {
                     Ver Histórico
                   </Button>
                 )}
-                <Button onClick={handleStartNewEvaluation}>
+                <Button onClick={handleStartNewEvaluation} type="button">
                   Nova Avaliação
                 </Button>
               </div>

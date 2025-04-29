@@ -35,7 +35,6 @@ const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
   showNewEvaluationButton,
   onNewEvaluation
 }) => {
-  // This function will be called when the Nova Avaliação button is clicked
   const handleNewEvaluationClick = () => {
     if (onNewEvaluation) {
       console.log("Nova Avaliação button clicked");
@@ -60,6 +59,7 @@ const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
               onClick={handleNewEvaluationClick}
               variant="outline" 
               className="flex items-center gap-2"
+              type="button"
             >
               <Plus size={16} />
               Nova Avaliação
