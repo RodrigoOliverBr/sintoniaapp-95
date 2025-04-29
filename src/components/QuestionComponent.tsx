@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { Question, FormAnswer, Mitigation } from "@/types/form";
+import { Question, Mitigation } from "@/types/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,24 +13,28 @@ import { getMitigationsByRiskId } from "@/services/form/formService";
 
 interface QuestionComponentProps {
   question: Question;
-  answer: FormAnswer | undefined;
-  onChange: (questionId: string, value: boolean | null) => void;
-  onObservationChange: (questionId: string, observation: string) => void;
-  onOptionsChange: (questionId: string, options: string[]) => void;
+  answer: boolean | null;
+  observations: string; // Changed from observation to match the form usage
+  selectedOptions: string[]; 
+  onAnswerChange: (answer: boolean | null) => void;
+  onObservationChange: (observation: string) => void;
+  onOptionsChange: (options: string[]) => void;
 }
 
 const QuestionComponent: React.FC<QuestionComponentProps> = ({
   question,
   answer,
-  onChange,
+  observations, // Updated parameter name
+  onAnswerChange,
   onObservationChange,
   onOptionsChange,
+  selectedOptions,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [mitigations, setMitigations] = useState<Mitigation[]>([]);
 
   useEffect(() => {
-    if (question.risco_id && answer?.answer === true) {
+    if (question.risco_id && answer === true) {
       const loadMitigations = async () => {
         try {
           const mitigationData = await getMitigationsByRiskId(question.risco_id);
@@ -41,7 +45,7 @@ const QuestionComponent: React.FC<QuestionComponentProps> = ({
       };
       loadMitigations();
     }
-  }, [question.risco_id, answer?.answer]);
+  }, [question.risco_id, answer]);
 
   return (
     <CardContent className="pt-6">
@@ -61,8 +65,8 @@ const QuestionComponent: React.FC<QuestionComponentProps> = ({
 
           <div className="flex flex-col space-y-2">
             <RadioGroup
-              value={answer?.answer === null ? undefined : answer?.answer?.toString()}
-              onValueChange={(value) => onChange(question.id, value === "true")}
+              value={answer === null ? undefined : answer?.toString()}
+              onValueChange={(value) => onAnswerChange(value === "true" ? true : value === "false" ? false : null)}
               className="flex space-x-4"
             >
               <div className="flex items-center space-x-2">
@@ -77,7 +81,7 @@ const QuestionComponent: React.FC<QuestionComponentProps> = ({
           </div>
         </div>
 
-        {answer?.answer === true && mitigations.length > 0 && (
+        {answer === true && mitigations.length > 0 && (
           <div className="mt-4 border-t pt-4">
             <Collapsible
               open={isOpen}
@@ -113,7 +117,7 @@ const QuestionComponent: React.FC<QuestionComponentProps> = ({
           </div>
         )}
 
-        {question.observacao_obrigatoria && answer?.answer === true && (
+        {question.observacao_obrigatoria && answer === true && (
           <div className="mt-4 border-t pt-4">
             <Label htmlFor={`observation-${question.id}`} className="mb-2 block text-sm font-medium">
               Observações (obrigatório)
@@ -121,8 +125,8 @@ const QuestionComponent: React.FC<QuestionComponentProps> = ({
             <Textarea
               id={`observation-${question.id}`}
               placeholder="Digite observações adicionais aqui..."
-              value={answer?.observation || ""}
-              onChange={(e) => onObservationChange(question.id, e.target.value)}
+              value={observations}
+              onChange={(e) => onObservationChange(e.target.value)}
               className="min-h-[80px] w-full"
             />
           </div>
