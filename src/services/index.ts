@@ -9,7 +9,8 @@ import {
   getEmployeeById,
   addEmployee,
   updateEmployee,
-  deleteEmployee
+  deleteEmployee,
+  getDepartmentsByCompany
 } from './employee/employeeService';
 
 export {
@@ -17,7 +18,8 @@ export {
   getEmployeeById,
   addEmployee,
   updateEmployee,
-  deleteEmployee
+  deleteEmployee,
+  getDepartmentsByCompany
 };
 
 // Import and re-export job role functions from jobRoleService
@@ -39,6 +41,23 @@ export {
   deleteJobRole
 };
 
+// Import and re-export form functions
+import { 
+  getFormQuestions,
+  getFormResultByEmployeeId, 
+  saveFormResult,
+  getMitigationsByRiskId,
+  getFormStatusByEmployeeId,
+  getEmployeeFormHistory,
+  getAllForms,
+  getDefaultRiskId,
+  getAllRisksWithSeverity,
+  getAllSeverities,
+  getFormResults,
+  deleteFormEvaluation,
+  updateAnalystNotes
+} from './form';
+
 export { 
   getFormQuestions,
   getFormResultByEmployeeId, 
@@ -51,5 +70,6 @@ export {
   getAllRisksWithSeverity,
   getAllSeverities,
   getFormResults,
-  deleteFormEvaluation
-} from './form';
+  deleteFormEvaluation,
+  updateAnalystNotes
+};

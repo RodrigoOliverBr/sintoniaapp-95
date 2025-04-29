@@ -61,9 +61,10 @@ export const addEmployee = async (employeeData: Partial<Employee>): Promise<Empl
     .insert({
       nome: employeeData.name,
       cpf: employeeData.cpf,
-      email: employeeData.email,
+      email: employeeData.email || "",
       cargo_id: employeeData.role,
       empresa_id: employeeData.company_id,
+      status: employeeData.status || "ativo"
       // department_id will be handled by the employee_departments junction table
     })
     .select()
@@ -92,6 +93,7 @@ export const updateEmployee = async (employeeId: string, employeeData: Partial<E
   if (employeeData.cpf !== undefined) updateData.cpf = employeeData.cpf;
   if (employeeData.email !== undefined) updateData.email = employeeData.email;
   if (employeeData.role !== undefined) updateData.cargo_id = employeeData.role;
+  if (employeeData.status !== undefined) updateData.status = employeeData.status;
   // department_id will be handled separately through the junction table
 
   const { data, error } = await supabase
@@ -126,7 +128,7 @@ export const deleteEmployee = async (employeeId: string): Promise<void> => {
   if (error) throw error;
 };
 
-// Remove the duplicated functions that are now in jobRoleService
+// Get departments by company
 export const getDepartmentsByCompany = async (companyId: string) => {
   const { data, error } = await supabase
     .from("setores")

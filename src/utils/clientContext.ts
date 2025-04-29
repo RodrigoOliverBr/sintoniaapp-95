@@ -62,15 +62,15 @@ export const useClienteContext = () => {
           tipo: "juridica", // Default value
           numeroEmpregados: 0, // Default value
           dataInclusao: Date.now(), // Default value
-          situacao: data.situacao,
+          situacao: data.situacao as any, // Force type for now
           cnpj: data.cnpj,
           cpfCnpj: data.cnpj, // Alias para compatibilidade
           email: data.email || "",
-          telefone: data.telefone,
-          responsavel: data.responsavel,
-          contato: data.telefone, // Using telefone as contato
-          planoId: data.plano_id,
-          contratoId: data.contrato_id,
+          telefone: data.telefone || "",
+          responsavel: data.responsavel || "",
+          contato: data.telefone || "", // Using telefone as contato
+          planoId: data.plano_id || "",
+          contratoId: data.contrato_id || "",
           clienteId: data.id // Using self id as clienteId
         };
         
