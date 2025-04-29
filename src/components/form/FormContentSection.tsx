@@ -64,11 +64,6 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
 }) => {
   const navigate = useNavigate();
   
-  // Handle navigation back to home
-  const handleBackToHome = () => {
-    navigate("/");
-  };
-  
   if (!showResults && showingHistoryView) {
     return (
       <EmployeeFormHistory
@@ -99,25 +94,12 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
     const shouldBeReadOnly = selectedEvaluation !== null && showingHistoryView;
     
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center mb-4">
-          <Button 
-            variant="outline" 
-            onClick={handleBackToHome}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft size={16} />
-            Voltar para Início
-          </Button>
-        </div>
-        
-        <FormResults 
-          result={selectedEvaluation || formResult!}
-          questions={questions}
-          onNotesChange={onNotesChange}
-          isReadOnly={shouldBeReadOnly}
-        />
-      </div>
+      <FormResults 
+        result={selectedEvaluation || formResult!}
+        questions={questions}
+        onNotesChange={onNotesChange}
+        isReadOnly={shouldBeReadOnly}
+      />
     );
   }
 

@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 import { FormResult } from "@/types/form";
 import { getEmployeeFormHistory, deleteFormEvaluation } from "@/services/form";
 import { toast as sonnerToast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useEvaluationHistory(employeeId?: string) {
   const [evaluationHistory, setEvaluationHistory] = useState<FormResult[]>([]);
@@ -31,6 +32,27 @@ export function useEvaluationHistory(employeeId?: string) {
     }
   }, [employeeId]);
 
+  const verifyDeletion = async (evaluationId: string): Promise<boolean> => {
+    try {
+      const { data: evaluation, error } = await supabase
+        .from('avaliacoes')
+        .select('id')
+        .eq('id', evaluationId)
+        .maybeSingle();
+        
+      if (error) {
+        console.error("Error verifying deletion:", error);
+        return false;
+      }
+      
+      // If the evaluation still exists, deletion failed
+      return !evaluation;
+    } catch (e) {
+      console.error("Error checking evaluation deletion:", e);
+      return false;
+    }
+  }
+
   const handleDeleteEvaluation = useCallback(async (evaluationId: string) => {
     if (!evaluationId) {
       sonnerToast.error("ID da avaliação inválido");
@@ -47,30 +69,42 @@ export function useEvaluationHistory(employeeId?: string) {
 
     setIsDeletingEvaluation(true);
     try {
-      console.log(`Deleting evaluation with ID: ${evaluationId}`);
+      console.log(`Iniciando exclusão da avaliação com ID: ${evaluationId}`);
       
       // Call the service to delete from database
       await deleteFormEvaluation(evaluationId);
       
-      // Update the local state to remove the deleted evaluation
-      setEvaluationHistory(prevHistory => 
-        prevHistory.filter(evaluation => evaluation.id !== evaluationId)
-      );
+      // Verify if deletion was successful by checking if the evaluation still exists
+      const isDeleted = await verifyDeletion(evaluationId);
       
-      // Reset selected evaluation if it was the one deleted
-      if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
-        setSelectedEvaluation(null);
+      if (isDeleted) {
+        console.log("Avaliação excluída com sucesso no banco de dados");
+        
+        // Update the local state to remove the deleted evaluation
+        setEvaluationHistory(prevHistory => 
+          prevHistory.filter(evaluation => evaluation.id !== evaluationId)
+        );
+        
+        // Reset selected evaluation if it was the one deleted
+        if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
+          setSelectedEvaluation(null);
+        }
+        
+        sonnerToast.success("Avaliação excluída com sucesso do banco de dados!");
+      } else {
+        console.error("Falha na verificação da exclusão da avaliação");
+        sonnerToast.error("A exclusão parece ter falhado. A avaliação ainda existe no banco de dados.");
+        
+        // Reload the history to ensure everything is in sync
+        await loadEmployeeHistory();
       }
       
-      sonnerToast.success("Avaliação excluída com sucesso!");
-      console.log("Evaluation deleted successfully");
-      
-      // Reload the history to ensure everything is in sync
-      await loadEmployeeHistory();
-      
     } catch (error: any) {
-      console.error("Error deleting evaluation:", error);
+      console.error("Erro ao excluir avaliação:", error);
       sonnerToast.error(`Não foi possível excluir a avaliação: ${error.message || "Erro desconhecido"}`);
+      
+      // Reload history to ensure UI is in sync with database
+      await loadEmployeeHistory();
     } finally {
       setIsDeletingEvaluation(false);
     }

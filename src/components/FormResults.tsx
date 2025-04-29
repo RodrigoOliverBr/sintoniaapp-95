@@ -7,13 +7,14 @@ import { ResultsActions } from "./results/ResultsActions";
 import { AnswersChart } from "./charts/AnswersChart";
 import { SeverityChart } from "./charts/SeverityChart";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2, Save } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { updateAnalystNotes } from "@/services/form/evaluations";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 interface FormResultsProps {
   result: FormResult;
@@ -46,7 +47,6 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
       setIsSaving(true);
       await updateAnalystNotes(result.id, value);
       onNotesChange(value);
-      sonnerToast.success("Observações salvas com sucesso!");
       return true;
     } catch (error) {
       console.error("Error saving notes:", error);
@@ -91,23 +91,22 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     }
   };
 
-  // Fixed save and return function - ensures notes are saved before navigating
-  const handleSaveAndReturn = async () => {
-    // Save notes first
+  // Handle return to home with saving
+  const handleReturnToHome = async () => {
+    // Save notes before navigating
     if (!isReadOnly && result.id) {
       setIsSaving(true);
       try {
-        await updateAnalystNotes(result.id, notes);
-        sonnerToast.success("Observações salvas com sucesso!");
-        // Navigate to home page with a slight delay to ensure toast is seen
-        setTimeout(() => {
-          navigate("/");
-        }, 1000);
+        const success = await saveNotes(notes);
+        if (success) {
+          sonnerToast.success("Observações salvas com sucesso!");
+        }
       } catch (error) {
         console.error("Error saving notes:", error);
-        sonnerToast.error("Não foi possível salvar as observações.");
       } finally {
         setIsSaving(false);
+        // Navigate regardless of save success to ensure user can exit
+        navigate("/");
       }
     } else {
       // If read-only, just navigate
@@ -191,13 +190,24 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
 
   return (
     <div className="space-y-6 print:pt-0">
-      <ResultsActions onPrint={handlePrint} />
+      <div className="flex justify-between items-center mb-4">
+        <Button 
+          variant="outline" 
+          onClick={handleReturnToHome}
+          className="flex items-center gap-2"
+          disabled={isSaving}
+        >
+          <ArrowLeft size={16} />
+          {isSaving ? "Salvando..." : "Voltar para Início"}
+        </Button>
+        <ResultsActions onPrint={handlePrint} />
+      </div>
 
       {isReadOnly && (
         <Alert variant="default" className="mb-4 bg-blue-50 border-blue-200">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Você está visualizando os resultados em modo somente leitura. Para fazer alterações, use o botão "Editar" ou clique em "Sair" para retornar ao formulário.
+            Você está visualizando os resultados em modo somente leitura. Para fazer alterações, use o botão "Editar" ou clique em "Voltar para Início".
           </AlertDescription>
         </Alert>
       )}
@@ -275,7 +285,6 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
             <span>Observações e Recomendações do Analista</span>
             {isSaving && !isReadOnly && (
               <div className="flex items-center gap-1 text-sm text-gray-500">
-                <Save className="h-4 w-4 animate-pulse" />
                 <span>Salvando...</span>
               </div>
             )}
@@ -295,14 +304,6 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
               <p className="text-xs text-gray-500">
                 As observações são salvas automaticamente após você parar de digitar ou ao sair do campo.
               </p>
-              <Button 
-                className="w-full sm:w-auto flex items-center justify-center gap-2"
-                onClick={handleSaveAndReturn}
-                disabled={isSaving}
-              >
-                <Save className="h-4 w-4" />
-                {isSaving ? "Salvando..." : "Salvar e Voltar"}
-              </Button>
             </div>
           )}
         </CardContent>
