@@ -24,8 +24,8 @@ import { useToast } from "@/hooks/use-toast";
 interface EditEmployeeModalProps {
   employee: Employee | null;
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onEmployeeUpdated: () => void;
+  onClose: () => void;
+  onSave: () => void;
   departments?: Department[];
   jobRoles?: JobRole[];
 }
@@ -33,8 +33,8 @@ interface EditEmployeeModalProps {
 const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   employee,
   open,
-  onOpenChange,
-  onEmployeeUpdated,
+  onClose,
+  onSave,
   departments = [],
   jobRoles = [],
 }) => {
@@ -89,8 +89,8 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
         description: "Funcionário atualizado com sucesso!",
       });
       
-      onEmployeeUpdated();
-      onOpenChange(false);
+      onSave();
+      onClose();
     } catch (error) {
       console.error("Error updating employee:", error);
       toast({
@@ -104,7 +104,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Editar Funcionário</DialogTitle>
@@ -179,7 +179,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => onOpenChange(false)} variant="outline">
+          <Button onClick={onClose} variant="outline">
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={isLoading}>

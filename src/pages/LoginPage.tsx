@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ const LoginPage: React.FC = () => {
           
           if (userType === 'admin') {
             navigate("/admin/dashboard");
-          } else if (userType === 'client' || userType === 'cliente') {
+          } else if (userType === 'client') {
             navigate("/");
           }
         }
@@ -82,11 +83,7 @@ const LoginPage: React.FC = () => {
       }
       
       // Normalizar o tipo de usuário para evitar problemas de case
-      // Aceitar tanto 'client' quanto 'cliente' como válidos para cliente
-      let userType = 'client';
-      if (perfilData.tipo?.toLowerCase() === 'admin') {
-        userType = 'admin';
-      }
+      const userType = perfilData.tipo?.toLowerCase() === 'client' ? 'client' : 'admin';
       console.log("Tipo de usuário normalizado:", userType);
       
       // Se for cliente, verificar status

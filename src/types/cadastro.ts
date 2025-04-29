@@ -47,7 +47,7 @@ export interface Employee {
 }
 
 export type TipoPessoa = 'juridica' | 'fisica';
-export type StatusContrato = 'ativo' | 'cancelado' | 'em-analise' | 'sem-contrato' | 'vencimento-proximo';
+export type StatusContrato = 'ativo' | 'cancelado' | 'em-analise' | 'sem-contrato';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
 export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
 export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
@@ -63,7 +63,7 @@ export interface Form {
 }
 
 export interface ClienteComContrato extends ClienteSistema {
-  statusContrato?: StatusContrato;
+  statusContrato?: StatusContrato | 'vencimento-proximo';
   diasParaVencimento?: number;
   contrato?: Contrato;
 }
