@@ -94,7 +94,7 @@ export default function RelatoriosPage() {
               </TabsContent>
               
               <TabsContent value="pgr">
-                <RelatorioPGR />
+                <RelatorioPGR companyId={selectedCompanyId} />
               </TabsContent>
             </Tabs>
           </div>
