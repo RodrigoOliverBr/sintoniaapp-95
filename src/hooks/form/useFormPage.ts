@@ -1,56 +1,64 @@
 
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { toast as sonnerToast } from "sonner";
-import { useCompanySelection } from "@/hooks/form/useCompanySelection";
-import { useEmployeeSelection } from "@/hooks/form/useEmployeeSelection";
-import { useFormSelection } from "@/hooks/form/useFormSelection";
 import { useFormQuestions } from "@/hooks/form/useFormQuestions";
 import { useFormAnswers } from "@/hooks/form/useFormAnswers";
 import { useEvaluationHistory } from "@/hooks/form/useEvaluationHistory";
-import { useFormCompletion } from "@/hooks/form/useFormCompletion";
-import { useFormView } from "@/hooks/form/useFormView";
-import { FormResult } from "@/types/form";
+import { useFormNavigation } from "@/hooks/form/useFormNavigation";
+import { useFormSelections } from "@/hooks/form/useFormSelections";
+import { useFormSubmissionHandler } from "@/hooks/form/useFormSubmissionHandler";
 
 export function useFormPage() {
-  // Custom hooks for forms
-  const { 
-    companies,
-    selectedCompanyId, 
-    setSelectedCompanyId 
-  } = useCompanySelection();
-
+  // Get form selection state
   const {
+    companies,
+    selectedCompanyId,
+    setSelectedCompanyId,
     employees,
     selectedEmployeeId,
-    setSelectedEmployeeId
-  } = useEmployeeSelection(selectedCompanyId);
-
-  const {
+    setSelectedEmployeeId,
     availableForms,
     selectedFormId,
-    setSelectedFormId
-  } = useFormSelection();
+    setSelectedFormId,
+    handleCompanyChange,
+    handleEmployeeChange,
+    handleFormChange,
+    selectedEmployee,
+    selectedFormTitle
+  } = useFormSelections();
 
+  // Get form questions and sections
   const {
     questions,
     formSections,
   } = useFormQuestions(selectedFormId);
 
+  // Get form answers state
   const {
     answers,
     setAnswers,
     formResult,
     setFormResult,
+    setIsSubmitting,
+  } = useFormAnswers();
+
+  // Get navigation state
+  const {
     showResults,
     setShowResults,
     formComplete,
-    setFormComplete
-  } = useFormAnswers();
-
-  const {
+    setFormComplete,
+    showForm,
+    setShowForm,
+    showingHistoryView,
+    setShowingHistoryView,
     selectedEvaluation,
     setSelectedEvaluation,
+    handleExitResults,
+    handleNewEvaluation: navHandleNewEvaluation
+  } = useFormNavigation();
+
+  // Get evaluation history
+  const {
     evaluationHistory,
     isLoadingHistory,
     loadEmployeeHistory,
@@ -58,23 +66,26 @@ export function useFormPage() {
     isDeletingEvaluation
   } = useEvaluationHistory(selectedEmployeeId);
 
+  // Get form submission handler
   const {
     isSubmitting,
     isNewEvaluation,
     setIsNewEvaluation,
-    handleSaveAndComplete: saveAndComplete,
-    resetFormState
-  } = useFormCompletion();
-
-  const {
-    showForm,
-    setShowForm,
-    showingHistoryView,
+    resetFormState,
+    handleSaveAndCompleteForm
+  } = useFormSubmissionHandler({
+    selectedFormId,
+    selectedEmployeeId,
+    selectedCompanyId,
+    answers,
+    formResult,
+    evaluationHistory,
+    selectedEvaluation,
+    setSelectedEvaluation,
+    setShowResults,
     setShowingHistoryView,
-    viewNewEvaluation,
-    viewHistoryList,
-    exitFormView
-  } = useFormView();
+    loadEmployeeHistory
+  });
 
   // Reset form when switching between employees
   useEffect(() => {
@@ -96,85 +107,28 @@ export function useFormPage() {
     setShowForm(false);
   };
 
-  const handleCompanyChange = (value: string) => {
-    setSelectedCompanyId(value);
-    setSelectedEmployeeId(undefined);
+  const handleNewEvaluation = () => {
+    resetForm();
+    setIsNewEvaluation(true);
+    navHandleNewEvaluation();
+  };
+
+  const handleEmployeeChangeWithReset = (value: string) => {
+    handleEmployeeChange(value);
     resetForm();
     setShowingHistoryView(false);
   };
 
-  const handleEmployeeChange = (value: string) => {
-    setSelectedEmployeeId(value);
-    resetForm();
-    setShowingHistoryView(false);
-  };
-
-  const handleFormChange = (value: string) => {
-    setSelectedFormId(value);
+  const handleFormChangeWithReset = (value: string) => {
+    handleFormChange(value);
     setAnswers({});
     resetForm();
   };
 
-  const handleNewEvaluation = () => {
-    console.log("handleNewEvaluation called, resetting form and showing new form");
+  const handleCompanyChangeWithReset = (value: string) => {
+    handleCompanyChange(value);
     resetForm();
     setShowingHistoryView(false);
-    setIsNewEvaluation(true);
-    setShowForm(true);
-    console.log("Iniciando nova avaliação");
-  };
-  
-  const handleExitResults = () => {
-    // Navigate to the home page instead of going back to the form
-    setShowResults(false);
-    setFormComplete(false);
-    setSelectedEvaluation(null);
-    setShowForm(false);
-    setShowingHistoryView(false);
-  };
-
-  const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
-  const selectedFormTitle = availableForms.find(f => f.id === selectedFormId)?.titulo || "Formulário";
-
-  const handleSaveAndCompleteForm = async () => {
-    if (!selectedFormId || !selectedEmployeeId || !selectedCompanyId) {
-      sonnerToast.warning("Por favor, selecione empresa, funcionário e formulário antes de continuar");
-      return;
-    }
-
-    // Check for duplicate evaluations before saving
-    console.log("Verificando avaliações existentes para o funcionário...");
-    await loadEmployeeHistory();
-
-    const duplicateEvaluation = evaluationHistory.find(evaluation => 
-      evaluation.is_complete && 
-      evaluation.formulario_id === selectedFormId && 
-      evaluation.id !== (selectedEvaluation?.id || '')
-    );
-
-    if (duplicateEvaluation && !selectedEvaluation) {
-      console.log("Avaliação completa já existe para este formulário e funcionário.");
-      sonnerToast.warning("Este funcionário já possui uma avaliação completa para este formulário.");
-      setShowingHistoryView(true);
-      setShowForm(false);
-      return;
-    }
-
-    const updatedResult = await saveAndComplete({
-      selectedFormId,
-      selectedEmployeeId,
-      selectedCompanyId,
-      answers,
-      existingFormResult: formResult,
-      selectedEvaluation,
-      loadEmployeeHistory
-    });
-    
-    if (updatedResult) {
-      setSelectedEvaluation(updatedResult);
-      setShowResults(true);
-      setShowingHistoryView(false);
-    }
   };
 
   return {
@@ -221,9 +175,9 @@ export function useFormPage() {
     isDeletingEvaluation,
     
     // Actions
-    handleCompanyChange,
-    handleEmployeeChange,
-    handleFormChange,
+    handleCompanyChange: handleCompanyChangeWithReset,
+    handleEmployeeChange: handleEmployeeChangeWithReset,
+    handleFormChange: handleFormChangeWithReset,
     handleNewEvaluation,
     handleExitResults,
     handleSaveAndComplete: handleSaveAndCompleteForm,
