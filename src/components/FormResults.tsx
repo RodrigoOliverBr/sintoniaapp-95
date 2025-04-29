@@ -10,7 +10,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2, Save } from "lucide-react";
 import { format } from "date-fns";
 import { updateAnalystNotes } from "@/services/form/evaluations";
-import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -33,23 +32,30 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   const [notes, setNotes] = useState(result.notas_analista || result.analyistNotes || '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
-  const { toast } = useToast();
 
+  // Sincronizar notas quando o resultado muda
   useEffect(() => {
     setNotes(result.notas_analista || result.analyistNotes || '');
   }, [result]);
 
   const saveNotes = async (value: string) => {
-    if (!result.id || isReadOnly) return;
+    if (!result.id || isReadOnly) return false;
     
     try {
       setIsSaving(true);
+      console.log(`Salvando notas para avaliação ${result.id}: "${value}"`);
+      
+      // Chama API para atualizar notas
       await updateAnalystNotes(result.id, value);
+      
+      // Atualiza estado local através do callback
       onNotesChange(value);
+      
       sonnerToast.success("Observações salvas com sucesso!");
+      console.log("Notas salvas com sucesso");
       return true;
     } catch (error) {
-      console.error("Error saving notes:", error);
+      console.error("Erro ao salvar notas:", error);
       sonnerToast.error("Não foi possível salvar as observações.");
       return false;
     } finally {
@@ -66,6 +72,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     const newValue = e.target.value;
     setNotes(newValue);
     
+    // Atualiza o estado local imediatamente
     onNotesChange(newValue);
     
     if (saveTimeout) {
@@ -73,6 +80,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     }
     
     if (!isReadOnly) {
+      // Debounce para auto-salvar após 2 segundos de inatividade
       const timeout = setTimeout(() => {
         debouncedSave(newValue);
       }, 2000);
@@ -91,17 +99,39 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     }
   };
 
+  // Implementação revisada do salvar e voltar
   const handleSaveAndReturn = async () => {
-    // Save notes first
-    if (!isReadOnly && result.id) {
-      const success = await saveNotes(notes);
-      if (success) {
-        // Navigate to home page
+    try {
+      // Evitar duplo clique
+      if (isSaving) return;
+      
+      setIsSaving(true);
+      
+      if (!isReadOnly && result.id) {
+        console.log(`Salvando notas antes de voltar: "${notes}"`);
+        
+        // Executa a função de salvamento e captura o resultado
+        const saved = await saveNotes(notes);
+        
+        if (saved) {
+          console.log("Notas salvas com sucesso, redirecionando...");
+          // Aguardar um pouco para garantir que o toast seja visto
+          setTimeout(() => {
+            navigate("/");
+          }, 500);
+        } else {
+          // Se falhou em salvar, mostra mensagem
+          sonnerToast.error("Não foi possível salvar as observações. Tente novamente.");
+        }
+      } else {
+        // Se estiver em modo leitura ou sem ID, apenas navega
         navigate("/");
       }
-    } else {
-      // If read-only, just navigate
-      navigate("/");
+    } catch (error) {
+      console.error("Erro ao salvar e voltar:", error);
+      sonnerToast.error("Ocorreu um erro. Por favor, tente novamente.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -280,6 +310,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
             onBlur={handleBlur}
             readOnly={isReadOnly}
           />
+          
           {!isReadOnly && (
             <div className="mt-4 space-y-2">
               <p className="text-xs text-gray-500">

@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { saveFormResult, getFormResultByEmployeeId } from "@/services/form";
 import { FormResult } from "@/types/form";
@@ -31,23 +30,24 @@ export function useFormCompletion() {
   }) => {
     if (!selectedFormId || !selectedEmployeeId || !selectedCompanyId) {
       sonnerToast.warning("Por favor, selecione empresa, funcionário e formulário antes de continuar");
-      return;
+      return null;
     }
 
-    // Validate all questions are answered
+    // Validar que todas as perguntas foram respondidas
     const unansweredQuestions = Object.values(answers).filter(
       answer => answer.answer === null || answer.answer === undefined
     );
     
     if (unansweredQuestions.length > 0) {
       sonnerToast.warning(`Por favor, responda todas as ${unansweredQuestions.length} perguntas pendentes antes de concluir`);
-      return;
+      return null;
     }
     
     setIsSubmitting(true);
+    console.log("Iniciando o processo de salvamento da avaliação...");
 
     try {
-      // Count actual yes/no answers
+      // Contar respostas sim/não
       let totalYes = 0;
       let totalNo = 0;
       
@@ -59,19 +59,22 @@ export function useFormCompletion() {
         }
       });
       
-      // Determine if we're editing an existing evaluation or creating a new one
+      console.log(`Total de respostas SIM: ${totalYes}, NÃO: ${totalNo}`);
+      
+      // Determinar se estamos editando uma avaliação existente ou criando uma nova
       let formResultToSave = existingFormResult;
       
       if (selectedEvaluation && !isNewEvaluation) {
-        // We're editing an existing evaluation
-        console.log(`Editing existing evaluation with ID: ${selectedEvaluation.id}`);
+        // Estamos editando uma avaliação existente
+        console.log(`Editando avaliação existente com ID: ${selectedEvaluation.id}`);
         formResultToSave = selectedEvaluation;
       }
       
-      // Get existing analyst notes
-      const notesAnalista = selectedEvaluation?.notas_analista || formResult?.notas_analista || '';
+      // Preservar as notas do analista existentes
+      const notesAnalista = selectedEvaluation?.notas_analista || formResult?.notas_analista || existingFormResult?.notas_analista || '';
+      console.log(`Preservando notas do analista: "${notesAnalista}"`);
       
-      // Prepare form result data
+      // Preparar dados do resultado do formulário
       const formResultData = {
         id: formResultToSave?.id || '',
         employeeId: selectedEmployeeId,
@@ -81,29 +84,39 @@ export function useFormCompletion() {
         total_sim: totalYes,
         total_nao: totalNo,
         notas_analista: notesAnalista,
-        is_complete: true, // Explicitly set to true for completed forms
+        is_complete: true, // Explicitamente definido como true para formulários completos
         last_updated: new Date().toISOString(),
         created_at: formResultToSave?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
       
-      // Save form result
+      console.log("Salvando os dados do formulário...");
+      
+      // Salvar resultado do formulário
       await saveFormResult(formResultData);
       sonnerToast.success("Formulário salvo com sucesso!");
       
-      // Get updated result
+      console.log("Dados salvos, obtendo resultado atualizado...");
+      
+      // Obter resultado atualizado
       const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId, selectedFormId);
       
       if (updatedResult) {
+        console.log("Resultado atualizado obtido com sucesso:", updatedResult.id);
         setFormResult(updatedResult);
         setShowResults(true);
         setFormComplete(true);
-        setIsNewEvaluation(false); // Reset new evaluation flag after saving
+        setIsNewEvaluation(false); // Redefinir sinalizador de nova avaliação após salvar
         
-        // Reload history after completing to get the updated list
+        // Recarregar histórico após concluir para obter a lista atualizada
+        console.log("Recarregando histórico de avaliações do funcionário...");
         await loadEmployeeHistory();
         
         return updatedResult;
+      } else {
+        console.warn("Não foi possível obter o resultado atualizado do servidor");
+        // Se não conseguirmos obter o resultado atualizado, retornar o que temos
+        return formResultData;
       }
     } catch (error: any) {
       console.error("Erro ao salvar o formulário:", error);
@@ -119,6 +132,7 @@ export function useFormCompletion() {
     setFormComplete(false);
     setShowResults(false);
     setIsNewEvaluation(false);
+    setFormResult(null);
   };
 
   return {
