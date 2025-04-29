@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
-import { addJobRole, getJobRolesByCompany } from "@/services";
+import { getJobRolesByCompany, addJobRole } from "@/services";
 import { JobRole } from "@/types/cadastro";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,7 +72,8 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
 
     try {
       setIsLoading(true);
-      await addJobRole(companyId, newRoleName.trim());
+      // Use the properly imported function with the correct parameter structure
+      await addJobRole({ name: newRoleName.trim(), company_id: companyId });
       toast({
         title: "Sucesso",
         description: "Cargo adicionado com sucesso!",

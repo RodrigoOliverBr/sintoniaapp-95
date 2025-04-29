@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Employee, JobRole } from "@/types/cadastro";
+import { Employee } from "@/types/cadastro";
 import { getClienteIdAtivo } from "@/utils/clientContext";
 
 export const getEmployeesByCompany = async (companyId: string): Promise<Employee[]> => {
@@ -15,13 +15,13 @@ export const getEmployeesByCompany = async (companyId: string): Promise<Employee
     id: employee.id,
     name: employee.nome,
     cpf: employee.cpf,
-    email: employee.email || "", // Handle optional field
+    email: employee.email || "", 
     role: employee.cargo_id,
-    department_id: employee.department_id || "", // Handle optional field
+    department_id: employee.department_id || "", 
     company_id: employee.empresa_id,
     created_at: employee.created_at,
     updated_at: employee.updated_at,
-    status: employee.status || "ativo", // Provide default value
+    status: employee.status || "ativo",
   }));
 };
 
@@ -39,13 +39,13 @@ export const getEmployeeById = async (employeeId: string): Promise<Employee | nu
     id: data.id,
     name: data.nome,
     cpf: data.cpf,
-    email: data.email || "", // Handle optional field
+    email: data.email || "", 
     role: data.cargo_id,
-    department_id: data.department_id || "", // Handle optional field
+    department_id: data.department_id || "", 
     company_id: data.empresa_id,
     created_at: data.created_at,
     updated_at: data.updated_at,
-    status: data.status || "ativo", // Provide default value
+    status: data.status || "ativo",
   };
 };
 
@@ -61,7 +61,7 @@ export const addEmployee = async (employeeData: Partial<Employee>): Promise<Empl
     .insert({
       nome: employeeData.name,
       cpf: employeeData.cpf,
-      email: employeeData.email, // May be undefined, database should handle
+      email: employeeData.email,
       cargo_id: employeeData.role,
       empresa_id: employeeData.company_id,
       // department_id will be handled by the employee_departments junction table
@@ -75,13 +75,13 @@ export const addEmployee = async (employeeData: Partial<Employee>): Promise<Empl
     id: data.id,
     name: data.nome,
     cpf: data.cpf,
-    email: data.email || "", // Handle nullable field
+    email: data.email || "", 
     role: data.cargo_id,
-    department_id: data.department_id || "", // Handle nullable field
+    department_id: data.department_id || "",
     company_id: data.empresa_id,
     created_at: data.created_at,
     updated_at: data.updated_at,
-    status: data.status || "ativo", // Default value if not in DB
+    status: data.status || "ativo",
   };
 };
 
@@ -107,13 +107,13 @@ export const updateEmployee = async (employeeId: string, employeeData: Partial<E
     id: data.id,
     name: data.nome,
     cpf: data.cpf,
-    email: data.email || "", // Handle nullable field
+    email: data.email || "", 
     role: data.cargo_id,
-    department_id: data.department_id || "", // Handle nullable field
+    department_id: data.department_id || "",
     company_id: data.empresa_id,
     created_at: data.created_at,
     updated_at: data.updated_at,
-    status: data.status || "ativo", // Default value if not in DB
+    status: data.status || "ativo",
   };
 };
 
@@ -126,35 +126,7 @@ export const deleteEmployee = async (employeeId: string): Promise<void> => {
   if (error) throw error;
 };
 
-export const getJobRolesByCompany = async (companyId: string): Promise<JobRole[]> => {
-  const { data, error } = await supabase
-    .from("cargos")
-    .select("*")
-    .eq("empresa_id", companyId);
-
-  if (error) throw error;
-
-  return data || [];
-};
-
-export const addJobRole = async (companyId: string, name: string): Promise<JobRole> => {
-  const { data, error } = await supabase
-    .from("cargos")
-    .insert({ nome: name, empresa_id: companyId })
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  return {
-    id: data.id,
-    name: data.nome,
-    company_id: data.empresa_id,
-    created_at: data.created_at,
-    updated_at: data.updated_at
-  };
-};
-
+// Remove the duplicated functions that are now in jobRoleService
 export const getDepartmentsByCompany = async (companyId: string) => {
   const { data, error } = await supabase
     .from("setores")

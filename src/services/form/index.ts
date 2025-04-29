@@ -1,9 +1,40 @@
 
-export * from './forms';
-export * from './questions';
-export * from './evaluations';
-export * from './risks';
+// Export specific functions to avoid conflicts
+import { 
+  getFormQuestions,
+  getFormResultByEmployeeId,
+  saveFormResult,
+  getFormStatusByEmployeeId,
+  getEmployeeFormHistory,
+  getAllForms
+} from './questions';
 
-// Make sure deleteFormEvaluation and updateAnalystNotes are included
-import { deleteFormEvaluation, updateAnalystNotes } from './evaluations';
-export { deleteFormEvaluation, updateAnalystNotes };
+import {
+  deleteFormEvaluation,
+  updateAnalystNotes
+} from './evaluations';
+
+import {
+  getMitigationsByRiskId,
+  getDefaultRiskId,
+  getAllRisksWithSeverity,
+  getAllSeverities,
+  getFormResults
+} from './risks';
+
+// Export individual functions to avoid naming conflicts
+export {
+  getFormQuestions,
+  getFormResultByEmployeeId,
+  saveFormResult,
+  getFormStatusByEmployeeId,
+  getEmployeeFormHistory,
+  getAllForms,
+  getMitigationsByRiskId,
+  getDefaultRiskId,
+  getAllRisksWithSeverity,
+  getAllSeverities,
+  getFormResults,
+  deleteFormEvaluation,
+  updateAnalystNotes
+};
