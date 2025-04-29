@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { FormResult, Question } from "@/types/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +32,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Sincronizar notas quando o resultado muda
+  // Synchronize notes when the result changes
   useEffect(() => {
     setNotes(result.notas_analista || result.analyistNotes || '');
   }, [result]);
@@ -43,20 +42,19 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     
     try {
       setIsSaving(true);
-      console.log(`Salvando notas para avaliação ${result.id}: "${value}"`);
+      console.log(`Saving notes for evaluation ${result.id}: "${value}"`);
       
-      // Chama API para atualizar notas - adaptação para usar a função diretamente
       await updateAnalystNotes(result.id, value);
       
-      // Atualiza estado local através do callback
+      // Update local state through callback
       onNotesChange(value);
       
-      sonnerToast.success("Observações salvas com sucesso!");
-      console.log("Notas salvas com sucesso");
+      sonnerToast.success("Notes saved successfully!");
+      console.log("Notes saved successfully");
       return true;
     } catch (error) {
-      console.error("Erro ao salvar notas:", error);
-      sonnerToast.error("Não foi possível salvar as observações.");
+      console.error("Error saving notes:", error);
+      sonnerToast.error("Could not save observations.");
       return false;
     } finally {
       setIsSaving(false);
@@ -72,7 +70,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     const newValue = e.target.value;
     setNotes(newValue);
     
-    // Atualiza o estado local imediatamente
+    // Update local state immediately
     onNotesChange(newValue);
     
     if (saveTimeout) {
@@ -80,7 +78,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     }
     
     if (!isReadOnly) {
-      // Debounce para auto-salvar após 2 segundos de inatividade
+      // Debounce to auto-save after 2 seconds of inactivity
       const timeout = setTimeout(() => {
         debouncedSave(newValue);
       }, 2000);
@@ -99,40 +97,39 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     }
   };
 
-  // Reimplementação completa do salvar e voltar
+  // Fixed implementation of save and return
   const handleSaveAndReturn = async () => {
+    if (isSaving) return; // Prevent double submission
+    
+    setIsSaving(true);
+    console.log("Save and Return button clicked");
+    
     try {
-      // Evitar duplo clique
-      if (isSaving) return;
-      
-      setIsSaving(true);
-      
       if (!isReadOnly && result.id) {
-        console.log(`Salvando notas antes de voltar: "${notes}"`);
+        console.log(`Explicitly saving notes before navigation: "${notes}"`);
         
         try {
-          // Chamada direta para API de salvar notas
+          // Direct API call to save notes
           await updateAnalystNotes(result.id, notes);
+          sonnerToast.success("Notes saved successfully!");
           
-          sonnerToast.success("Observações salvas com sucesso!");
-          console.log("Notas salvas com sucesso, redirecionando...");
-          
-          // Aguardar um pouco para garantir que o toast seja visto
+          // Delay navigation slightly to allow the toast to be seen
           setTimeout(() => {
+            console.log("Navigating to home page");
             navigate("/");
           }, 500);
         } catch (error) {
-          console.error("Erro ao salvar notas:", error);
-          sonnerToast.error("Não foi possível salvar as observações. Tente novamente.");
+          console.error("Error saving notes before navigation:", error);
+          sonnerToast.error("Failed to save notes. Please try again.");
+          setIsSaving(false);
         }
       } else {
-        // Se estiver em modo leitura ou sem ID, apenas navega
+        // If in read-only mode or no ID, just navigate
         navigate("/");
       }
     } catch (error) {
-      console.error("Erro ao salvar e voltar:", error);
-      sonnerToast.error("Ocorreu um erro. Por favor, tente novamente.");
-    } finally {
+      console.error("Error in save and return:", error);
+      sonnerToast.error("An error occurred. Please try again.");
       setIsSaving(false);
     }
   };
@@ -219,7 +216,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
         <Alert variant="default" className="mb-4 bg-blue-50 border-blue-200">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Você está visualizando os resultados em modo somente leitura. Para fazer alterações, use o botão "Editar" ou clique em "Sair" para retornar ao formulário.
+            You are viewing results in read-only mode. To make changes, use the "Edit" button or click "Exit" to return to the form.
           </AlertDescription>
         </Alert>
       )}
@@ -294,18 +291,18 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
       <Card>
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
-            <span>Observações e Recomendações do Analista</span>
+            <span>Analyst Observations and Recommendations</span>
             {isSaving && !isReadOnly && (
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 <Save className="h-4 w-4 animate-pulse" />
-                <span>Salvando...</span>
+                <span>Saving...</span>
               </div>
             )}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea
-            placeholder="Digite aqui suas observações e recomendações para melhorar o ambiente psicossocial..."
+            placeholder="Type your observations and recommendations here to improve the psychosocial environment..."
             className="min-h-[200px]"
             value={notes}
             onChange={handleNotesChange}
@@ -316,7 +313,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
           {!isReadOnly && (
             <div className="mt-4 space-y-2">
               <p className="text-xs text-gray-500">
-                As observações são salvas automaticamente após você parar de digitar ou ao sair do campo.
+                Observations are saved automatically after you stop typing or leave the field.
               </p>
               <Button 
                 className="w-full sm:w-auto flex items-center justify-center gap-2"
@@ -324,7 +321,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
                 disabled={isSaving}
               >
                 <Save className="h-4 w-4" />
-                {isSaving ? "Salvando..." : "Salvar e Voltar"}
+                {isSaving ? "Saving..." : "Save and Return"}
               </Button>
             </div>
           )}

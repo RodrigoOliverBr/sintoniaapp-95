@@ -24,7 +24,7 @@ export function useEvaluationHistory(employeeId?: string) {
       console.log(`Loaded ${history.length} evaluations`);
     } catch (error) {
       console.error("Error loading employee evaluation history:", error);
-      sonnerToast.error("Não foi possível carregar o histórico de avaliações");
+      sonnerToast.error("Could not load evaluation history");
       setEvaluationHistory([]);
     } finally {
       setIsLoadingHistory(false);
@@ -33,32 +33,34 @@ export function useEvaluationHistory(employeeId?: string) {
 
   const handleDeleteEvaluation = useCallback(async (evaluationId: string) => {
     if (!evaluationId) {
-      sonnerToast.error("ID da avaliação inválido");
+      sonnerToast.error("Invalid evaluation ID");
       return;
     }
 
     setIsDeletingEvaluation(true);
     try {
-      console.log(`Deletando avaliação com ID: ${evaluationId}`);
+      console.log(`Deleting evaluation with ID: ${evaluationId}`);
       
-      // Chama o serviço de exclusão
+      // Call the deletion service
       await deleteFormEvaluation(evaluationId);
       
-      // Atualiza o estado local removendo a avaliação excluída
+      console.log(`Successfully deleted evaluation ${evaluationId}`);
+      
+      // Update local state by removing the deleted evaluation
       setEvaluationHistory(prevHistory => 
         prevHistory.filter(evaluation => evaluation.id !== evaluationId)
       );
       
-      // Resetar a avaliação selecionada se ela foi a que foi excluída
+      // Reset selected evaluation if it was the one that was deleted
       if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
         setSelectedEvaluation(null);
       }
       
-      sonnerToast.success("Avaliação excluída com sucesso!");
+      sonnerToast.success("Evaluation successfully deleted!");
       
     } catch (error: any) {
-      console.error("Erro ao excluir avaliação:", error);
-      sonnerToast.error(`Não foi possível excluir a avaliação: ${error.message || "Erro desconhecido"}`);
+      console.error("Error deleting evaluation:", error);
+      sonnerToast.error(`Could not delete evaluation: ${error.message || "Unknown error"}`);
     } finally {
       setIsDeletingEvaluation(false);
     }

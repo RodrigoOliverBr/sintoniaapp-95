@@ -45,15 +45,22 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
     if (!evaluationToDelete) return;
     
     try {
+      console.log(`Starting deletion process for evaluation ${evaluationToDelete}`);
       setIsDeleting(true);
+      
+      // Call the onDeleteEvaluation function provided by the parent component
       await onDeleteEvaluation(evaluationToDelete);
+      
+      console.log("Deletion process completed successfully");
       setIsConfirmOpen(false);
       setEvaluationToDelete(null);
+      
+      // No need for a toast here as the parent component should handle the success message
     } catch (error) {
-      console.error("Error deleting evaluation:", error);
+      console.error("Error in deletion confirmation handler:", error);
       toast({
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir a avaliação",
+        title: "Delete Error",
+        description: "Could not delete evaluation",
         variant: "destructive"
       });
     } finally {
@@ -62,6 +69,7 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   };
 
   const handleDelete = (evaluationId: string) => {
+    console.log(`Requesting deletion of evaluation ${evaluationId}`);
     setEvaluationToDelete(evaluationId);
     setIsConfirmOpen(true);
   };
@@ -81,10 +89,10 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Histórico de Avaliações</h2>
+        <h2 className="text-2xl font-bold">Evaluation History</h2>
         <Button onClick={onNewEvaluation} className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
-          Nova Avaliação
+          New Evaluation
         </Button>
       </div>
 
@@ -92,10 +100,10 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
         <Card>
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground">
-              Este funcionário ainda não possui avaliações registradas.
+              This employee does not have any recorded evaluations yet.
             </p>
             <Button onClick={onNewEvaluation} className="mt-4">
-              Criar Primeira Avaliação
+              Create First Evaluation
             </Button>
           </CardContent>
         </Card>
@@ -103,39 +111,40 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
         <div className="grid gap-4">
           {sortedEvaluations.map((evaluation) => {
             const date = evaluation.created_at
-              ? format(new Date(evaluation.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-              : "Data desconhecida";
+              ? format(new Date(evaluation.created_at), "dd 'of' MMMM 'of' yyyy", { locale: ptBR })
+              : "Unknown date";
             
             const time = evaluation.created_at
               ? format(new Date(evaluation.created_at), "HH:mm", { locale: ptBR })
               : "";
 
             const isCurrentlyDeleting = isDeleting && evaluationToDelete === evaluation.id;
+            const isDisabled = isCurrentlyDeleting || isDeletingEvaluation;
 
             return (
               <Card key={evaluation.id} className="overflow-hidden">
                 <CardHeader className="bg-muted/40 py-3">
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-medium">
-                      Avaliação {evaluation.is_complete ? "Completa" : "Incompleta"}
+                      {evaluation.is_complete ? "Complete" : "Incomplete"} Evaluation
                     </CardTitle>
-                    <span className="text-sm text-muted-foreground">{date} às {time}</span>
+                    <span className="text-sm text-muted-foreground">{date} at {time}</span>
                   </div>
                 </CardHeader>
                 <CardContent className="py-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">Respostas:</span>
+                        <span className="font-medium">Answers:</span>
                         <span>
-                          <span className="text-green-600 font-medium">{evaluation.total_sim} Sim</span>, 
-                          <span className="text-gray-600 ml-1">{evaluation.total_nao} Não</span>
+                          <span className="text-green-600 font-medium">{evaluation.total_sim} Yes</span>, 
+                          <span className="text-gray-600 ml-1">{evaluation.total_nao} No</span>
                         </span>
                       </div>
                       {evaluation.is_complete ? (
-                        <div className="text-sm text-emerald-600">Avaliação finalizada</div>
+                        <div className="text-sm text-emerald-600">Evaluation completed</div>
                       ) : (
-                        <div className="text-sm text-amber-600">Avaliação em andamento</div>
+                        <div className="text-sm text-amber-600">Evaluation in progress</div>
                       )}
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
@@ -143,35 +152,35 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
                         onClick={() => onEditEvaluation && onEditEvaluation(evaluation)} 
                         variant="outline" 
                         className="w-full sm:w-auto"
-                        disabled={isCurrentlyDeleting || isDeletingEvaluation}
+                        disabled={isDisabled}
                       >
                         <Pencil className="h-4 w-4 mr-2" />
-                        Editar
+                        Edit
                       </Button>
                       <Button 
                         onClick={() => onShowResults(evaluation)}
                         variant="outline"
                         className="w-full sm:w-auto"
-                        disabled={isCurrentlyDeleting || isDeletingEvaluation}
+                        disabled={isDisabled}
                       >
                         <FileText className="h-4 w-4 mr-2" />
-                        Ver Resultados
+                        View Results
                       </Button>
                       <Button 
                         onClick={() => handleDelete(evaluation.id)}
                         variant="outline"
                         className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50"
-                        disabled={isCurrentlyDeleting || isDeletingEvaluation}
+                        disabled={isDisabled}
                       >
                         {isCurrentlyDeleting ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Excluindo...
+                            Deleting...
                           </>
                         ) : (
                           <>
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
+                            Delete
                           </>
                         )}
                       </Button>
@@ -184,18 +193,18 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
         </div>
       )}
 
-      {/* Single confirmation dialog for deletion */}
+      {/* Confirmation dialog for deletion */}
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir avaliação</AlertDialogTitle>
+            <AlertDialogTitle>Delete evaluation</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita 
-              e removerá permanentemente a avaliação e todas as suas respostas.
+              Are you sure you want to delete this evaluation? This action cannot be undone
+              and will permanently remove the evaluation and all its answers.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelDelete} disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleCancelDelete} disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
@@ -204,9 +213,9 @@ const EmployeeFormHistory: React.FC<EmployeeFormHistoryProps> = ({
               {isDeleting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Excluindo...
+                  Deleting...
                 </>
-              ) : "Sim, excluir avaliação"}
+              ) : "Yes, delete evaluation"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
