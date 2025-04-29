@@ -362,7 +362,21 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
   try {
     console.log(`Iniciando exclusão da avaliação com ID: ${evaluationId}`);
     
-    // Step 1: Delete responses and their options (cascade deletion should handle related resposta_opcoes)
+    // First step: Delete any related reports
+    console.log("Excluindo relatórios associados...");
+    const { error: reportsError } = await supabase
+      .from('relatorios')
+      .delete()
+      .eq('avaliacao_id', evaluationId);
+      
+    if (reportsError) {
+      console.error("Erro ao excluir relatórios:", reportsError);
+      // Continue with the process, just log the error
+    } else {
+      console.log("Relatórios excluídos com sucesso (se existirem)");
+    }
+    
+    // Second step: Delete responses
     console.log("Excluindo respostas...");
     const { error: responsesError } = await supabase
       .from('respostas')
@@ -376,21 +390,7 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
     
     console.log("Respostas excluídas com sucesso");
     
-    // Step 2: Delete reports related to this evaluation
-    console.log("Excluindo relatórios associados...");
-    const { error: reportsError } = await supabase
-      .from('relatorios')
-      .delete()
-      .eq('avaliacao_id', evaluationId);
-      
-    if (reportsError) {
-      console.error("Erro ao excluir relatórios:", reportsError);
-      // Don't throw here - we'll continue with the evaluation deletion even if reports deletion fails
-    } else {
-      console.log("Relatórios excluídos com sucesso");
-    }
-    
-    // Step 3: Delete the evaluation itself
+    // Final step: Delete the evaluation itself
     console.log("Excluindo a avaliação...");
     const { error: evaluationError } = await supabase
       .from('avaliacoes')

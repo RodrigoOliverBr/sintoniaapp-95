@@ -64,6 +64,11 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
 }) => {
   const navigate = useNavigate();
   
+  // Handle navigation back to home
+  const handleBackToHome = () => {
+    navigate("/");
+  };
+  
   if (!showResults && showingHistoryView) {
     return (
       <EmployeeFormHistory
@@ -98,7 +103,7 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
         <div className="flex justify-between items-center mb-4">
           <Button 
             variant="outline" 
-            onClick={() => navigate("/")}
+            onClick={handleBackToHome}
             className="flex items-center gap-2"
           >
             <ArrowLeft size={16} />

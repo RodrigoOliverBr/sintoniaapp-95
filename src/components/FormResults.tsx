@@ -40,7 +40,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   }, [result]);
 
   const saveNotes = async (value: string) => {
-    if (!result.id || isReadOnly) return;
+    if (!result.id || isReadOnly) return false;
     
     try {
       setIsSaving(true);
@@ -91,13 +91,23 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     }
   };
 
+  // Fixed save and return function - ensures notes are saved before navigating
   const handleSaveAndReturn = async () => {
     // Save notes first
     if (!isReadOnly && result.id) {
-      const success = await saveNotes(notes);
-      if (success) {
-        // Navigate to home page
-        navigate("/");
+      setIsSaving(true);
+      try {
+        await updateAnalystNotes(result.id, notes);
+        sonnerToast.success("Observações salvas com sucesso!");
+        // Navigate to home page with a slight delay to ensure toast is seen
+        setTimeout(() => {
+          navigate("/");
+        }, 1000);
+      } catch (error) {
+        console.error("Error saving notes:", error);
+        sonnerToast.error("Não foi possível salvar as observações.");
+      } finally {
+        setIsSaving(false);
       }
     } else {
       // If read-only, just navigate
