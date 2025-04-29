@@ -15,7 +15,7 @@ import { Company } from "@/types/cadastro";
 import { Risk, Severity, Mitigation } from '@/types/form';
 import { Clock, Download } from "lucide-react";
 import { format } from "date-fns";
-import ptBR from "date-fns/locale/pt-BR";
+import { ptBR } from "date-fns/locale";
 
 interface RelatorioPGRProps {
   companyId?: string;
@@ -85,7 +85,18 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ companyId: propCompanyId })
         .order('nome');
       
       if (error) throw error;
-      setCompanies(data || []);
+      
+      if (data) {
+        // Convert empresas data to Company type
+        const companyData: Company[] = data.map(empresa => ({
+          id: empresa.id,
+          name: empresa.nome,
+          type: empresa.tipo,
+          // Add other required fields from Company type
+          employees: empresa.numero_empregados || 0
+        }));
+        setCompanies(companyData);
+      }
     } catch (error) {
       console.error("Erro ao carregar empresas:", error);
     }
@@ -168,7 +179,7 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ companyId: propCompanyId })
       }
 
       // 3. Get all responses for these evaluations
-      const evaluationIds = evaluations.map(eval => eval.id);
+      const evaluationIds = evaluations.map(evaluation => evaluation.id);
       const { data: responses, error: responsesError } = await supabase
         .from('respostas')
         .select(`
@@ -502,7 +513,7 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ companyId: propCompanyId })
               <SelectContent>
                 {companies.map((company) => (
                   <SelectItem key={company.id} value={company.id}>
-                    {company.nome}
+                    {company.name}
                   </SelectItem>
                 ))}
               </SelectContent>

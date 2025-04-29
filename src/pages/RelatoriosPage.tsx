@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import MapaRiscoPsicossocial from "@/components/relatorios/MapaRiscoPsicossocial";
 import RelatorioPGR from "@/components/relatorios/RelatorioPGR";

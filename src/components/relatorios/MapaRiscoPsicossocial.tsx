@@ -9,7 +9,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip, Legend } from "recharts";
-import { getDepartmentsByCompany, getFormResultByEmployeeId, getEmployeesByCompany } from "@/services";
+import { getDepartmentsByCompany, getEmployeesByCompany } from "@/services";
 import { Department, Employee } from "@/types/cadastro";
 import { FormResult, Question, Section } from "@/types/form";
 
@@ -125,7 +125,7 @@ export default function MapaRiscoPsicossocial({
         });
         
         // Group questions by risk
-        const questionsByRisk: Record<string, Question[]> = {};
+        const questionsByRisk: Record<string, any[]> = {};
         questions.forEach(q => {
           if (!q.risco_id) return;
           
@@ -418,7 +418,7 @@ export default function MapaRiscoPsicossocial({
                   <TableHead className="min-w-[250px]">Dimensão / Pergunta</TableHead>
                   {departments.map(dept => (
                     <TableHead key={dept.id} className="text-center">
-                      {dept.nome}
+                      {dept.name}
                     </TableHead>
                   ))}
                 </TableRow>
