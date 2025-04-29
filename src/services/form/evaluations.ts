@@ -251,10 +251,11 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
 
 export async function updateAnalystNotes(evaluationId: string, notes: string): Promise<void> {
   if (!evaluationId) {
-    throw new Error("Evaluation ID is required");
+    throw new Error("ID da avaliação é obrigatório");
   }
 
-  console.log(`Updating analyst notes for evaluation ${evaluationId}`);
+  console.log(`Atualizando notas do analista para avaliação ${evaluationId}`);
+  console.log(`Conteúdo das notas: "${notes}"`);
   
   try {
     const { error } = await supabase
@@ -266,13 +267,13 @@ export async function updateAnalystNotes(evaluationId: string, notes: string): P
       .eq('id', evaluationId);
       
     if (error) {
-      console.error("Error updating analyst notes:", error);
+      console.error("Erro ao atualizar notas do analista:", error);
       throw error;
     }
     
-    console.log("Analyst notes updated successfully");
+    console.log("Notas do analista atualizadas com sucesso");
   } catch (error) {
-    console.error("Failed to update analyst notes:", error);
+    console.error("Falha ao atualizar notas do analista:", error);
     throw error;
   }
 }
@@ -362,7 +363,7 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
   try {
     console.log(`Iniciando exclusão da avaliação com ID: ${evaluationId}`);
     
-    // First step: Delete any related reports
+    // Primeiro passo: Excluir quaisquer relatórios relacionados
     console.log("Excluindo relatórios associados...");
     const { error: reportsError } = await supabase
       .from('relatorios')
@@ -371,12 +372,12 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
       
     if (reportsError) {
       console.error("Erro ao excluir relatórios:", reportsError);
-      // Continue with the process, just log the error
+      // Continue com o processo, apenas registre o erro
     } else {
       console.log("Relatórios excluídos com sucesso (se existirem)");
     }
     
-    // Second step: Delete responses
+    // Segundo passo: Excluir respostas
     console.log("Excluindo respostas...");
     const { error: responsesError } = await supabase
       .from('respostas')
@@ -386,11 +387,11 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
     if (responsesError) {
       console.error("Erro ao excluir respostas:", responsesError);
       throw new Error(`Erro ao excluir respostas: ${responsesError.message}`);
+    } else {
+      console.log("Respostas excluídas com sucesso");
     }
     
-    console.log("Respostas excluídas com sucesso");
-    
-    // Final step: Delete the evaluation itself
+    // Último passo: Excluir a própria avaliação
     console.log("Excluindo a avaliação...");
     const { error: evaluationError } = await supabase
       .from('avaliacoes')
@@ -400,9 +401,10 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
     if (evaluationError) {
       console.error("Erro ao excluir avaliação:", evaluationError);
       throw new Error(`Erro ao excluir avaliação: ${evaluationError.message}`);
+    } else {
+      console.log(`Avaliação ${evaluationId} excluída com sucesso`);
     }
     
-    console.log(`Avaliação ${evaluationId} excluída com sucesso`);
   } catch (error) {
     console.error("Falha na exclusão da avaliação:", error);
     throw error;

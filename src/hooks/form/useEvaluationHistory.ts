@@ -47,34 +47,30 @@ export function useEvaluationHistory(employeeId?: string) {
 
     setIsDeletingEvaluation(true);
     try {
-      console.log(`Deleting evaluation with ID: ${evaluationId}`);
+      console.log(`Deletando avaliação com ID: ${evaluationId}`);
       
-      // Call the service to delete from database
+      // Implementação melhorada para deletar a avaliação completa
       await deleteFormEvaluation(evaluationId);
       
-      // Update the local state to remove the deleted evaluation
+      // Atualizar o estado local para remover a avaliação excluída
       setEvaluationHistory(prevHistory => 
         prevHistory.filter(evaluation => evaluation.id !== evaluationId)
       );
       
-      // Reset selected evaluation if it was the one deleted
+      // Resetar a avaliação selecionada se ela foi a que foi excluída
       if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
         setSelectedEvaluation(null);
       }
       
       sonnerToast.success("Avaliação excluída com sucesso!");
-      console.log("Evaluation deleted successfully");
-      
-      // Reload the history to ensure everything is in sync
-      await loadEmployeeHistory();
       
     } catch (error: any) {
-      console.error("Error deleting evaluation:", error);
+      console.error("Erro ao excluir avaliação:", error);
       sonnerToast.error(`Não foi possível excluir a avaliação: ${error.message || "Erro desconhecido"}`);
     } finally {
       setIsDeletingEvaluation(false);
     }
-  }, [selectedEvaluation, loadEmployeeHistory]);
+  }, [selectedEvaluation]);
 
   useEffect(() => {
     if (employeeId) {

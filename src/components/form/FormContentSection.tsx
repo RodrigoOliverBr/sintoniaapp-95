@@ -7,7 +7,6 @@ import { Employee } from "@/types/cadastro";
 import { FormResult, Question } from "@/types/form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 interface FormContentSectionProps {
   selectedEmployee: Employee | undefined;
@@ -62,12 +61,6 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   onEditEvaluation,
   onExitResults
 }) => {
-  const navigate = useNavigate();
-  
-  // Handle navigation back to home
-  const handleBackToHome = () => {
-    navigate("/");
-  };
   
   if (!showResults && showingHistoryView) {
     return (
@@ -100,16 +93,18 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
     
     return (
       <div className="space-y-4">
-        <div className="flex justify-between items-center mb-4">
-          <Button 
-            variant="outline" 
-            onClick={handleBackToHome}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft size={16} />
-            Voltar para Início
-          </Button>
-        </div>
+        {onExitResults && (
+          <div className="flex justify-between items-center mb-4">
+            <Button 
+              variant="outline" 
+              onClick={onExitResults}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft size={16} />
+              Voltar ao formulário
+            </Button>
+          </div>
+        )}
         
         <FormResults 
           result={selectedEvaluation || formResult!}
