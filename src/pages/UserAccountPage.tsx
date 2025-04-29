@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ReloadIcon } from "@radix-ui/react-icons";
+import { Loader2 } from "lucide-react"; // Using Loader2 from lucide-react as alternative
 
 interface Perfil {
   id: string;
@@ -130,7 +130,7 @@ const UserAccountPage: React.FC = () => {
         <CardContent className="space-y-4">
           {loading ? (
             <div className="flex justify-center items-center">
-              <ReloadIcon className="mr-2 h-4 w-4 animate-spin" /> Carregando...
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando...
             </div>
           ) : (
             <>

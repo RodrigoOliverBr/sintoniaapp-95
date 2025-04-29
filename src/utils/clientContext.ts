@@ -40,3 +40,28 @@ export const getStatusColor = (status: ClienteStatus): string => {
       return 'text-gray-500';
   }
 };
+
+/**
+ * Function to get the active client ID from session storage
+ * @returns The active client ID or null if none exists
+ */
+export const getClienteIdAtivo = (): string | null => {
+  // Check for impersonated client ID in session storage
+  const impersonatedClientId = sessionStorage.getItem("impersonatedClientId");
+  if (impersonatedClientId) {
+    return impersonatedClientId;
+  }
+  
+  // Check for client ID in localStorage
+  const storedClient = localStorage.getItem("sintonia:currentCliente");
+  if (storedClient) {
+    try {
+      const client = JSON.parse(storedClient);
+      return client.id || null;
+    } catch (error) {
+      console.error("Error parsing stored client:", error);
+    }
+  }
+  
+  return null;
+};
