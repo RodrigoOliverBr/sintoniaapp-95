@@ -39,13 +39,7 @@ export function useFormPage() {
 
   const {
     answers,
-    setAnswers,
-    formResult,
-    setFormResult,
-    showResults,
-    setShowResults,
-    formComplete,
-    setFormComplete
+    setAnswers
   } = useFormAnswers();
 
   const {
@@ -60,9 +54,15 @@ export function useFormPage() {
 
   const {
     isSubmitting,
+    formComplete,
+    setFormComplete,
     isNewEvaluation,
     setIsNewEvaluation,
-    handleSaveAndComplete: saveAndComplete,
+    showResults,
+    setShowResults,
+    formResult,
+    setFormResult,
+    handleSaveAndComplete,
     resetFormState
   } = useFormCompletion();
 
@@ -160,7 +160,7 @@ export function useFormPage() {
       return;
     }
 
-    const updatedResult = await saveAndComplete({
+    const updatedResult = await handleSaveAndComplete({
       selectedFormId,
       selectedEmployeeId,
       selectedCompanyId,
@@ -231,10 +231,6 @@ export function useFormPage() {
     // Form state
     isSubmitting,
     isNewEvaluation,
-    setIsNewEvaluation,
-    
-    // Derived data
-    selectedEmployee,
-    selectedFormTitle
+    setIsNewEvaluation
   };
 }
