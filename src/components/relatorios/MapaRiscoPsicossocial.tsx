@@ -3,83 +3,47 @@ import React, { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { BarChart } from "@/components/ui/BarChart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getDepartmentsByCompany, getEmployeesByCompany, getFormResultByEmployeeId } from "@/services";
-import { Department } from "@/types/cadastro";
-import { formSections } from "@/data/formData";
+import { supabase } from "@/integrations/supabase/client";
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip, Legend } from "recharts";
+import { getDepartmentsByCompany, getFormResultByEmployeeId, getEmployeesByCompany } from "@/services";
+import { Department, Employee } from "@/types/cadastro";
+import { FormResult, Question, Section } from "@/types/form";
 
-const dimensoes = [
-  "Demandas Psicológicas", 
-  "Organização e Gestão do Trabalho", 
-  "Trabalho Ativo e Competências", 
-  "Apoio Social e Liderança", 
-  "Compensação e Reconhecimento", 
-  "Dupla Presença", 
-  "Assédio Moral e Sexual"
-];
+// Interface for section data with count of "yes" answers
+interface SectionData {
+  sectionId: string;
+  title: string;
+  yesCount: number;
+  totalCount: number;
+  percentual: number;
+}
 
-const perguntasPorDimensao = {
-  "Demandas Psicológicas": [
-    "Há sobrecarga de trabalho?",
-    "O ritmo de trabalho é adequado?",
-    "As metas são atingíveis?"
-  ],
-  "Organização e Gestão do Trabalho": [
-    "Os processos são claros?",
-    "As decisões são comunicadas adequadamente?",
-    "Há participação nas decisões?"
-  ],
-  "Trabalho Ativo e Competências": [
-    "Há autonomia no trabalho?",
-    "As habilidades são bem aproveitadas?",
-    "Há oportunidades de desenvolvimento?"
-  ],
-  "Apoio Social e Liderança": [
-    "Recebe apoio dos colegas?",
-    "A liderança é acessível?",
-    "Há feedback construtivo?"
-  ],
-  "Compensação e Reconhecimento": [
-    "A remuneração é adequada?",
-    "Há reconhecimento pelo trabalho?",
-    "Existem benefícios satisfatórios?"
-  ],
-  "Dupla Presença": [
-    "Consegue conciliar trabalho e vida pessoal?",
-    "Há flexibilidade para questões familiares?",
-    "O trabalho interfere na vida pessoal?"
-  ],
-  "Assédio Moral e Sexual": [
-    "Há respeito entre colegas?",
-    "Existem políticas contra assédio?",
-    "Sente-se seguro no ambiente de trabalho?"
-  ]
-};
+// Interface for risk data with count of "yes" answers
+interface RiskData {
+  riskId: string;
+  text: string;
+  yesCount: number;
+  totalCount: number;
+  percentual: number;
+}
 
-const simulatedData = [
-  { dimensao: "Demandas Psicológicas", percentual: 72 },
-  { dimensao: "Organização e Gestão do Trabalho", percentual: 64 },
-  { dimensao: "Trabalho Ativo e Competências", percentual: 45 },
-  { dimensao: "Apoio Social e Liderança", percentual: 58 },
-  { dimensao: "Compensação e Reconhecimento", percentual: 39 },
-  { dimensao: "Dupla Presença", percentual: 51 },
-  { dimensao: "Assédio Moral e Sexual", percentual: 22 }
-];
-
-const radarData = simulatedData.map(item => ({
-  subject: item.dimensao.split(' ')[0], // Usa apenas a primeira palavra para o radar
-  A: item.percentual,
-  fullMark: 100
-}));
+// Interface for question data with yes counts by department
+interface QuestionByDepartmentData {
+  questionId: string;
+  questionText: string;
+  sectionTitle: string;
+  departmentYesCounts: {
+    [departmentId: string]: {
+      count: number;
+      total: number;
+      percentual: number;
+    }
+  }
+}
 
 const getRiskColor = (value: number) => {
   if (value <= 20) return "#4ade80"; // Verde para valores até 20%
@@ -110,16 +74,245 @@ export default function MapaRiscoPsicossocial({
   departmentId, 
   dateRange 
 }: MapaRiscoPsicossocialProps) {
-  // Em uma implementação real, você usaria esses parâmetros para filtrar os dados
-  
-  // Dados por dimensão para o gráfico de barras
-  const barData = simulatedData.map(item => ({
-    dimensao: item.dimensao,
-    percentual: item.percentual
-  }));
+  const [sectionData, setSectionData] = useState<SectionData[]>([]);
+  const [riskData, setRiskData] = useState<RiskData[]>([]);
+  const [questionByDepartment, setQuestionByDepartment] = useState<QuestionByDepartmentData[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Cores para o gráfico de barras baseado no nível de risco
-  const barColors = simulatedData.map(item => getRiskColor(item.percentual));
+  useEffect(() => {
+    if (!companyId) return;
+    
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Get company departments
+        const departmentsData = await getDepartmentsByCompany(companyId);
+        setDepartments(departmentsData);
+        
+        // Get employees from the company
+        const employees = await getEmployeesByCompany(companyId);
+        
+        // Get all form data needed for sections and questions
+        const { data: sectionsData } = await supabase
+          .from('secoes')
+          .select('*')
+          .order('ordem');
+        
+        const { data: questionsData } = await supabase
+          .from('perguntas')
+          .select(`
+            *,
+            risco:riscos (
+              *,
+              severidade:severidade (*)
+            )
+          `);
+        
+        const sections = sectionsData || [];
+        const questions = questionsData || [];
+        
+        // Group questions by section
+        const questionsBySection = sections.map(section => {
+          return {
+            sectionId: section.id,
+            title: section.titulo,
+            questions: questions.filter(q => q.secao_id === section.id)
+          };
+        });
+        
+        // Group questions by risk
+        const questionsByRisk: Record<string, Question[]> = {};
+        questions.forEach(q => {
+          if (!q.risco_id) return;
+          
+          if (!questionsByRisk[q.risco_id]) {
+            questionsByRisk[q.risco_id] = [];
+          }
+          questionsByRisk[q.risco_id].push(q);
+        });
+        
+        // Initialize data structures
+        const sectionResults: Record<string, { yes: number, total: number }> = {};
+        const riskResults: Record<string, { yes: number, total: number, text: string }> = {};
+        const questionsByDeptResults: Record<string, { 
+          text: string, 
+          sectionTitle: string, 
+          departmentCounts: Record<string, { yes: number, total: number }> 
+        }> = {};
+        
+        // Process each employee's evaluation
+        for (const employee of employees) {
+          // Get completed evaluations for this employee
+          const { data: evaluations } = await supabase
+            .from('avaliacoes')
+            .select('*')
+            .eq('funcionario_id', employee.id)
+            .eq('is_complete', true);
+            
+          if (!evaluations || evaluations.length === 0) continue;
+          
+          // Get the latest evaluation
+          const latestEvaluation = evaluations.reduce((latest, current) => 
+            new Date(current.updated_at) > new Date(latest.updated_at) ? current : latest
+          );
+          
+          // Get responses for this evaluation
+          const { data: responses } = await supabase
+            .from('respostas')
+            .select('*')
+            .eq('avaliacao_id', latestEvaluation.id);
+            
+          if (!responses) continue;
+          
+          // Get employee departments
+          const { data: employeeDepartments } = await supabase
+            .from('employee_departments')
+            .select('department_id')
+            .eq('employee_id', employee.id);
+            
+          const employeeDeptIds = employeeDepartments?.map(ed => ed.department_id) || [];
+          
+          // Process responses
+          for (const response of responses) {
+            const question = questions.find(q => q.id === response.pergunta_id);
+            if (!question) continue;
+            
+            const sectionId = question.secao_id;
+            const riskId = question.risco_id;
+            const section = sections.find(s => s.id === sectionId);
+            
+            if (!sectionId || !section) continue;
+            
+            // Initialize section data if needed
+            if (!sectionResults[sectionId]) {
+              sectionResults[sectionId] = { yes: 0, total: 0 };
+            }
+            
+            // Initialize risk data if needed
+            if (riskId && !riskResults[riskId] && question.risco) {
+              riskResults[riskId] = { 
+                yes: 0, 
+                total: 0,
+                text: question.risco.texto
+              };
+            }
+            
+            // Initialize question by department data if needed
+            if (!questionsByDeptResults[question.id]) {
+              questionsByDeptResults[question.id] = {
+                text: question.texto,
+                sectionTitle: section.titulo,
+                departmentCounts: {}
+              };
+              
+              // Initialize counts for each department
+              departments.forEach(dept => {
+                questionsByDeptResults[question.id].departmentCounts[dept.id] = { yes: 0, total: 0 };
+              });
+            }
+            
+            // Count responses
+            sectionResults[sectionId].total++;
+            if (response.resposta === true) {
+              sectionResults[sectionId].yes++;
+            }
+            
+            if (riskId) {
+              riskResults[riskId].total++;
+              if (response.resposta === true) {
+                riskResults[riskId].yes++;
+              }
+            }
+            
+            // Count responses by department
+            employeeDeptIds.forEach(deptId => {
+              if (!questionsByDeptResults[question.id].departmentCounts[deptId]) {
+                questionsByDeptResults[question.id].departmentCounts[deptId] = { yes: 0, total: 0 };
+              }
+              
+              questionsByDeptResults[question.id].departmentCounts[deptId].total++;
+              if (response.resposta === true) {
+                questionsByDeptResults[question.id].departmentCounts[deptId].yes++;
+              }
+            });
+          }
+        }
+        
+        // Convert to arrays and calculate percentages
+        const sectionsArray = Object.entries(sectionResults).map(([sectionId, counts]) => {
+          const section = sections.find(s => s.id === sectionId);
+          return {
+            sectionId,
+            title: section?.titulo || "Desconhecido",
+            yesCount: counts.yes,
+            totalCount: counts.total,
+            percentual: counts.total > 0 ? Math.round((counts.yes / counts.total) * 100) : 0
+          };
+        });
+        
+        const risksArray = Object.entries(riskResults).map(([riskId, data]) => {
+          return {
+            riskId,
+            text: data.text || "Desconhecido",
+            yesCount: data.yes,
+            totalCount: data.total,
+            percentual: data.total > 0 ? Math.round((data.yes / data.total) * 100) : 0
+          };
+        });
+        
+        const questionsByDeptArray = Object.entries(questionsByDeptResults).map(([questionId, data]) => {
+          const departmentYesCounts: Record<string, { count: number; total: number; percentual: number }> = {};
+          
+          Object.entries(data.departmentCounts).forEach(([deptId, counts]) => {
+            departmentYesCounts[deptId] = {
+              count: counts.yes,
+              total: counts.total,
+              percentual: counts.total > 0 ? Math.round((counts.yes / counts.total) * 100) : 0
+            };
+          });
+          
+          return {
+            questionId,
+            questionText: data.text,
+            sectionTitle: data.sectionTitle,
+            departmentYesCounts
+          };
+        });
+        
+        // Sort and set state
+        setSectionData(sectionsArray.sort((a, b) => a.percentual - b.percentual));
+        setRiskData(risksArray.sort((a, b) => a.percentual - b.percentual));
+        setQuestionByDepartment(questionsByDeptArray);
+        
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Erro ao carregar dados do relatório");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [companyId]);
+
+  // Prepare chart data
+  const radarData = sectionData.map(item => ({
+    subject: item.title.split(' ')[0], // Use first word for shorter labels
+    A: item.percentual,
+    fullMark: 100
+  }));
+  
+  if (isLoading) {
+    return <div className="flex items-center justify-center p-12">Carregando dados...</div>;
+  }
+  
+  if (error) {
+    return <div className="text-red-500 p-12">{error}</div>;
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -146,6 +339,9 @@ export default function MapaRiscoPsicossocial({
               </RadarChart>
             </ResponsiveContainer>
           </div>
+          <div className="mt-4 text-sm text-gray-500 text-center">
+            Percentual de respostas "Sim" por seção
+          </div>
         </CardContent>
       </Card>
 
@@ -171,14 +367,18 @@ export default function MapaRiscoPsicossocial({
             <TableHeader>
               <TableRow>
                 <TableHead>Dimensão</TableHead>
+                <TableHead className="text-center">Sim</TableHead>
+                <TableHead className="text-center">Total</TableHead>
                 <TableHead className="text-center">Percentual</TableHead>
                 <TableHead className="text-center">Escala Visual</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {barData.map((item, index) => (
+              {riskData.map((item, index) => (
                 <TableRow key={index}>
-                  <TableCell className="font-medium">{item.dimensao}</TableCell>
+                  <TableCell className="font-medium">{item.text}</TableCell>
+                  <TableCell className="text-center">{item.yesCount}</TableCell>
+                  <TableCell className="text-center">{item.totalCount}</TableCell>
                   <TableCell className={`text-center font-bold ${getTextColor(item.percentual)}`}>
                     {item.percentual}%
                   </TableCell>
@@ -186,7 +386,7 @@ export default function MapaRiscoPsicossocial({
                     <div className="flex items-center">
                       <div className="w-full bg-gray-200 rounded-full h-4">
                         <div 
-                          className={`h-4 rounded-full`}
+                          className="h-4 rounded-full"
                           style={{ 
                             width: `${item.percentual}%`, 
                             backgroundColor: getRiskColor(item.percentual)
@@ -201,7 +401,7 @@ export default function MapaRiscoPsicossocial({
           </Table>
           
           <div className="mt-4 text-xs text-gray-500">
-            <p>* Quanto menor o percentual de respostas positivas, maior o risco psicossocial na dimensão.</p>
+            <p>* Percentual de respostas "Sim" por tipo de risco.</p>
           </div>
         </CardContent>
       </Card>
@@ -216,48 +416,59 @@ export default function MapaRiscoPsicossocial({
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[250px]">Dimensão / Pergunta</TableHead>
-                  {/* This would need a proper implementation to fetch departments */}
-                  {['Departamento 1', 'Departamento 2', 'Departamento 3'].map(dept => (
-                    <TableHead key={dept} className="text-center">
-                      {dept}
+                  {departments.map(dept => (
+                    <TableHead key={dept.id} className="text-center">
+                      {dept.nome}
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dimensoes.map((dimensao, dimIdx) => {
-                  const perguntas = perguntasPorDimensao[dimensao as keyof typeof perguntasPorDimensao] || [];
-                  return (
-                    <React.Fragment key={dimensao}>
-                      <TableRow className="bg-muted/30 font-medium">
-                        <TableCell colSpan={4}>
-                          {dimensao}
+                {questionByDepartment.reduce((acc: React.ReactNode[], question, qIndex) => {
+                  // Check if we need to add a section header
+                  const sectionTitle = question.sectionTitle;
+                  
+                  if (qIndex === 0 || questionByDepartment[qIndex - 1].sectionTitle !== sectionTitle) {
+                    acc.push(
+                      <TableRow key={`section-${sectionTitle}`} className="bg-muted/30 font-medium">
+                        <TableCell colSpan={departments.length + 1}>
+                          {sectionTitle}
                         </TableCell>
                       </TableRow>
-                      {perguntas.map((pergunta, qIdx) => (
-                        <TableRow key={`${dimensao}-${qIdx}`}>
-                          <TableCell className="pl-8 text-sm">
-                            {pergunta}
+                    );
+                  }
+                  
+                  // Add the question row
+                  acc.push(
+                    <TableRow key={`question-${question.questionId}`}>
+                      <TableCell className="pl-8 text-sm">
+                        {question.questionText}
+                      </TableCell>
+                      {departments.map(dept => {
+                        const deptData = question.departmentYesCounts[dept.id];
+                        const percentual = deptData?.percentual || 0;
+                        const count = deptData?.count || 0;
+                        const total = deptData?.total || 0;
+                        
+                        return (
+                          <TableCell key={dept.id} className="text-center">
+                            <div className="flex items-center justify-center">
+                              <div 
+                                className="w-8 h-8 rounded-full mr-2" 
+                                style={{ backgroundColor: getRiskColor(percentual) }}
+                              />
+                              <span>
+                                {count}/{total} ({percentual}%)
+                              </span>
+                            </div>
                           </TableCell>
-                          {['Departamento 1', 'Departamento 2', 'Departamento 3'].map(dept => {
-                            const randomValue = Math.floor(Math.random() * 100);
-                            return (
-                              <TableCell key={dept} className="text-center">
-                                <div className="flex items-center justify-center">
-                                  <div 
-                                    className="w-8 h-8 rounded-full mr-2" 
-                                    style={{ backgroundColor: getRiskColor(randomValue) }}
-                                  />
-                                  <span>{randomValue}%</span>
-                                </div>
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))}
-                    </React.Fragment>
+                        );
+                      })}
+                    </TableRow>
                   );
-                })}
+                  
+                  return acc;
+                }, [])}
               </TableBody>
             </Table>
           </div>

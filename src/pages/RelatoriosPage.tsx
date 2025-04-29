@@ -5,8 +5,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import MapaRiscoPsicossocial from "@/components/relatorios/MapaRiscoPsicossocial";
-import DiagnosticoIndividual from "@/components/relatorios/DiagnosticoIndividual";
-import RankingAreasCriticas from "@/components/relatorios/RankingAreasCriticas";
 import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import FilterSection from "@/components/relatorios/FilterSection";
 import { getCompanies } from "@/services";
@@ -82,10 +80,8 @@ export default function RelatoriosPage() {
             </div>
 
             <Tabs defaultValue="mapa-risco" className="w-full">
-              <TabsList className="grid grid-cols-4 mb-6">
+              <TabsList className="grid grid-cols-2 mb-6">
                 <TabsTrigger value="mapa-risco">Mapa de Risco</TabsTrigger>
-                <TabsTrigger value="ranking">Ranking de Áreas</TabsTrigger>
-                <TabsTrigger value="diagnostico">Diagnóstico Individual</TabsTrigger>
                 <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
               </TabsList>
               
@@ -94,18 +90,6 @@ export default function RelatoriosPage() {
                   companyId={selectedCompanyId}
                   departmentId=""
                   dateRange={{}}
-                />
-              </TabsContent>
-              
-              <TabsContent value="ranking">
-                <RankingAreasCriticas
-                  companyId={selectedCompanyId}
-                />
-              </TabsContent>
-              
-              <TabsContent value="diagnostico">
-                <DiagnosticoIndividual
-                  employeeId={selectedCompanyId}
                 />
               </TabsContent>
               

@@ -1,6 +1,5 @@
 
 import { useState, useCallback } from "react";
-import { toast as sonnerToast } from "sonner";
 import { FormResult } from "@/types/form";
 
 export function useFormNavigation() {

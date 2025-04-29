@@ -1,9 +1,8 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { useCompanySelection } from "@/hooks/form/useCompanySelection";
 import { useEmployeeSelection } from "@/hooks/form/useEmployeeSelection";
 import { useFormSelection } from "@/hooks/form/useFormSelection";
-import { Employee } from "@/types/cadastro";
 
 export function useFormSelections() {
   const { 
