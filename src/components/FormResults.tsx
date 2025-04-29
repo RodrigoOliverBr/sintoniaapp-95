@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { FormResult, Question } from "@/types/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,8 @@ import { format } from "date-fns";
 import { updateAnalystNotes } from "@/services/form/evaluations";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface FormResultsProps {
   result: FormResult;
@@ -26,6 +29,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     high: 0
   });
   
+  const navigate = useNavigate();
   const [notes, setNotes] = useState(result.notas_analista || result.analyistNotes || '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -35,19 +39,27 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     setNotes(result.notas_analista || result.analyistNotes || '');
   }, [result]);
 
-  const debouncedSave = useCallback(async (value: string) => {
+  const saveNotes = async (value: string) => {
     if (!result.id || isReadOnly) return;
     
     try {
       setIsSaving(true);
       await updateAnalystNotes(result.id, value);
       onNotesChange(value);
+      sonnerToast.success("Observações salvas com sucesso!");
+      return true;
     } catch (error) {
       console.error("Error saving notes:", error);
       sonnerToast.error("Não foi possível salvar as observações.");
+      return false;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const debouncedSave = useCallback(async (value: string) => {
+    if (!result.id || isReadOnly) return;
+    await saveNotes(value);
   }, [result.id, onNotesChange, isReadOnly]);
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -75,7 +87,21 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     }
     
     if (!isReadOnly && result.id) {
-      debouncedSave(notes);
+      await debouncedSave(notes);
+    }
+  };
+
+  const handleSaveAndReturn = async () => {
+    // Save notes first
+    if (!isReadOnly && result.id) {
+      const success = await saveNotes(notes);
+      if (success) {
+        // Navigate to home page
+        navigate("/");
+      }
+    } else {
+      // If read-only, just navigate
+      navigate("/");
     }
   };
 
@@ -255,9 +281,19 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
             readOnly={isReadOnly}
           />
           {!isReadOnly && (
-            <p className="text-xs text-gray-500 mt-2">
-              As observações serão salvas automaticamente após você parar de digitar ou ao sair do campo.
-            </p>
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-gray-500">
+                As observações são salvas automaticamente após você parar de digitar ou ao sair do campo.
+              </p>
+              <Button 
+                className="w-full sm:w-auto flex items-center justify-center gap-2"
+                onClick={handleSaveAndReturn}
+                disabled={isSaving}
+              >
+                <Save className="h-4 w-4" />
+                {isSaving ? "Salvando..." : "Salvar e Voltar"}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

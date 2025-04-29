@@ -1,6 +1,6 @@
 
 import React from "react";
-import { FormAnswer, Question } from "@/types/form";
+import { Question } from "@/types/form";
 import QuestionComponent from "./QuestionComponent";
 import { Card } from "@/components/ui/card";
 
@@ -10,7 +10,7 @@ interface FormSectionProps {
     title: string;
     questions: Question[];
   };
-  answers: Record<string, FormAnswer>;
+  answers: Record<string, any>;
   onAnswerChange: (questionId: string, answer: boolean | null) => void;
   onObservationChange: (questionId: string, observation: string) => void;
   onOptionsChange: (questionId: string, options: string[]) => void;
@@ -53,10 +53,12 @@ const FormSection: React.FC<FormSectionProps> = ({
           <Card key={question.id} className="overflow-hidden">
             <QuestionComponent
               question={question}
-              answer={answers[question.id]}
-              onChange={onAnswerChange}
-              onObservationChange={onObservationChange}
-              onOptionsChange={onOptionsChange}
+              answer={answers[question.id]?.answer}
+              observations={answers[question.id]?.observation || ""}
+              selectedOptions={answers[question.id]?.selectedOptions || []}
+              onAnswerChange={(answer) => onAnswerChange(question.id, answer)}
+              onObservationChange={(observation) => onObservationChange(question.id, observation)}
+              onOptionsChange={(options) => onOptionsChange(question.id, options)}
             />
           </Card>
         ))}

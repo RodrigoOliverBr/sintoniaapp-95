@@ -121,14 +121,12 @@ export function useFormPage() {
   };
   
   const handleExitResults = () => {
-    if (selectedEmployeeId) {
-      // Recarregar o histórico do funcionário
-      loadEmployeeHistory();
-    }
-    
+    // Navigate to the home page instead of going back to the form
     setShowResults(false);
     setFormComplete(false);
     setSelectedEvaluation(null);
+    setShowForm(false);
+    setShowingHistoryView(false);
   };
 
   const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
@@ -137,6 +135,24 @@ export function useFormPage() {
   const handleSaveAndCompleteForm = async () => {
     if (!selectedFormId || !selectedEmployeeId || !selectedCompanyId) {
       sonnerToast.warning("Por favor, selecione empresa, funcionário e formulário antes de continuar");
+      return;
+    }
+
+    // Check for duplicate evaluations before saving
+    console.log("Verificando avaliações existentes para o funcionário...");
+    await loadEmployeeHistory();
+
+    const duplicateEvaluation = evaluationHistory.find(eval => 
+      eval.is_complete && 
+      eval.formulario_id === selectedFormId && 
+      eval.id !== (selectedEvaluation?.id || '')
+    );
+
+    if (duplicateEvaluation && !selectedEvaluation) {
+      console.log("Avaliação completa já existe para este formulário e funcionário.");
+      sonnerToast.warning("Este funcionário já possui uma avaliação completa para este formulário.");
+      setShowingHistoryView(true);
+      setShowForm(false);
       return;
     }
 
@@ -152,6 +168,8 @@ export function useFormPage() {
     
     if (updatedResult) {
       setSelectedEvaluation(updatedResult);
+      setShowResults(true);
+      setShowingHistoryView(false);
     }
   };
 
@@ -203,16 +221,5 @@ export function useFormPage() {
     handleNewEvaluation,
     handleExitResults,
     handleSaveAndComplete: handleSaveAndCompleteForm,
-    
-    // Form state
-    isSubmitting,
-    isNewEvaluation,
-    showForm,
-    setShowForm,
-    resetForm,
-    
-    // Derived data
-    selectedEmployee,
-    selectedFormTitle
   };
 }

@@ -355,45 +355,56 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
 }
 
 export async function deleteFormEvaluation(evaluationId: string): Promise<void> {
+  if (!evaluationId) {
+    throw new Error("ID da avaliação é obrigatório");
+  }
+
   try {
-    console.log(`Legacy deleteFormEvaluation called for ID: ${evaluationId}`);
+    console.log(`Iniciando exclusão da avaliação com ID: ${evaluationId}`);
     
-    // Delete responses first (and resposta_opcoes via cascade)
+    // Step 1: Delete responses and their options (cascade deletion should handle related resposta_opcoes)
+    console.log("Excluindo respostas...");
     const { error: responsesError } = await supabase
       .from('respostas')
       .delete()
       .eq('avaliacao_id', evaluationId);
       
     if (responsesError) {
-      console.error('Error deleting responses:', responsesError);
-      throw responsesError;
+      console.error("Erro ao excluir respostas:", responsesError);
+      throw new Error(`Erro ao excluir respostas: ${responsesError.message}`);
     }
     
-    // Delete reports linked to this evaluation
+    console.log("Respostas excluídas com sucesso");
+    
+    // Step 2: Delete reports related to this evaluation
+    console.log("Excluindo relatórios associados...");
     const { error: reportsError } = await supabase
       .from('relatorios')
       .delete()
       .eq('avaliacao_id', evaluationId);
       
     if (reportsError) {
-      console.error('Error deleting reports:', reportsError);
-      // Continue even if reports deletion fails
+      console.error("Erro ao excluir relatórios:", reportsError);
+      // Don't throw here - we'll continue with the evaluation deletion even if reports deletion fails
+    } else {
+      console.log("Relatórios excluídos com sucesso");
     }
     
-    // Finally delete the evaluation itself
+    // Step 3: Delete the evaluation itself
+    console.log("Excluindo a avaliação...");
     const { error: evaluationError } = await supabase
       .from('avaliacoes')
       .delete()
       .eq('id', evaluationId);
       
     if (evaluationError) {
-      console.error('Error deleting evaluation:', evaluationError);
-      throw evaluationError;
+      console.error("Erro ao excluir avaliação:", evaluationError);
+      throw new Error(`Erro ao excluir avaliação: ${evaluationError.message}`);
     }
     
-    console.log(`Evaluation ${evaluationId} deleted successfully`);
+    console.log(`Avaliação ${evaluationId} excluída com sucesso`);
   } catch (error) {
-    console.error('Error in deleteFormEvaluation:', error);
+    console.error("Falha na exclusão da avaliação:", error);
     throw error;
   }
 }
