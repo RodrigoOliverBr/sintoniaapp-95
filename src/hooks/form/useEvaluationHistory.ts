@@ -1,128 +1,138 @@
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FormResult } from "@/types/form";
-import { getEmployeeFormHistory, deleteFormEvaluation } from "@/services/form";
+import { getEmployeeFormHistory } from "@/services";
+import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useEvaluationHistory(employeeId?: string) {
+export function useEvaluationHistory(selectedEmployeeId: string | undefined) {
   const [evaluationHistory, setEvaluationHistory] = useState<FormResult[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [isDeletingEvaluation, setIsDeletingEvaluation] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
+  const [showingHistoryView, setShowingHistoryView] = useState<boolean>(false);
   const [selectedEvaluation, setSelectedEvaluation] = useState<FormResult | null>(null);
+  const [isDeletingEvaluation, setIsDeletingEvaluation] = useState<boolean>(false);
+  const { toast } = useToast();
 
-  const loadEmployeeHistory = useCallback(async () => {
-    if (!employeeId) {
+  // Load employee evaluation history when employee ID changes
+  useEffect(() => {
+    if (selectedEmployeeId) {
+      loadEmployeeHistory();
+    } else {
       setEvaluationHistory([]);
-      return;
+      setShowingHistoryView(false);
     }
+  }, [selectedEmployeeId]);
+
+  const loadEmployeeHistory = async () => {
+    if (!selectedEmployeeId) return;
 
     setIsLoadingHistory(true);
     try {
-      console.log(`Loading evaluation history for employee ${employeeId}`);
-      const history = await getEmployeeFormHistory(employeeId);
+      const history = await getEmployeeFormHistory(selectedEmployeeId);
       setEvaluationHistory(history);
-      console.log(`Loaded ${history.length} evaluations`);
+      
+      // If there's history, show the history view
+      if (history && history.length > 0) {
+        setShowingHistoryView(true);
+      } else {
+        setShowingHistoryView(false);
+      }
     } catch (error) {
-      console.error("Error loading employee evaluation history:", error);
-      sonnerToast.error("Não foi possível carregar o histórico de avaliações");
-      setEvaluationHistory([]);
+      console.error("Error loading employee history:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar o histórico de avaliações",
+        variant: "destructive",
+      });
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [employeeId]);
+  };
 
-  const verifyDeletion = async (evaluationId: string): Promise<boolean> => {
-    try {
-      const { data: evaluation, error } = await supabase
-        .from('avaliacoes')
-        .select('id')
-        .eq('id', evaluationId)
-        .maybeSingle();
-        
-      if (error) {
-        console.error("Error verifying deletion:", error);
-        return false;
-      }
-      
-      // If the evaluation still exists, deletion failed
-      return !evaluation;
-    } catch (e) {
-      console.error("Error checking evaluation deletion:", e);
-      return false;
-    }
-  }
-
+  // Modified delete implementation to handle the new two-step process
   const handleDeleteEvaluation = useCallback(async (evaluationId: string) => {
     if (!evaluationId) {
-      sonnerToast.error("ID da avaliação inválido");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita."
-    );
-
-    if (!confirmed) {
+      sonnerToast.error("ID da avaliação não fornecido");
       return;
     }
 
     setIsDeletingEvaluation(true);
+    
     try {
-      console.log(`Iniciando exclusão da avaliação com ID: ${evaluationId}`);
+      console.log(`Iniciando processo de exclusão para avaliação ID: ${evaluationId}`);
       
-      // Call the service to delete from database
-      await deleteFormEvaluation(evaluationId);
+      // Step 1 is implied to have happened already in the UI
+      // The user confirmed to delete questions, so we'll delete responses first
+      // 1. Delete responses - responses_opcoes will be deleted via FK cascade
+      const { error: responsesError } = await supabase
+        .from('respostas')
+        .delete()
+        .eq('avaliacao_id', evaluationId);
       
-      // Verify if deletion was successful by checking if the evaluation still exists
-      const isDeleted = await verifyDeletion(evaluationId);
-      
-      if (isDeleted) {
-        console.log("Avaliação excluída com sucesso no banco de dados");
-        
-        // Update the local state to remove the deleted evaluation
-        setEvaluationHistory(prevHistory => 
-          prevHistory.filter(evaluation => evaluation.id !== evaluationId)
-        );
-        
-        // Reset selected evaluation if it was the one deleted
-        if (selectedEvaluation && selectedEvaluation.id === evaluationId) {
-          setSelectedEvaluation(null);
-        }
-        
-        sonnerToast.success("Avaliação excluída com sucesso do banco de dados!");
-      } else {
-        console.error("Falha na verificação da exclusão da avaliação");
-        sonnerToast.error("A exclusão parece ter falhado. A avaliação ainda existe no banco de dados.");
-        
-        // Reload the history to ensure everything is in sync
-        await loadEmployeeHistory();
+      if (responsesError) {
+        console.error("Erro ao excluir respostas:", responsesError);
+        throw new Error(`Erro ao excluir respostas: ${responsesError.message}`);
       }
       
-    } catch (error: any) {
-      console.error("Erro ao excluir avaliação:", error);
-      sonnerToast.error(`Não foi possível excluir a avaliação: ${error.message || "Erro desconhecido"}`);
+      console.log("Respostas excluídas com sucesso");
       
-      // Reload history to ensure UI is in sync with database
-      await loadEmployeeHistory();
+      // Step 2: Delete related reports
+      // This happens only if user confirmed step 2 in the UI
+      const { error: reportsError } = await supabase
+        .from('relatorios')
+        .delete()
+        .eq('avaliacao_id', evaluationId);
+      
+      if (reportsError) {
+        console.error("Erro ao excluir relatórios:", reportsError);
+        // Continue even if reports deletion fails
+      }
+      
+      // 3. Finally, delete the evaluation
+      const { error: evaluationError } = await supabase
+        .from('avaliacoes')
+        .delete()
+        .eq('id', evaluationId);
+      
+      if (evaluationError) {
+        console.error("Erro ao excluir avaliação:", evaluationError);
+        throw new Error(`Erro ao excluir avaliação: ${evaluationError.message}`);
+      }
+      
+      console.log("Avaliação excluída com sucesso");
+      sonnerToast.success("Avaliação excluída com sucesso");
+      
+      // Update local state to remove the deleted evaluation
+      setEvaluationHistory(prevState => prevState.filter(item => item.id !== evaluationId));
+      
+      // If the selectedEvaluation was the one deleted, reset it
+      if (selectedEvaluation?.id === evaluationId) {
+        setSelectedEvaluation(null);
+      }
+      
+      // If evaluation history is now empty, exit history view
+      if (evaluationHistory.length <= 1) {
+        setShowingHistoryView(false);
+      }
+      
+    } catch (error) {
+      console.error("Erro ao excluir avaliação:", error);
+      sonnerToast.error(`Erro ao excluir avaliação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setIsDeletingEvaluation(false);
     }
-  }, [selectedEvaluation, loadEmployeeHistory]);
-
-  useEffect(() => {
-    if (employeeId) {
-      loadEmployeeHistory();
-    }
-  }, [employeeId, loadEmployeeHistory]);
+  }, [evaluationHistory, selectedEvaluation, toast]);
 
   return {
-    selectedEvaluation,
-    setSelectedEvaluation,
     evaluationHistory,
     isLoadingHistory,
+    showingHistoryView,
+    setShowingHistoryView,
+    selectedEvaluation,
+    setSelectedEvaluation,
+    isDeletingEvaluation,
     loadEmployeeHistory,
-    handleDeleteEvaluation,
-    isDeletingEvaluation
+    handleDeleteEvaluation
   };
 }

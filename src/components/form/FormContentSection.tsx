@@ -94,12 +94,25 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
     const shouldBeReadOnly = selectedEvaluation !== null && showingHistoryView;
     
     return (
-      <FormResults 
-        result={selectedEvaluation || formResult!}
-        questions={questions}
-        onNotesChange={onNotesChange}
-        isReadOnly={shouldBeReadOnly}
-      />
+      <div className="space-y-4">
+        <div className="flex justify-between items-center mb-4">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft size={16} />
+            Voltar para Início
+          </Button>
+        </div>
+        
+        <FormResults 
+          result={selectedEvaluation || formResult!}
+          questions={questions}
+          onNotesChange={onNotesChange}
+          isReadOnly={shouldBeReadOnly}
+        />
+      </div>
     );
   }
 

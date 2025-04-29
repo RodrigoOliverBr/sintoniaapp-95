@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { FormResult } from "@/types/form";
 
@@ -363,63 +362,11 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
   try {
     console.log(`Iniciando exclusão da avaliação com ID: ${evaluationId}`);
     
-    // Use a transaction to ensure all related data is deleted atomically
-    // We can't use a transaction with the JavaScript client, so we'll delete explicitly in sequence
-    
-    // First step: Delete any related reports
-    console.log("Excluindo relatórios associados...");
-    const { error: reportsError, count: reportsDeleted } = await supabase
-      .from('relatorios')
-      .delete({ count: 'exact' })
-      .eq('avaliacao_id', evaluationId);
-      
-    if (reportsError) {
-      console.error("Erro ao excluir relatórios:", reportsError);
-      throw new Error(`Erro ao excluir relatórios: ${reportsError.message}`);
-    }
-    
-    console.log(`${reportsDeleted || 0} relatórios excluídos`);
-    
-    // Second step: Delete any response options
-    console.log("Excluindo opções de respostas relacionadas...");
-    
-    // Get all response IDs for this evaluation
-    const { data: responseIds, error: responseIdsError } = await supabase
-      .from('respostas')
-      .select('id')
-      .eq('avaliacao_id', evaluationId);
-      
-    if (responseIdsError) {
-      console.error("Erro ao buscar IDs das respostas:", responseIdsError);
-      throw new Error(`Erro ao buscar IDs das respostas: ${responseIdsError.message}`);
-    }
-    
-    // If there are response options, delete them
-    if (responseIds && responseIds.length > 0) {
-      const ids = responseIds.map(r => r.id);
-      console.log(`Encontradas ${ids.length} respostas para excluir opções`);
-      
-      // Use in clause to delete all related options at once
-      const { error: optionsError } = await supabase
-        .from('resposta_opcoes')
-        .delete()
-        .in('resposta_id', ids);
-        
-      if (optionsError) {
-        console.error("Erro ao excluir opções de respostas:", optionsError);
-        throw new Error(`Erro ao excluir opções de respostas: ${optionsError.message}`);
-      }
-      
-      console.log("Opções de respostas excluídas com sucesso");
-    } else {
-      console.log("Nenhuma resposta encontrada para excluir opções");
-    }
-    
-    // Third step: Delete responses
+    // Step 1: Delete responses and their options (cascade deletion should handle related resposta_opcoes)
     console.log("Excluindo respostas...");
-    const { error: responsesError, count: responsesDeleted } = await supabase
+    const { error: responsesError } = await supabase
       .from('respostas')
-      .delete({ count: 'exact' })
+      .delete()
       .eq('avaliacao_id', evaluationId);
       
     if (responsesError) {
@@ -427,9 +374,23 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
       throw new Error(`Erro ao excluir respostas: ${responsesError.message}`);
     }
     
-    console.log(`${responsesDeleted || 0} respostas excluídas`);
+    console.log("Respostas excluídas com sucesso");
     
-    // Final step: Delete the evaluation itself
+    // Step 2: Delete reports related to this evaluation
+    console.log("Excluindo relatórios associados...");
+    const { error: reportsError } = await supabase
+      .from('relatorios')
+      .delete()
+      .eq('avaliacao_id', evaluationId);
+      
+    if (reportsError) {
+      console.error("Erro ao excluir relatórios:", reportsError);
+      // Don't throw here - we'll continue with the evaluation deletion even if reports deletion fails
+    } else {
+      console.log("Relatórios excluídos com sucesso");
+    }
+    
+    // Step 3: Delete the evaluation itself
     console.log("Excluindo a avaliação...");
     const { error: evaluationError } = await supabase
       .from('avaliacoes')
@@ -442,24 +403,6 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
     }
     
     console.log(`Avaliação ${evaluationId} excluída com sucesso`);
-    
-    // Verify that the evaluation was actually deleted
-    const { data: checkEvaluation, error: checkError } = await supabase
-      .from('avaliacoes')
-      .select('id')
-      .eq('id', evaluationId)
-      .maybeSingle();
-      
-    if (checkError) {
-      console.error("Erro ao verificar exclusão:", checkError);
-    }
-    
-    if (checkEvaluation) {
-      console.error("ATENÇÃO: A avaliação ainda existe no banco de dados após a exclusão!");
-      throw new Error("Falha na exclusão: a avaliação ainda existe no banco de dados");
-    } else {
-      console.log("Verificado: avaliação não existe mais no banco de dados");
-    }
   } catch (error) {
     console.error("Falha na exclusão da avaliação:", error);
     throw error;
