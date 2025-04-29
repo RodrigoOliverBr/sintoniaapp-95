@@ -28,7 +28,7 @@ const Index = () => {
                 </p>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" onClick={() => navigate("/")}>
+                <Button className="w-full" onClick={() => navigate("/formulario")}>
                   Iniciar Avaliação
                 </Button>
               </CardFooter>

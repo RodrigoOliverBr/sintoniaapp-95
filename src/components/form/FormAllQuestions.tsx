@@ -81,7 +81,7 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
                   key={question.id}
                   question={question}
                   answer={answers[question.id]?.answer}
-                  observation={answers[question.id]?.observation || ""}
+                  observations={answers[question.id]?.observation || ""}
                   selectedOptions={answers[question.id]?.selectedOptions || []}
                   onAnswerChange={(answer) => onAnswerChange(question.id, answer)}
                   onObservationChange={(observation) => onObservationChange(question.id, observation)}
