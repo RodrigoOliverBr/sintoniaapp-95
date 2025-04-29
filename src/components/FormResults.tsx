@@ -7,11 +7,10 @@ import { ResultsActions } from "./results/ResultsActions";
 import { AnswersChart } from "./charts/AnswersChart";
 import { SeverityChart } from "./charts/SeverityChart";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2, Save } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { updateAnalystNotes } from "@/services/form/evaluations";
 import { toast as sonnerToast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 interface FormResultsProps {
@@ -21,7 +20,12 @@ interface FormResultsProps {
   isReadOnly?: boolean;
 }
 
-const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNotesChange, isReadOnly = false }) => {
+const FormResults: React.FC<FormResultsProps> = ({ 
+  result, 
+  questions = [], 
+  onNotesChange, 
+  isReadOnly = false 
+}) => {
   const [severityCounts, setSeverityCounts] = useState({
     light: 0,
     medium: 0,
@@ -33,7 +37,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Sincronizar notas quando o resultado muda
+  // Synchronize notes when result changes
   useEffect(() => {
     setNotes(result.notas_analista || result.analyistNotes || '');
   }, [result]);
@@ -45,10 +49,10 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
       setIsSaving(true);
       console.log(`Salvando notas para avaliação ${result.id}: "${value}"`);
       
-      // Chama API para atualizar notas
+      // Call API to update notes
       await updateAnalystNotes(result.id, value);
       
-      // Atualiza estado local através do callback
+      // Update local state through callback
       onNotesChange(value);
       
       sonnerToast.success("Observações salvas com sucesso!");
@@ -66,13 +70,13 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   const debouncedSave = useCallback(async (value: string) => {
     if (!result.id || isReadOnly) return;
     await saveNotes(value);
-  }, [result.id, onNotesChange, isReadOnly]);
+  }, [result.id, isReadOnly]);
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setNotes(newValue);
     
-    // Atualiza o estado local imediatamente
+    // Update local state immediately
     onNotesChange(newValue);
     
     if (saveTimeout) {
@@ -80,7 +84,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     }
     
     if (!isReadOnly) {
-      // Debounce para auto-salvar após 2 segundos de inatividade
+      // Debounce to auto-save after 2 seconds of inactivity
       const timeout = setTimeout(() => {
         debouncedSave(newValue);
       }, 2000);
@@ -96,42 +100,6 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     
     if (!isReadOnly && result.id) {
       await debouncedSave(notes);
-    }
-  };
-
-  // Implementação revisada do salvar e voltar
-  const handleSaveAndReturn = async () => {
-    try {
-      // Evitar duplo clique
-      if (isSaving) return;
-      
-      setIsSaving(true);
-      
-      if (!isReadOnly && result.id) {
-        console.log(`Salvando notas antes de voltar: "${notes}"`);
-        
-        // Executa a função de salvamento e captura o resultado
-        const saved = await saveNotes(notes);
-        
-        if (saved) {
-          console.log("Notas salvas com sucesso, redirecionando...");
-          // Aguardar um pouco para garantir que o toast seja visto
-          setTimeout(() => {
-            navigate("/");
-          }, 500);
-        } else {
-          // Se falhou em salvar, mostra mensagem
-          sonnerToast.error("Não foi possível salvar as observações. Tente novamente.");
-        }
-      } else {
-        // Se estiver em modo leitura ou sem ID, apenas navega
-        navigate("/");
-      }
-    } catch (error) {
-      console.error("Erro ao salvar e voltar:", error);
-      sonnerToast.error("Ocorreu um erro. Por favor, tente novamente.");
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -295,7 +263,6 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
             <span>Observações e Recomendações do Analista</span>
             {isSaving && !isReadOnly && (
               <div className="flex items-center gap-1 text-sm text-gray-500">
-                <Save className="h-4 w-4 animate-pulse" />
                 <span>Salvando...</span>
               </div>
             )}
@@ -316,14 +283,6 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
               <p className="text-xs text-gray-500">
                 As observações são salvas automaticamente após você parar de digitar ou ao sair do campo.
               </p>
-              <Button 
-                className="w-full sm:w-auto flex items-center justify-center gap-2"
-                onClick={handleSaveAndReturn}
-                disabled={isSaving}
-              >
-                <Save className="h-4 w-4" />
-                {isSaving ? "Salvando..." : "Salvar e Voltar"}
-              </Button>
             </div>
           )}
         </CardContent>
