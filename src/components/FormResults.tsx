@@ -45,7 +45,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
       setIsSaving(true);
       console.log(`Salvando notas para avaliação ${result.id}: "${value}"`);
       
-      // Chama API para atualizar notas
+      // Chama API para atualizar notas - adaptação para usar a função diretamente
       await updateAnalystNotes(result.id, value);
       
       // Atualiza estado local através do callback
@@ -66,7 +66,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
   const debouncedSave = useCallback(async (value: string) => {
     if (!result.id || isReadOnly) return;
     await saveNotes(value);
-  }, [result.id, onNotesChange, isReadOnly]);
+  }, [result.id, isReadOnly]);
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -99,7 +99,7 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
     }
   };
 
-  // Implementação revisada do salvar e voltar
+  // Reimplementação completa do salvar e voltar
   const handleSaveAndReturn = async () => {
     try {
       // Evitar duplo clique
@@ -110,17 +110,19 @@ const FormResults: React.FC<FormResultsProps> = ({ result, questions = [], onNot
       if (!isReadOnly && result.id) {
         console.log(`Salvando notas antes de voltar: "${notes}"`);
         
-        // Executa a função de salvamento e captura o resultado
-        const saved = await saveNotes(notes);
-        
-        if (saved) {
+        try {
+          // Chamada direta para API de salvar notas
+          await updateAnalystNotes(result.id, notes);
+          
+          sonnerToast.success("Observações salvas com sucesso!");
           console.log("Notas salvas com sucesso, redirecionando...");
+          
           // Aguardar um pouco para garantir que o toast seja visto
           setTimeout(() => {
             navigate("/");
           }, 500);
-        } else {
-          // Se falhou em salvar, mostra mensagem
+        } catch (error) {
+          console.error("Erro ao salvar notas:", error);
           sonnerToast.error("Não foi possível salvar as observações. Tente novamente.");
         }
       } else {

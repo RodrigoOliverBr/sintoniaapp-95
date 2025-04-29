@@ -37,22 +37,14 @@ export function useEvaluationHistory(employeeId?: string) {
       return;
     }
 
-    const confirmed = window.confirm(
-      "Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita."
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setIsDeletingEvaluation(true);
     try {
       console.log(`Deletando avaliação com ID: ${evaluationId}`);
       
-      // Implementação melhorada para deletar a avaliação completa
+      // Chama o serviço de exclusão
       await deleteFormEvaluation(evaluationId);
       
-      // Atualizar o estado local para remover a avaliação excluída
+      // Atualiza o estado local removendo a avaliação excluída
       setEvaluationHistory(prevHistory => 
         prevHistory.filter(evaluation => evaluation.id !== evaluationId)
       );

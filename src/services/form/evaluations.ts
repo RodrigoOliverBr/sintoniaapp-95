@@ -391,8 +391,9 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
       console.log("Respostas excluídas com sucesso");
     }
     
-    // Último passo: Excluir a própria avaliação
-    console.log("Excluindo a avaliação...");
+    // Último passo: Excluir a própria avaliação - ESTE É O PASSO QUE ESTAVA FALHANDO
+    console.log("Excluindo a avaliação com ID:", evaluationId);
+    
     const { error: evaluationError } = await supabase
       .from('avaliacoes')
       .delete()
