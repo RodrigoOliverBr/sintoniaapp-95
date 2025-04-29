@@ -142,10 +142,10 @@ export function useFormPage() {
     console.log("Verificando avaliações existentes para o funcionário...");
     await loadEmployeeHistory();
 
-    const duplicateEvaluation = evaluationHistory.find(eval => 
-      eval.is_complete && 
-      eval.formulario_id === selectedFormId && 
-      eval.id !== (selectedEvaluation?.id || '')
+    const duplicateEvaluation = evaluationHistory.find(evaluation => 
+      evaluation.is_complete && 
+      evaluation.formulario_id === selectedFormId && 
+      evaluation.id !== (selectedEvaluation?.id || '')
     );
 
     if (duplicateEvaluation && !selectedEvaluation) {
