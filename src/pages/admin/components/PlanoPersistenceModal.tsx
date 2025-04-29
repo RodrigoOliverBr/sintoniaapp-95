@@ -53,18 +53,18 @@ const PlanoPersistenceModal: React.FC<PlanoPersistenceModalProps> = ({
     if (planoToEdit) {
       setNome(planoToEdit.nome);
       setDescricao(planoToEdit.descricao || "");
-      setValorMensal(Number(planoToEdit.valor_mensal));
-      setValorImplantacao(Number(planoToEdit.valor_implantacao));
-      setLimiteEmpresas(planoToEdit.limite_empresas || 0);
-      setLimiteEmpregados(planoToEdit.limite_empregados || 0);
-      setEmpresasIlimitadas(Boolean(planoToEdit.empresas_ilimitadas));
-      setEmpregadosIlimitados(Boolean(planoToEdit.empregados_ilimitados));
-      setSemVencimento(Boolean(planoToEdit.sem_vencimento));
+      setValorMensal(Number(planoToEdit.valorMensal));
+      setValorImplantacao(Number(planoToEdit.valorImplantacao));
+      setLimiteEmpresas(planoToEdit.limiteEmpresas || 0);
+      setLimiteEmpregados(planoToEdit.limiteEmpregados || 0);
+      setEmpresasIlimitadas(Boolean(planoToEdit.empresasIlimitadas));
+      setEmpregadosIlimitados(Boolean(planoToEdit.empregadosIlimitados));
+      setSemVencimento(Boolean(planoToEdit.semVencimento));
       setAtivo(Boolean(planoToEdit.ativo));
       
       // Convert date from string or timestamp if exists
-      if (planoToEdit.data_validade) {
-        const dateValue = new Date(planoToEdit.data_validade);
+      if (planoToEdit.dataValidade) {
+        const dateValue = new Date(planoToEdit.dataValidade);
         if (!isNaN(dateValue.getTime())) {
           setDataValidade(dateValue);
         }
@@ -99,6 +99,7 @@ const PlanoPersistenceModal: React.FC<PlanoPersistenceModalProps> = ({
     setIsSubmitting(true);
 
     try {
+      // Use camelCase field names for DB operations
       const planoData: any = {
         nome,
         descricao,

@@ -20,7 +20,7 @@ export const ClienteStatusBadge: React.FC<ClienteStatusBadgeProps> = ({ cliente 
     default:
       if (cliente.statusContrato === 'vencimento-proximo') {
         return (
-          <Badge variant="warning" className="bg-yellow-500 hover:bg-yellow-600">
+          <Badge variant="secondary" className="bg-yellow-500 hover:bg-yellow-600">
             Vencimento em {cliente.diasParaVencimento} dias
           </Badge>
         );

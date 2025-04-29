@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -205,14 +204,14 @@ const PlanosPage: React.FC = () => {
       </Card>
 
       <PlanoPersistenceModal
-        plano={currentPlano}
-        isOpen={openNewModal || openEditModal}
+        open={openNewModal || openEditModal}
         onOpenChange={(open) => {
           setOpenNewModal(open);
           setOpenEditModal(open);
           if (!open) setCurrentPlano(null);
         }}
-        onSubmit={currentPlano ? handleUpdatePlano : handleAddPlano}
+        onSuccess={() => fetchPlanos()}
+        planoToEdit={currentPlano}
       />
 
       {/* Modal de Exclusão */}

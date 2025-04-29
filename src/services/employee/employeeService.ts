@@ -13,14 +13,14 @@ export const getEmployees = async (): Promise<Employee[]> => {
     return {
       id: employee.id,
       name: employee.nome,
-      email: employee.email || '',
+      email: '',
       cpf: employee.cpf || '',
       role: employee.cargo_id || '',
-      department_id: employee.department_id || '',
+      department_id: '',
       company_id: employee.empresa_id,
       created_at: employee.created_at,
       updated_at: employee.updated_at,
-      status: employee.status || 'active'
+      status: 'active'
     };
   });
 };
@@ -37,14 +37,14 @@ export const getEmployeesByCompany = async (companyId: string): Promise<Employee
     return {
       id: employee.id,
       name: employee.nome,
-      email: employee.email || '',
+      email: '',
       cpf: employee.cpf || '',
       role: employee.cargo_id || '',
-      department_id: employee.department_id || '',
+      department_id: '',
       company_id: employee.empresa_id,
       created_at: employee.created_at,
       updated_at: employee.updated_at,
-      status: employee.status || 'active'
+      status: 'active'
     };
   });
 };
@@ -69,14 +69,14 @@ export const addEmployee = async (employeeData: Partial<Employee>): Promise<Empl
   return {
     id: data.id,
     name: data.nome,
-    email: data.email || '',
+    email: employeeData.email || '',
     cpf: data.cpf || '',
     role: data.cargo_id || '',
-    department_id: data.department_id || '',
+    department_id: '',
     company_id: data.empresa_id,
     created_at: data.created_at,
     updated_at: data.updated_at,
-    status: data.status || 'active'
+    status: 'active'
   };
 };
 
@@ -101,14 +101,14 @@ export const updateEmployee = async (employeeId: string, employeeData: Partial<E
   return {
     id: data.id,
     name: data.nome,
-    email: data.email || '',
+    email: employeeData.email || '',
     cpf: data.cpf || '',
     role: data.cargo_id || '',
-    department_id: data.department_id || '',
+    department_id: '',
     company_id: data.empresa_id,
     created_at: data.created_at,
     updated_at: data.updated_at,
-    status: data.status || 'active'
+    status: 'active'
   };
 };
 

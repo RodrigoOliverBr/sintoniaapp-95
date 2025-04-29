@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { 
   getJobRolesByCompany, 
   addJobRole 
-} from "@/services"; // Updated import path
+} from "@/services/jobRole/jobRoleService"; // Import directly from jobRoleService
 import { useToast } from "@/hooks/use-toast";
 import { JobRole } from "@/types/cadastro";
 import { Trash2 } from "lucide-react";
@@ -78,7 +78,8 @@ const JobRolesModal: React.FC<JobRolesModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      await addJobRole(companyId, { name: newRoleName.trim() });
+      // Correcting the call to addJobRole to match parameter signature
+      await addJobRole({ name: newRoleName.trim(), company_id: companyId });
       
       toast({
         title: "Sucesso",

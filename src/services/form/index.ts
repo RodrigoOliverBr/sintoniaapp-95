@@ -4,6 +4,5 @@ export * from './questions';
 export * from './evaluations';
 export * from './risks';
 
-// Make sure deleteFormEvaluation and updateAnalystNotes are included
-import { deleteFormEvaluation, updateAnalystNotes, getFormResultByEmployeeId, saveFormResult, getEmployeeFormHistory } from './evaluations';
-export { deleteFormEvaluation, updateAnalystNotes, getFormResultByEmployeeId, saveFormResult, getEmployeeFormHistory };
+// Explicitly re-export these functions instead of using wildcards to avoid conflicts
+export { deleteFormEvaluation, updateAnalystNotes, getFormResultByEmployeeId, saveFormResult, getEmployeeFormHistory } from './evaluations';

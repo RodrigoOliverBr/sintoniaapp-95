@@ -35,7 +35,7 @@ export interface Contrato {
   valorMensal: number;
   taxaImplantacao: number;
   observacoes?: string;
-  cicloFaturamento?: string;
+  cicloFaturamento?: CicloFaturamento;
   proximaRenovacao?: number;
   ciclosGerados?: number;
 }
@@ -52,7 +52,7 @@ export interface Plano {
   empregadosIlimitados?: boolean;
   descricao?: string;
   semVencimento?: boolean;
-  dataValidade?: string | number;
+  dataValidade?: string | number | null;
 }
 
 export interface BatchSelection {
@@ -72,12 +72,12 @@ export interface ClienteSistema {
   razaoSocial?: string;  // Alias para compatibilidade
   nome: string;
   tipo: TipoPessoa;
-  numeroEmpregados: number;
-  dataInclusao: number;
+  numeroEmpregados?: number;
+  dataInclusao?: number | string;
   situacao: ClienteStatus;
-  cnpj: string;
+  cnpj?: string;
   cpfCnpj?: string;
-  email: string;
+  email?: string;
   telefone?: string;
   responsavel?: string;
   contato?: string;
