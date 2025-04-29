@@ -1,11 +1,22 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Company } from '@/types/cadastro';
+import { getClienteIdAtivo } from '@/utils/clientContext';
 
 export const getCompanies = async (): Promise<Company[]> => {
-  const { data, error } = await supabase
+  // Obter o ID do cliente ativo (real ou impersonado)
+  const clienteId = getClienteIdAtivo();
+  
+  let query = supabase
     .from('empresas')
     .select('*');
+  
+  // Se houver um cliente ativo, filtrar empresas por esse cliente
+  if (clienteId) {
+    query = query.eq('perfil_id', clienteId);
+  }
+  
+  const { data, error } = await query;
 
   if (error) throw error;
   
@@ -28,11 +39,19 @@ export const getCompanies = async (): Promise<Company[]> => {
 };
 
 export const getCompanyById = async (companyId: string): Promise<Company | null> => {
-  const { data, error } = await supabase
+  const clienteId = getClienteIdAtivo();
+  
+  let query = supabase
     .from('empresas')
     .select('*')
-    .eq('id', companyId)
-    .maybeSingle();
+    .eq('id', companyId);
+  
+  // Se houver um cliente ativo, verificar se a empresa pertence a ele
+  if (clienteId) {
+    query = query.eq('perfil_id', clienteId);
+  }
+  
+  const { data, error } = await query.maybeSingle();
 
   if (error) throw error;
   
@@ -57,6 +76,12 @@ export const getCompanyById = async (companyId: string): Promise<Company | null>
 };
 
 export const addCompany = async (companyData: Partial<Company>): Promise<Company> => {
+  const clienteId = getClienteIdAtivo();
+  
+  if (!clienteId) {
+    throw new Error("Nenhum cliente do sistema ativo para associar a empresa");
+  }
+  
   const { data, error } = await supabase
     .from('empresas')
     .insert({
@@ -70,7 +95,8 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
       contato: companyData.contact,
       cep: companyData.zipCode,
       estado: companyData.state,
-      cidade: companyData.city
+      cidade: companyData.city,
+      perfil_id: clienteId // Associar a empresa ao cliente do sistema atual
     })
     .select()
     .single();
@@ -96,6 +122,7 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
 };
 
 export const updateCompany = async (companyId: string, companyData: Partial<Company>): Promise<Company> => {
+  const clienteId = getClienteIdAtivo();
   const updateData: any = {};
   
   if (companyData.name) updateData.nome = companyData.name;
@@ -110,12 +137,17 @@ export const updateCompany = async (companyId: string, companyData: Partial<Comp
   if (companyData.state) updateData.estado = companyData.state;
   if (companyData.city) updateData.cidade = companyData.city;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('empresas')
     .update(updateData)
-    .eq('id', companyId)
-    .select()
-    .single();
+    .eq('id', companyId);
+  
+  // Se houver um cliente ativo, garantir que a empresa pertence a ele
+  if (clienteId) {
+    query = query.eq('perfil_id', clienteId);
+  }
+  
+  const { data, error } = await query.select().single();
 
   if (error) throw error;
   
@@ -138,10 +170,19 @@ export const updateCompany = async (companyId: string, companyData: Partial<Comp
 };
 
 export const deleteCompany = async (companyId: string): Promise<void> => {
-  const { error } = await supabase
+  const clienteId = getClienteIdAtivo();
+  
+  let query = supabase
     .from('empresas')
     .delete()
     .eq('id', companyId);
+  
+  // Se houver um cliente ativo, garantir que a empresa pertence a ele
+  if (clienteId) {
+    query = query.eq('perfil_id', clienteId);
+  }
+  
+  const { error } = await query;
 
   if (error) throw error;
 };
