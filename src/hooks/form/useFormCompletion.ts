@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { saveFormResult, getFormResultByEmployeeId } from "@/services/form";
 import { FormResult } from "@/types/form";
@@ -33,7 +34,7 @@ export function useFormCompletion() {
       return null;
     }
 
-    // Validar que todas as perguntas foram respondidas
+    // Validate all questions are answered
     const unansweredQuestions = Object.values(answers).filter(
       answer => answer.answer === null || answer.answer === undefined
     );
@@ -47,7 +48,7 @@ export function useFormCompletion() {
     console.log("Iniciando o processo de salvamento da avaliação...");
 
     try {
-      // Contar respostas sim/não
+      // Count actual yes/no answers
       let totalYes = 0;
       let totalNo = 0;
       
@@ -61,20 +62,19 @@ export function useFormCompletion() {
       
       console.log(`Total de respostas SIM: ${totalYes}, NÃO: ${totalNo}`);
       
-      // Determinar se estamos editando uma avaliação existente ou criando uma nova
+      // Determine if we're editing an existing evaluation or creating a new one
       let formResultToSave = existingFormResult;
       
       if (selectedEvaluation && !isNewEvaluation) {
-        // Estamos editando uma avaliação existente
+        // We're editing an existing evaluation
         console.log(`Editando avaliação existente com ID: ${selectedEvaluation.id}`);
         formResultToSave = selectedEvaluation;
       }
       
-      // Preservar as notas do analista existentes
-      const notesAnalista = selectedEvaluation?.notas_analista || formResult?.notas_analista || existingFormResult?.notas_analista || '';
-      console.log(`Preservando notas do analista: "${notesAnalista}"`);
+      // Get existing analyst notes
+      const notesAnalista = selectedEvaluation?.notas_analista || formResult?.notas_analista || '';
       
-      // Preparar dados do resultado do formulário
+      // Prepare form result data
       const formResultData = {
         id: formResultToSave?.id || '',
         employeeId: selectedEmployeeId,
@@ -84,7 +84,7 @@ export function useFormCompletion() {
         total_sim: totalYes,
         total_nao: totalNo,
         notas_analista: notesAnalista,
-        is_complete: true, // Explicitamente definido como true para formulários completos
+        is_complete: true, // Explicitly set to true for completed forms
         last_updated: new Date().toISOString(),
         created_at: formResultToSave?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -92,13 +92,13 @@ export function useFormCompletion() {
       
       console.log("Salvando os dados do formulário...");
       
-      // Salvar resultado do formulário
+      // Save form result
       await saveFormResult(formResultData);
       sonnerToast.success("Formulário salvo com sucesso!");
       
       console.log("Dados salvos, obtendo resultado atualizado...");
       
-      // Obter resultado atualizado
+      // Get updated result
       const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId, selectedFormId);
       
       if (updatedResult) {
@@ -106,16 +106,16 @@ export function useFormCompletion() {
         setFormResult(updatedResult);
         setShowResults(true);
         setFormComplete(true);
-        setIsNewEvaluation(false); // Redefinir sinalizador de nova avaliação após salvar
+        setIsNewEvaluation(false); // Reset new evaluation flag after saving
         
-        // Recarregar histórico após concluir para obter a lista atualizada
+        // Reload history after completing to get the updated list
         console.log("Recarregando histórico de avaliações do funcionário...");
         await loadEmployeeHistory();
         
         return updatedResult;
       } else {
         console.warn("Não foi possível obter o resultado atualizado do servidor");
-        // Se não conseguirmos obter o resultado atualizado, retornar o que temos
+        // If we can't get the updated result, return what we have
         return formResultData;
       }
     } catch (error: any) {
@@ -132,7 +132,6 @@ export function useFormCompletion() {
     setFormComplete(false);
     setShowResults(false);
     setIsNewEvaluation(false);
-    setFormResult(null);
   };
 
   return {

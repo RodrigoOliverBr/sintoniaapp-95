@@ -251,11 +251,10 @@ export async function saveFormResult(formData: FormResult): Promise<void> {
 
 export async function updateAnalystNotes(evaluationId: string, notes: string): Promise<void> {
   if (!evaluationId) {
-    throw new Error("ID da avaliação é obrigatório");
+    throw new Error("Evaluation ID is required");
   }
 
-  console.log(`Atualizando notas do analista para avaliação ${evaluationId}`);
-  console.log(`Conteúdo das notas: "${notes}"`);
+  console.log(`Updating analyst notes for evaluation ${evaluationId}`);
   
   try {
     const { error } = await supabase
@@ -267,13 +266,13 @@ export async function updateAnalystNotes(evaluationId: string, notes: string): P
       .eq('id', evaluationId);
       
     if (error) {
-      console.error("Erro ao atualizar notas do analista:", error);
+      console.error("Error updating analyst notes:", error);
       throw error;
     }
     
-    console.log("Notas do analista atualizadas com sucesso");
+    console.log("Analyst notes updated successfully");
   } catch (error) {
-    console.error("Falha ao atualizar notas do analista:", error);
+    console.error("Failed to update analyst notes:", error);
     throw error;
   }
 }
@@ -357,56 +356,55 @@ export async function getEmployeeFormHistory(employeeId: string): Promise<FormRe
 
 export async function deleteFormEvaluation(evaluationId: string): Promise<void> {
   if (!evaluationId) {
-    throw new Error("Evaluation ID is required");
+    throw new Error("ID da avaliação é obrigatório");
   }
 
   try {
-    console.log(`Starting deletion of evaluation with ID: ${evaluationId}`);
+    console.log(`Iniciando exclusão da avaliação com ID: ${evaluationId}`);
     
-    // Step 1: Delete related reports
-    console.log("Deleting related reports...");
+    // First step: Delete any related reports
+    console.log("Excluindo relatórios associados...");
     const { error: reportsError } = await supabase
       .from('relatorios')
       .delete()
       .eq('avaliacao_id', evaluationId);
       
     if (reportsError) {
-      console.error("Error deleting reports:", reportsError);
+      console.error("Erro ao excluir relatórios:", reportsError);
+      // Continue with the process, just log the error
     } else {
-      console.log("Related reports deleted successfully (if any)");
+      console.log("Relatórios excluídos com sucesso (se existirem)");
     }
     
-    // Step 2: Delete answers
-    console.log("Deleting answers...");
+    // Second step: Delete responses
+    console.log("Excluindo respostas...");
     const { error: responsesError } = await supabase
       .from('respostas')
       .delete()
       .eq('avaliacao_id', evaluationId);
       
     if (responsesError) {
-      console.error("Error deleting answers:", responsesError);
-      throw new Error(`Error deleting answers: ${responsesError.message}`);
-    } else {
-      console.log("Answers deleted successfully");
+      console.error("Erro ao excluir respostas:", responsesError);
+      throw new Error(`Erro ao excluir respostas: ${responsesError.message}`);
     }
     
-    // Step 3: Delete the evaluation itself
-    console.log("Deleting evaluation with ID:", evaluationId);
+    console.log("Respostas excluídas com sucesso");
     
+    // Final step: Delete the evaluation itself
+    console.log("Excluindo a avaliação...");
     const { error: evaluationError } = await supabase
       .from('avaliacoes')
       .delete()
       .eq('id', evaluationId);
       
     if (evaluationError) {
-      console.error("Error deleting evaluation:", evaluationError);
-      throw new Error(`Error deleting evaluation: ${evaluationError.message}`);
-    } else {
-      console.log(`Evaluation ${evaluationId} deleted successfully`);
+      console.error("Erro ao excluir avaliação:", evaluationError);
+      throw new Error(`Erro ao excluir avaliação: ${evaluationError.message}`);
     }
     
+    console.log(`Avaliação ${evaluationId} excluída com sucesso`);
   } catch (error) {
-    console.error("Failed to delete evaluation:", error);
+    console.error("Falha na exclusão da avaliação:", error);
     throw error;
   }
 }
