@@ -18,7 +18,10 @@ export const getCompanies = async (): Promise<Company[]> => {
   
   const { data, error } = await query;
 
-  if (error) throw error;
+  if (error) {
+    console.error("Erro ao buscar empresas:", error);
+    throw error;
+  }
   
   return (data || []).map(company => ({
     id: company.id,
@@ -79,30 +82,60 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
   const clienteId = getClienteIdAtivo();
   
   if (!clienteId) {
-    throw new Error("Nenhum cliente do sistema ativo para associar a empresa");
+    console.error("Nenhum cliente do sistema ativo para associar a empresa");
+    throw new Error("Você precisa estar autenticado para adicionar uma empresa");
+  }
+
+  // Primeiro, vamos verificar se o perfil existe na tabela de perfis
+  const { data: perfilExists, error: perfilError } = await supabase
+    .from('perfis')
+    .select('id')
+    .eq('id', clienteId)
+    .single();
+
+  if (perfilError) {
+    console.error("Erro ao verificar perfil:", perfilError);
+    if (perfilError.code === 'PGRST116') {
+      throw new Error("Seu perfil não foi encontrado no sistema. Por favor, contate o suporte.");
+    }
+    throw perfilError;
+  }
+
+  if (!perfilExists) {
+    throw new Error("Seu perfil não foi encontrado no sistema. Por favor, contate o suporte.");
   }
   
+  console.log("Adicionando empresa para o perfil:", clienteId);
+  
+  const dbData = {
+    nome: companyData.name,
+    cpf_cnpj: companyData.cpfCnpj,
+    telefone: companyData.telefone,
+    email: companyData.email,
+    endereco: companyData.address,
+    tipo: companyData.type || 'juridica',
+    situacao: companyData.status || 'ativo',
+    contato: companyData.contact,
+    cep: companyData.zipCode,
+    estado: companyData.state,
+    cidade: companyData.city,
+    perfil_id: clienteId // Associar a empresa ao cliente do sistema atual
+  };
+
+  console.log("Dados para inserção:", dbData);
+
   const { data, error } = await supabase
     .from('empresas')
-    .insert({
-      nome: companyData.name,
-      cpf_cnpj: companyData.cpfCnpj,
-      telefone: companyData.telefone,
-      email: companyData.email,
-      endereco: companyData.address,
-      tipo: companyData.type || 'juridica',
-      situacao: companyData.status || 'ativo',
-      contato: companyData.contact,
-      cep: companyData.zipCode,
-      estado: companyData.state,
-      cidade: companyData.city,
-      perfil_id: clienteId // Associar a empresa ao cliente do sistema atual
-    })
+    .insert(dbData)
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Erro detalhado ao cadastrar empresa:", error);
+    throw error;
+  }
   
+  console.log("Empresa cadastrada com sucesso:", data);
   return {
     id: data.id,
     name: data.nome,

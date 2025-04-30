@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addCompany } from "@/services"; // Updated import path
+import { addCompany } from "@/services"; 
 import { useToast } from "@/hooks/use-toast";
 
 interface NewCompanyModalProps {
@@ -44,6 +44,8 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
     setIsSubmitting(true);
     
     try {
+      console.log("Iniciando processo de cadastro da empresa:", name.trim());
+      
       // Simplificando ao máximo - apenas enviando o nome da empresa
       await addCompany({ name: name.trim() });
       
@@ -59,11 +61,11 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       
       // Refresh the companies list if callback provided
       if (onCompanyAdded) onCompanyAdded();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao cadastrar empresa:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível cadastrar a empresa",
+        description: error?.message || "Não foi possível cadastrar a empresa",
         variant: "destructive",
       });
     } finally {
