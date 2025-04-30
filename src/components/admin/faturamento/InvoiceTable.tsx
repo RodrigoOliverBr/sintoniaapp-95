@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Table,
@@ -21,14 +22,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 interface InvoiceTableProps {
   invoices: Fatura[];
+  onEdit?: (invoice: Fatura) => void;
+  onDelete?: (invoice: Fatura) => void;
+  onStatusChange?: (invoice: Fatura, newStatus: string) => void;
+  isLoading?: boolean;
+  selectedInvoices?: Record<string, boolean>;
+  onSelectInvoice?: (id: string, selected: boolean) => void;
+  onSelectAll?: (selected: boolean) => void;
+  allSelected?: boolean;
 }
 
-const InvoiceTable: React.FC<InvoiceTableProps> = ({ invoices }) => {
-  const router = useRouter();
+const InvoiceTable: React.FC<InvoiceTableProps> = ({ 
+  invoices, 
+  onEdit,
+  onDelete,
+  onStatusChange,
+  isLoading,
+  selectedInvoices = {},
+  onSelectInvoice,
+  onSelectAll,
+  allSelected 
+}) => {
+  const navigate = useNavigate();
 
   return (
     <div className="w-full overflow-auto">
@@ -74,14 +93,14 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({ invoices }) => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => router.push(`/admin/faturas/${invoice.id}`)}>
+                      <DropdownMenuItem onClick={() => navigate(`/admin/faturas/${invoice.id}`)}>
                         Visualizar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEdit && onEdit(invoice)}>
                         Editar
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onDelete && onDelete(invoice)}>
                         Excluir
                       </DropdownMenuItem>
                     </DropdownMenuContent>
