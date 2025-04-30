@@ -59,45 +59,50 @@ export const getStatusColor = (status: ClienteStatus): string => {
  * @returns The active client ID or null if none exists
  */
 export const getClienteIdAtivo = (): string | null => {
-  // Check for impersonated client ID in session storage
-  const impersonatedClientId = sessionStorage.getItem("impersonatedClientId");
-  if (impersonatedClientId) {
-    console.log("Usando cliente impersonado:", impersonatedClientId);
-    return impersonatedClientId;
-  }
-  
-  // Check for client ID in localStorage
-  const storedClient = localStorage.getItem("sintonia:currentCliente");
-  if (storedClient) {
+  try {
+    // Check for impersonated client ID in session storage
+    const impersonatedClientId = sessionStorage.getItem("impersonatedClientId");
+    if (impersonatedClientId) {
+      console.log("Usando cliente impersonado:", impersonatedClientId);
+      return impersonatedClientId;
+    }
+    
+    // Check for client ID in localStorage
+    const storedClient = localStorage.getItem("sintonia:currentCliente");
+    if (storedClient) {
+      try {
+        const client = JSON.parse(storedClient);
+        if (client.id) {
+          console.log("Usando ID do cliente do localStorage:", client.id);
+          return client.id;
+        }
+      } catch (error) {
+        console.error("Erro ao analisar cliente armazenado:", error);
+      }
+    }
+    
+    // Se não encontrou, tentar pegar o ID do usuário autenticado
     try {
-      const client = JSON.parse(storedClient);
-      if (client.id) {
-        console.log("Usando ID do cliente do localStorage:", client.id);
-        return client.id;
+      const authDataStr = localStorage.getItem("supabase.auth.token");
+      if (authDataStr) {
+        const authData = JSON.parse(authDataStr);
+        const userId = authData?.currentSession?.user?.id;
+        
+        if (userId) {
+          console.log("Usando ID do usuário autenticado:", userId);
+          return userId;
+        }
       }
     } catch (error) {
-      console.error("Erro ao analisar cliente armazenado:", error);
+      console.error("Erro ao obter ID do usuário autenticado:", error);
     }
-  }
-  
-  // Se não encontrou, tentar pegar o ID do usuário autenticado
-  try {
-    const authDataStr = localStorage.getItem("supabase.auth.token");
-    if (authDataStr) {
-      const authData = JSON.parse(authDataStr);
-      const userId = authData?.currentSession?.user?.id;
-      
-      if (userId) {
-        console.log("Usando ID do usuário autenticado:", userId);
-        return userId;
-      }
-    }
+    
+    console.warn("Nenhum ID de cliente encontrado");
+    return null;
   } catch (error) {
-    console.error("Erro ao obter ID do usuário autenticado:", error);
+    console.error("Erro ao obter cliente ativo:", error);
+    return null;
   }
-  
-  console.warn("Nenhum ID de cliente encontrado");
-  return null;
 };
 
 /**
@@ -105,8 +110,13 @@ export const getClienteIdAtivo = (): string | null => {
  * @returns Boolean indicando se o usuário é admin
  */
 export const isUserAdmin = (): boolean => {
-  const userType = localStorage.getItem("sintonia:userType");
-  return userType === 'admin';
+  try {
+    const userType = localStorage.getItem("sintonia:userType");
+    return userType === 'admin';
+  } catch (error) {
+    console.error("Erro ao verificar tipo de usuário:", error);
+    return false;
+  }
 };
 
 /**
@@ -114,6 +124,11 @@ export const isUserAdmin = (): boolean => {
  * @returns Boolean indicando se o usuário é cliente
  */
 export const isUserClient = (): boolean => {
-  const userType = localStorage.getItem("sintonia:userType");
-  return userType === 'client';
+  try {
+    const userType = localStorage.getItem("sintonia:userType");
+    return userType === 'client';
+  } catch (error) {
+    console.error("Erro ao verificar tipo de usuário:", error);
+    return false;
+  }
 };

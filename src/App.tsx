@@ -26,6 +26,7 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, userType: 'admin' | 'client' | 'all' }) => {
   const currentUserType = localStorage.getItem("sintonia:userType") || "";
   
+  // Enforce light theme
   useEffect(() => {
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark');
@@ -53,12 +54,15 @@ const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, use
 };
 
 const App = () => {
+  // Moved authentication check to this component only
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   useEffect(() => {
+    // Only check localStorage once during initialization
     const userType = localStorage.getItem("sintonia:userType");
     setIsAuthenticated(!!userType);
     
+    // Enforce light theme
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark');
     document.documentElement.style.backgroundColor = "white";
@@ -73,6 +77,7 @@ const App = () => {
         <Toaster />
         <BrowserRouter>
           <Routes>
+            {/* Login route is accessible to everyone */}
             <Route path="/login" element={<LoginPage />} />
             
             {/* Rotas do cliente */}

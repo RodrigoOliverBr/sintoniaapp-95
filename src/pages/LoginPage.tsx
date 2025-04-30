@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,45 +14,8 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  useEffect(() => {
-    // Verificar se o usuário já está logado e redirecionar de acordo com o tipo
-    const checkAuthStatus = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        
-        if (data.session) {
-          // Buscar o perfil do usuário para determinar o tipo
-          const { data: perfilData, error: perfilError } = await supabase
-            .from('perfis')
-            .select('tipo')
-            .eq('id', data.session.user.id)
-            .maybeSingle();
-          
-          if (perfilError) {
-            console.error("Erro ao verificar tipo de usuário:", perfilError);
-            return;
-          }
-          
-          const userType = perfilData?.tipo?.toLowerCase();
-          console.log("Usuário já autenticado. Tipo:", userType);
-          
-          if (userType === 'admin') {
-            navigate("/admin/dashboard");
-          } else if (userType === 'client') {
-            navigate("/");
-          } else {
-            console.warn("Tipo de usuário não reconhecido:", userType);
-            localStorage.removeItem("sintonia:userType"); // Limpa o cache caso exista
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao verificar sessão:", error);
-      }
-    };
-    
-    checkAuthStatus();
-  }, [navigate]);
-
+  // Removed useEffect that was causing issues on component mount
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -101,8 +64,14 @@ const LoginPage: React.FC = () => {
       const userType = perfilData.tipo?.toLowerCase();
       console.log("Tipo de usuário normalizado:", userType);
       
+      if (!userType || (userType !== 'admin' && userType !== 'client')) {
+        console.error("Tipo de usuário inválido:", userType);
+        await supabase.auth.signOut();
+        throw new Error("Tipo de usuário inválido. Por favor, contate o suporte.");
+      }
+      
       // Definir tipo de usuário no local storage
-      localStorage.setItem("sintonia:userType", userType === 'admin' ? 'admin' : 'client');
+      localStorage.setItem("sintonia:userType", userType);
       
       if (userType === 'client') {
         // Se for cliente, verificar status
