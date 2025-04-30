@@ -23,7 +23,7 @@ import { ThemeProvider } from "next-themes";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, userType: 'admin' | 'cliente' | 'all' }) => {
+const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, userType: 'admin' | 'client' | 'all' }) => {
   const currentUserType = localStorage.getItem("sintonia:userType") || "";
   
   useEffect(() => {
@@ -39,8 +39,14 @@ const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, use
     return <Navigate to="/login" replace />;
   }
   
-  if (userType !== 'all' && currentUserType !== userType) {
+  // Verificar se o usuário tem o tipo correto para acessar a rota
+  if (userType === 'admin' && currentUserType !== 'admin') {
     return <Navigate to="/" replace />;
+  }
+  
+  // Redirecionamento para módulo administrativo se usuário admin tentar acessar área de cliente
+  if (userType === 'client' && currentUserType === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
   }
   
   return children;
@@ -69,10 +75,11 @@ const App = () => {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             
+            {/* Rotas do cliente */}
             <Route 
               path="/" 
               element={
-                <ProtectedRoute userType="all">
+                <ProtectedRoute userType="client">
                   <FormularioPage />
                 </ProtectedRoute>
               } 
@@ -80,7 +87,7 @@ const App = () => {
             <Route 
               path="/como-preencher" 
               element={
-                <ProtectedRoute userType="all">
+                <ProtectedRoute userType="client">
                   <ComoPreencher />
                 </ProtectedRoute>
               } 
@@ -88,7 +95,7 @@ const App = () => {
             <Route 
               path="/como-avaliar" 
               element={
-                <ProtectedRoute userType="all">
+                <ProtectedRoute userType="client">
                   <ComoAvaliar />
                 </ProtectedRoute>
               } 
@@ -104,7 +111,7 @@ const App = () => {
             <Route 
               path="/cadastros/empresas" 
               element={
-                <ProtectedRoute userType="all">
+                <ProtectedRoute userType="client">
                   <CompaniesPage />
                 </ProtectedRoute>
               } 
@@ -112,7 +119,7 @@ const App = () => {
             <Route 
               path="/cadastros/funcionarios" 
               element={
-                <ProtectedRoute userType="all">
+                <ProtectedRoute userType="client">
                   <EmployeesPage />
                 </ProtectedRoute>
               } 
@@ -120,12 +127,13 @@ const App = () => {
             <Route 
               path="/relatorios" 
               element={
-                <ProtectedRoute userType="all">
+                <ProtectedRoute userType="client">
                   <RelatoriosPage />
                 </ProtectedRoute>
               } 
             />
             
+            {/* Rotas do admin */}
             <Route 
               path="/admin/dashboard" 
               element={
@@ -203,11 +211,15 @@ const App = () => {
               />
             </Route>
             
+            {/* Fallback route para usuários autenticados */}
             <Route 
               path="/" 
               element={
                 isAuthenticated ? 
-                <FormularioPage /> : 
+                  (localStorage.getItem("sintonia:userType") === 'admin' ? 
+                    <Navigate to="/admin/dashboard" replace /> : 
+                    <FormularioPage />
+                  ) : 
                 <Navigate to="/login" replace />
               } 
             />

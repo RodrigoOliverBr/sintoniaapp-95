@@ -21,13 +21,28 @@ const LoginPage: React.FC = () => {
         const { data } = await supabase.auth.getSession();
         
         if (data.session) {
-          const userType = localStorage.getItem("sintonia:userType");
+          // Buscar o perfil do usuário para determinar o tipo
+          const { data: perfilData, error: perfilError } = await supabase
+            .from('perfis')
+            .select('tipo')
+            .eq('id', data.session.user.id)
+            .maybeSingle();
+          
+          if (perfilError) {
+            console.error("Erro ao verificar tipo de usuário:", perfilError);
+            return;
+          }
+          
+          const userType = perfilData?.tipo?.toLowerCase();
           console.log("Usuário já autenticado. Tipo:", userType);
           
           if (userType === 'admin') {
             navigate("/admin/dashboard");
           } else if (userType === 'client') {
             navigate("/");
+          } else {
+            console.warn("Tipo de usuário não reconhecido:", userType);
+            localStorage.removeItem("sintonia:userType"); // Limpa o cache caso exista
           }
         }
       } catch (error) {
@@ -62,7 +77,7 @@ const LoginPage: React.FC = () => {
       
       console.log("Usuário autenticado com sucesso:", authData.user);
       
-      // Buscar o perfil do usuário
+      // Buscar o perfil do usuário para confirmar seu tipo (admin ou client)
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
@@ -79,15 +94,18 @@ const LoginPage: React.FC = () => {
       
       if (!perfilData) {
         await supabase.auth.signOut();
-        throw new Error("Perfil de usuário não encontrado. Verifique se seu cadastro está completo.");
+        throw new Error("Seu perfil não foi encontrado no sistema. Por favor, contate o suporte.");
       }
       
-      // Normalizar o tipo de usuário para evitar problemas de case
-      const userType = perfilData.tipo?.toLowerCase() === 'client' ? 'client' : 'admin';
+      // Normalizar o tipo de usuário (garantindo case-insensitive)
+      const userType = perfilData.tipo?.toLowerCase();
       console.log("Tipo de usuário normalizado:", userType);
       
-      // Se for cliente, verificar status
+      // Definir tipo de usuário no local storage
+      localStorage.setItem("sintonia:userType", userType === 'admin' ? 'admin' : 'client');
+      
       if (userType === 'client') {
+        // Se for cliente, verificar status
         const { data: clienteData, error: clienteError } = await supabase
           .from('clientes_sistema')
           .select('*')
@@ -114,9 +132,6 @@ const LoginPage: React.FC = () => {
         
         localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
       }
-      
-      // Definir tipo de usuário e redirecionar
-      localStorage.setItem("sintonia:userType", userType);
       
       toast.success(`Login realizado com sucesso como ${userType === 'admin' ? 'Administrador' : 'Cliente'}`);
       

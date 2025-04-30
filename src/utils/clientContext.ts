@@ -99,3 +99,21 @@ export const getClienteIdAtivo = (): string | null => {
   console.warn("Nenhum ID de cliente encontrado");
   return null;
 };
+
+/**
+ * Verifica se o usuário atual é do tipo administrador
+ * @returns Boolean indicando se o usuário é admin
+ */
+export const isUserAdmin = (): boolean => {
+  const userType = localStorage.getItem("sintonia:userType");
+  return userType === 'admin';
+};
+
+/**
+ * Verifica se o usuário atual é do tipo cliente
+ * @returns Boolean indicando se o usuário é cliente
+ */
+export const isUserClient = (): boolean => {
+  const userType = localStorage.getItem("sintonia:userType");
+  return userType === 'client';
+};
