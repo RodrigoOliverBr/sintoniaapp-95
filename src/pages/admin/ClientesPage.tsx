@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
-import { ClienteSistema, ClienteComContrato, ClienteStatus } from "@/types/admin";
+import { ClienteSistema, ClienteComContrato, ClienteStatus, TipoPessoa, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
 import { ClienteForm } from "@/components/admin/ClienteForm";
 import { ClientesTable } from "@/components/admin/clientes/ClientesTable";
@@ -91,16 +92,16 @@ const ClientesPage = () => {
         razao_social: item.razao_social,
         razaoSocial: item.razao_social,
         nome: item.razao_social, // Using razao_social as nome
-        tipo: item.tipo as TipoPessoa,
-        numeroEmpregados: item.numero_empregados || 0,
-        dataInclusao: item.data_inclusao ? new Date(item.data_inclusao).getTime() : Date.now(),
+        tipo: 'juridica' as TipoPessoa, // Default to 'juridica'
+        numeroEmpregados: 0, // Default value
+        dataInclusao: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
         situacao: item.situacao as ClienteStatus,
         cnpj: item.cnpj || '',
         cpfCnpj: item.cnpj || '',
         email: item.email || '',
         telefone: item.telefone || '',
         responsavel: item.responsavel || '',
-        contato: item.contato || '',
+        contato: item.responsavel || '', // Using responsavel as contato
         planoId: item.plano_id || '',
         contratoId: item.contrato_id || '',
       }));

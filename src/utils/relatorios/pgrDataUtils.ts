@@ -15,15 +15,18 @@ export const generatePGRData = (questions: Question[], answers: Record<string, a
   const sections: PGRSection[] = [
     {
       title: "Identificação de Riscos Psicossociais",
-      questions: questions.filter(q => q.categoria === 'risco_psicossocial' || !q.categoria)
+      questions: questions.filter(q => questions.indexOf(q) < Math.floor(questions.length / 3))
     },
     {
       title: "Avaliação de Fatores Organizacionais",
-      questions: questions.filter(q => q.categoria === 'organizacional')
+      questions: questions.filter(q => {
+        const idx = questions.indexOf(q);
+        return idx >= Math.floor(questions.length / 3) && idx < Math.floor(questions.length * 2 / 3);
+      })
     },
     {
       title: "Medidas de Controle e Prevenção",
-      questions: questions.filter(q => q.categoria === 'prevencao')
+      questions: questions.filter(q => questions.indexOf(q) >= Math.floor(questions.length * 2 / 3))
     }
   ];
   

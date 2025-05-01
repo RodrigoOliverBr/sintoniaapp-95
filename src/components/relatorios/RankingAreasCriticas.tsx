@@ -1,17 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getRankingAreasCriticas } from "@/services/relatorios/relatoriosService";
+import { getRankingAreasCriticas, AreaCriticaData } from "@/services/relatorios/relatoriosService";
 import { Company } from '@/types/cadastro';
 
 interface RankingAreasCriticasProps {
   selectedCompanyId?: string;
   companies: Company[];
-}
-
-interface AreaCriticaData {
-  area: string;
-  total: number;
 }
 
 const RankingAreasCriticas: React.FC<RankingAreasCriticasProps> = ({ selectedCompanyId, companies }) => {

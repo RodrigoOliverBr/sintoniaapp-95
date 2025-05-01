@@ -14,6 +14,9 @@ interface Perfil {
   nome: string;
   email: string;
   telefone?: string;
+  tipo: string;
+  created_at: string;
+  updated_at: string;
   // Adicione outros campos conforme necessário
 }
 
@@ -66,7 +69,7 @@ const UserAccountPage: React.FC = () => {
       }
 
       if (data) {
-        setPerfil(data);
+        setPerfil(data as Perfil);
         setNome(data.nome);
         setTelefone(data.telefone || '');
       }

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -22,8 +21,7 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ companyId }) => {
   // Using placeholders for these objects until we fetch real data
   const mockCompany: Company = { 
     id: companyId, 
-    name: 'Empresa de Exemplo', 
-    cnpj: '12.345.678/0001-99',
+    name: 'Empresa de Exemplo',
     address: 'Endereço de Exemplo' 
   };
   
@@ -31,7 +29,6 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ companyId }) => {
     id: '1', 
     name: 'Funcionário de Exemplo',
     department_id: '1',
-    job_role_id: '1',
     email: 'exemplo@empresa.com'
   };
   
@@ -39,7 +36,9 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ companyId }) => {
     id: '1', 
     titulo: 'Formulário de Exemplo',
     descricao: 'Descrição do formulário',
-    ativo: true
+    ativo: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   };
 
   const mockQuestions: Question[] = [];

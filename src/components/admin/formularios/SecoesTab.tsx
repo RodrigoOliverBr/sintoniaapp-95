@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
@@ -190,9 +189,6 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
             .insert({
               texto: "Pergunta Exemplo",
               secao_id: newSection.id,
-              secao: formData.titulo, // For backwards compatibility
-              secao_descricao: formData.descricao || null, // For backwards compatibility
-              ordem: ordem, // For backwards compatibility
               risco_id: defaultRiskId,
               formulario_id: formularioId
             });

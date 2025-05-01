@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 10,
   },
-  table: {
+  tableDisplay: {
     display: 'table',
     width: 'auto',
     borderStyle: 'solid',
