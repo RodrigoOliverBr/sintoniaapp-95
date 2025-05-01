@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,45 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  // Removed useEffect that was causing issues on component mount
+  // Verificar se já existe uma sessão ativa
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        console.log("Sessão existente encontrada:", session.user.id);
+        // Verificar o tipo de usuário para redirecionar
+        const { data: perfilData } = await supabase
+          .from('perfis')
+          .select('tipo')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        
+        if (perfilData) {
+          localStorage.setItem("sintonia:userType", perfilData.tipo.toLowerCase());
+          
+          if (perfilData.tipo.toLowerCase() === 'admin') {
+            navigate('/admin/dashboard');
+          } else {
+            // Buscar dados do cliente
+            const { data: clienteData } = await supabase
+              .from('clientes_sistema')
+              .select('*')
+              .eq('email', session.user.email)
+              .maybeSingle();
+              
+            if (clienteData) {
+              localStorage.setItem("sintonia:currentCliente", JSON.stringify(clienteData));
+            }
+            
+            navigate('/');
+          }
+        }
+      }
+    };
+    
+    checkExistingSession();
+  }, [navigate]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +77,7 @@ const LoginPage: React.FC = () => {
       }
       
       console.log("Usuário autenticado com sucesso:", authData.user);
+      console.log("Sessão completa:", authData.session);
       
       // Buscar o perfil do usuário para confirmar seu tipo (admin ou client)
       const { data: perfilData, error: perfilError } = await supabase

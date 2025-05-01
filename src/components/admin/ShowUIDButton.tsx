@@ -16,7 +16,39 @@ const ShowUIDButton: React.FC = () => {
       }
       
       console.log('Meu UID:', data.user?.id);
-      alert(`Seu UID: ${data.user?.id || 'Usuário não autenticado'}`);
+      
+      // Verificar se há sessão ativa
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Erro ao obter sessão:", sessionError);
+        alert(`Erro ao obter sessão: ${sessionError.message}`);
+        return;
+      }
+      
+      console.log('Dados da sessão:', sessionData.session);
+      
+      // Verificar perfil do usuário
+      const { data: perfilData, error: perfilError } = await supabase
+        .from('perfis')
+        .select('tipo')
+        .eq('id', data.user?.id)
+        .maybeSingle();
+      
+      if (perfilError) {
+        console.error("Erro ao obter perfil:", perfilError);
+      } else {
+        console.log('Perfil:', perfilData);
+      }
+      
+      const message = `
+        Seu UID: ${data.user?.id || 'Usuário não autenticado'}
+        Email: ${data.user?.email || 'N/A'}
+        Tipo: ${perfilData?.tipo || 'N/A'}
+        Sessão ativa: ${sessionData.session ? 'Sim' : 'Não'}
+      `;
+      
+      alert(message);
     } catch (err) {
       console.error("Erro inesperado:", err);
       alert("Erro ao obter UID do usuário");

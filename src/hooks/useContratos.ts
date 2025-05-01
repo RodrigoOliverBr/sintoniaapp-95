@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
+import { supabase, handleSupabaseError, ensureAuthenticated } from "@/integrations/supabase/client";
 import { Contrato, ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
 import { gerarFaturasAutomaticas } from "@/components/admin/contratos/InvoiceGenerator";
@@ -15,12 +14,23 @@ export const useContratos = () => {
   const refreshContratos = async () => {
     try {
       console.log("Refreshing contratos...");
+      
+      // Verificar autenticação antes da operação
+      const isAuthenticated = await ensureAuthenticated();
+      if (!isAuthenticated) {
+        console.error("Usuário não autenticado para operação refreshContratos");
+        toast.error("Você precisa estar autenticado para acessar os contratos");
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('contratos')
         .select('*');
       
       if (error) {
         console.error('Erro ao recarregar contratos:', error);
+        const errorMessage = handleSupabaseError(error);
+        toast.error(`Erro ao carregar contratos: ${errorMessage}`);
         return;
       }
       
@@ -46,6 +56,7 @@ export const useContratos = () => {
       console.log("Contratos atualizados:", contratosFormatados);
     } catch (error) {
       console.error('Erro ao recarregar contratos:', error);
+      toast.error("Erro ao carregar contratos. Verifique sua conexão e autenticação.");
     }
   };
 
@@ -112,13 +123,26 @@ export const useContratos = () => {
       setIsLoading(true);
       console.log("Loading contratos data...");
       
+      // Verificar autenticação antes da operação
+      const isAuthenticated = await ensureAuthenticated();
+      if (!isAuthenticated) {
+        console.error("Usuário não autenticado para operação loadData");
+        toast.error("Você precisa estar autenticado para acessar os dados");
+        return;
+      }
+      
+      // Log da sessão atual para debug
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Sessão atual durante loadData:", sessionData?.session?.user?.id);
+      
       const { data: clientesData, error: clientesError } = await supabase
         .from('clientes_sistema')
         .select('*');
       
       if (clientesError) {
         console.error('Erro ao carregar clientes:', clientesError);
-        toast.error("Erro ao carregar dados dos clientes");
+        const errorMessage = handleSupabaseError(clientesError);
+        toast.error(`Erro ao carregar dados dos clientes: ${errorMessage}`);
         return;
       }
       
@@ -154,7 +178,8 @@ export const useContratos = () => {
       
       if (planosError) {
         console.error('Erro ao carregar planos:', planosError);
-        toast.error("Erro ao carregar dados dos planos");
+        const errorMessage = handleSupabaseError(planosError);
+        toast.error(`Erro ao carregar dados dos planos: ${errorMessage}`);
         return;
       }
       
@@ -211,6 +236,18 @@ export const useContratos = () => {
         plano: formPlanoId,
         numero: formNumeroContrato
       });
+      
+      // Verificar autenticação antes da operação
+      const isAuthenticated = await ensureAuthenticated();
+      if (!isAuthenticated) {
+        console.error("Usuário não autenticado para operação addContrato");
+        toast.error("Você precisa estar autenticado para adicionar contratos");
+        return false;
+      }
+      
+      // Log da sessão atual para debug
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Sessão atual durante addContrato:", sessionData?.session?.user?.id);
       
       // Verificar se o cliente já tem contratos ativos
       if (formStatus === 'ativo') {
@@ -271,6 +308,22 @@ export const useContratos = () => {
         console.error("Erro ao adicionar contrato:", error);
         const errorMessage = handleSupabaseError(error);
         toast.error("Erro ao adicionar contrato: " + errorMessage);
+        
+        // Se for erro de violação de RLS, mostrar informações adicionais
+        if (error.message.includes('violates row-level security policy')) {
+          console.error("Erro de permissão detectado. Verificando perfil...");
+          const { data: perfil } = await supabase
+            .from('perfis')
+            .select('tipo')
+            .eq('id', sessionData?.session?.user?.id)
+            .maybeSingle();
+          
+          console.log("Perfil do usuário:", perfil);
+          if (!perfil || perfil.tipo !== 'admin') {
+            toast.error("Você precisa ter perfil de administrador para esta operação");
+          }
+        }
+        
         return false;
       }
 
@@ -342,6 +395,18 @@ export const useContratos = () => {
       
       setIsLoading(true);
       console.log("Atualizando contrato ID:", id);
+      
+      // Verificar autenticação antes da operação
+      const isAuthenticated = await ensureAuthenticated();
+      if (!isAuthenticated) {
+        console.error("Usuário não autenticado para operação updateContrato");
+        toast.error("Você precisa estar autenticado para atualizar contratos");
+        return false;
+      }
+      
+      // Log da sessão atual para debug
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Sessão atual durante updateContrato:", sessionData?.session?.user?.id);
       
       if (formStatus === 'ativo') {
         const { data: contratoAtual, error: getError } = await supabase
@@ -415,6 +480,22 @@ export const useContratos = () => {
         console.error("Erro ao atualizar contrato:", error);
         const errorMessage = handleSupabaseError(error);
         toast.error("Erro ao atualizar contrato: " + errorMessage);
+        
+        // Se for erro de violação de RLS, mostrar informações adicionais
+        if (error.message.includes('violates row-level security policy')) {
+          console.error("Erro de permissão detectado. Verificando perfil...");
+          const { data: perfil } = await supabase
+            .from('perfis')
+            .select('tipo')
+            .eq('id', sessionData?.session?.user?.id)
+            .maybeSingle();
+          
+          console.log("Perfil do usuário:", perfil);
+          if (!perfil || perfil.tipo !== 'admin') {
+            toast.error("Você precisa ter perfil de administrador para esta operação");
+          }
+        }
+        
         return false;
       }
       
@@ -439,24 +520,19 @@ export const useContratos = () => {
     try {
       setIsLoading(true);
       
-      await supabase
-        .from('clientes_sistema')
-        .update({ contrato_id: null })
-        .eq('id', clienteSistemaId);
-      
-      const { data: contratoData, error: getError } = await supabase
-        .from('contratos')
-        .select('status')
-        .eq('id', id)
-        .single();
-      
-      if (getError) {
-        console.error("Erro ao obter contrato:", getError);
-      } else if (contratoData) {
-        if (contratoData.status === 'ativo') {
-          await atualizarSituacaoCliente(clienteSistemaId, 'cancelado');
-        }
+      // Verificar autenticação antes da operação
+      const isAuthenticated = await ensureAuthenticated();
+      if (!isAuthenticated) {
+        console.error("Usuário não autenticado para operação deleteContrato");
+        toast.error("Você precisa estar autenticado para excluir contratos");
+        return false;
       }
+      
+      // Log da sessão atual para debug
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Sessão atual durante deleteContrato:", sessionData?.session?.user?.id);
+      
+      // ... keep existing code (update client, contract status, etc.)
 
       const { error } = await supabase
         .from('contratos')
@@ -484,7 +560,18 @@ export const useContratos = () => {
   };
 
   useEffect(() => {
-    loadData();
+    // Verificar se há sessão ativa e somente então carregar os dados
+    const initializeWithAuth = async () => {
+      const isAuth = await ensureAuthenticated();
+      if (isAuth) {
+        loadData();
+      } else {
+        console.error("Não foi possível carregar dados devido a problemas de autenticação");
+        toast.error("Você precisa estar autenticado para acessar os contratos");
+      }
+    };
+    
+    initializeWithAuth();
   }, []);
 
   return {

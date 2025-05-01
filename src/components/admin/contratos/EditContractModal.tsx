@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import ContractForm from "./ContractForm";
 import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
+import { supabase, ensureAuthenticated } from "@/integrations/supabase/client";
 
 interface EditContractModalProps {
   formClienteId: string;
@@ -97,7 +98,7 @@ const EditContractModal: React.FC<EditContractModalProps> = ({
     return true;
   };
   
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log("Tentando salvar edição de contrato com dados:", {
       cliente: formClienteId,
       plano: formPlanoId,
@@ -106,6 +107,18 @@ const EditContractModal: React.FC<EditContractModalProps> = ({
       valor: formValorMensal,
       status: formStatus
     });
+    
+    // Verificar autenticação antes de salvar
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error("Usuário não autenticado para salvar contrato");
+      toast.error("Você precisa estar autenticado para salvar o contrato");
+      return;
+    }
+    
+    // Log da sessão atual para debug
+    const { data: sessionData } = await supabase.auth.getSession();
+    console.log("Sessão atual durante handleSave (EditContractModal):", sessionData?.session?.user?.id);
     
     if (!validateForm()) return;
     onSave();
