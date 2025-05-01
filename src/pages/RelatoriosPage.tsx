@@ -1,118 +1,135 @@
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import MapaRiscoPsicossocial from "@/components/relatorios/MapaRiscoPsicossocial";
-import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import FilterSection from "@/components/relatorios/FilterSection";
-import { getCompanies } from "@/services";
-import { Company } from "@/types/cadastro";
-import { Download, FileText, RefreshCcw } from "lucide-react";
+import DiagnosticoIndividual from "@/components/relatorios/DiagnosticoIndividual";
+import MapaRiscoPsicossocial from "@/components/relatorios/MapaRiscoPsicossocial";
+import RankingAreasCriticas from "@/components/relatorios/RankingAreasCriticas";
+import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
+import { useQuery } from "@tanstack/react-query";
+import { getCompanies, getEmployees } from "@/services/relatorios/relatoriosService";
+import { Question } from "@/types/form";
+import { Company, Employee } from "@/types/cadastro";
 
-export default function RelatoriosPage() {
+const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [reportGenerated, setReportGenerated] = useState(false);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        const companiesData = await getCompanies();
-        setCompanies(companiesData);
-      } catch (error) {
-        console.error("Error fetching companies:", error);
-      }
-    };
-    
-    fetchCompanies();
-  }, []);
-  
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("diagnostico");
+
+  // Sample questions and answers for demonstration
+  const sampleQuestions: Question[] = [
+    {
+      id: "q1",
+      texto: "Você se sente sobrecarregado no trabalho?",
+      tipo: "boolean",
+      required: true,
+      secao_id: "s1"
+    },
+    {
+      id: "q2",
+      texto: "Você tem autonomia para tomar decisões no seu trabalho?",
+      tipo: "boolean",
+      required: true,
+      secao_id: "s1"
+    },
+    {
+      id: "q3",
+      texto: "Seu ambiente de trabalho é adequado para suas necessidades?",
+      tipo: "boolean",
+      required: true,
+      secao_id: "s2"
+    }
+  ];
+
+  const sampleAnswers = {
+    q1: true,
+    q2: false,
+    q3: true
+  };
+
+  const { data: companies = [] } = useQuery({
+    queryKey: ["companies"],
+    queryFn: getCompanies
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees", selectedCompanyId],
+    queryFn: () => selectedCompanyId ? getEmployees(selectedCompanyId) : Promise.resolve([]),
+    enabled: !!selectedCompanyId
+  });
+
   const handleCompanyChange = (companyId: string) => {
     setSelectedCompanyId(companyId);
-    setReportGenerated(false);
+    setSelectedEmployeeId("");
   };
 
-  const generateReport = () => {
-    if (!selectedCompanyId) return;
-    
-    setIsGeneratingReport(true);
-    
-    setTimeout(() => {
-      setIsGeneratingReport(false);
-      setReportGenerated(true);
-    }, 1000);
+  const handleEmployeeChange = (employeeId: string) => {
+    setSelectedEmployeeId(employeeId);
   };
 
-  const handleExportPDF = () => {
-    console.log("Exportando relatório para PDF");
+  const handlePeriodChange = (period: string) => {
+    setSelectedPeriod(period);
   };
+
+  const selectedCompany = companies.find(c => c.id === selectedCompanyId);
+  const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
 
   return (
-    <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Relatórios Psicossociais</h1>
-        
-        <FilterSection 
+    <Layout title="Relatórios">
+      <div className="space-y-4 px-4 py-6">
+        <FilterSection
           companies={companies}
+          employees={employees}
           selectedCompanyId={selectedCompanyId}
+          selectedEmployeeId={selectedEmployeeId}
+          selectedPeriod={selectedPeriod}
           onCompanyChange={handleCompanyChange}
-          onGenerateReport={generateReport}
-          isGenerating={isGeneratingReport}
+          onEmployeeChange={handleEmployeeChange}
+          onPeriodChange={handlePeriodChange}
         />
-        
-        {reportGenerated && (
-          <div className="mt-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Resultados da Análise</h2>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setReportGenerated(false)}>
-                  <RefreshCcw className="mr-2 h-4 w-4" />
-                  Redefinir
-                </Button>
-                <Button onClick={handleExportPDF}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar PDF
-                </Button>
-              </div>
-            </div>
 
-            <Tabs defaultValue="mapa-risco" className="w-full">
-              <TabsList className="grid grid-cols-2 mb-6">
-                <TabsTrigger value="mapa-risco">Mapa de Risco</TabsTrigger>
-                <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="mapa-risco">
-                <MapaRiscoPsicossocial 
-                  companyId={selectedCompanyId}
-                  departmentId=""
-                  dateRange={{}}
-                />
-              </TabsContent>
-              
-              <TabsContent value="pgr">
-                <RelatorioPGR companyId={selectedCompanyId} />
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
-        
-        {!reportGenerated && selectedCompanyId && (
-          <div className="mt-10 text-center py-16 border-2 border-dashed border-gray-200 rounded-lg">
-            <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-600 mb-2">Nenhum relatório gerado</h3>
-            <p className="text-gray-500 mb-4">Configure a empresa acima e clique em "Gerar Relatório"</p>
-            <Button 
-              onClick={generateReport} 
-              disabled={isGeneratingReport || !selectedCompanyId}
-            >
-              Gerar Relatório
-            </Button>
-          </div>
-        )}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-4 mb-8">
+            <TabsTrigger value="diagnostico">Diagnóstico Individual</TabsTrigger>
+            <TabsTrigger value="mapa">Mapa de Risco</TabsTrigger>
+            <TabsTrigger value="areas">Ranking Áreas Críticas</TabsTrigger>
+            <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="diagnostico" className="mt-0">
+            <DiagnosticoIndividual />
+          </TabsContent>
+
+          <TabsContent value="mapa" className="mt-0">
+            <MapaRiscoPsicossocial />
+          </TabsContent>
+
+          <TabsContent value="areas" className="mt-0">
+            <RankingAreasCriticas />
+          </TabsContent>
+
+          <TabsContent value="pgr" className="mt-0">
+            {selectedCompany && selectedEmployee ? (
+              <RelatorioPGR 
+                company={selectedCompany as Company}
+                employee={selectedEmployee as Employee}
+                questions={sampleQuestions}
+                answers={sampleAnswers}
+              />
+            ) : (
+              <div className="text-center p-8 bg-gray-50 rounded-md">
+                <p className="text-gray-500">
+                  Selecione uma empresa e um funcionário para visualizar o relatório PGR
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </Layout>
   );
-}
+};
+
+export default RelatoriosPage;

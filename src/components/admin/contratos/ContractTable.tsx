@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
-import { Contrato, ClienteSistema, Plano } from "@/types/admin";
+import { Contrato, ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -40,6 +40,17 @@ const ContractTable: React.FC<ContractTableProps> = ({
     return format(new Date(data), "dd/MM/yyyy", { locale: ptBR });
   };
 
+  const getStatusVariant = (status: StatusContrato) => {
+    switch (status) {
+      case "ativo":
+        return "default";
+      case "em-analise":
+        return "secondary";
+      default:
+        return "destructive";
+    }
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -71,11 +82,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contrato.valorMensal)}
               </TableCell>
               <TableCell>
-                <Badge variant={
-                    contrato.status === "ativo" ? "default" : 
-                    contrato.status === "em-analise" ? "secondary" : 
-                    "destructive"
-                  }>
+                <Badge variant={getStatusVariant(contrato.status)}>
                   {contrato.status}
                 </Badge>
               </TableCell>

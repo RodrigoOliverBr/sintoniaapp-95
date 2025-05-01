@@ -18,6 +18,8 @@ export function usePlanos() {
         id: item.id,
         nome: item.nome,
         descricao: item.descricao || "",
+        valor: Number(item.valor_mensal || 0),
+        numeroUsuarios: 0,
         valorMensal: Number(item.valor_mensal),
         valorImplantacao: Number(item.valor_implantacao),
         limiteEmpresas: item.limite_empresas || 0,
@@ -64,6 +66,8 @@ export function usePlanos() {
           id: data[0].id,
           nome: data[0].nome,
           descricao: data[0].descricao || "",
+          valor: Number(data[0].valor_mensal || 0),
+          numeroUsuarios: 0,
           valorMensal: Number(data[0].valor_mensal),
           valorImplantacao: Number(data[0].valor_implantacao),
           limiteEmpresas: data[0].limite_empresas || 0,
@@ -112,7 +116,9 @@ export function usePlanos() {
 
       const updatedPlanoObj: Plano = {
         id,
-        ...planoDados
+        ...planoDados,
+        valor: planoDados.valorMensal, // Make sure to set valor field
+        numeroUsuarios: 0 // Default value
       };
       
       setPlanos(prevPlanos => 

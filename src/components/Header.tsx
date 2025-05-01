@@ -21,6 +21,22 @@ interface HeaderProps {
   title?: string;
 }
 
+// Define the type for client data from supabase
+interface ClienteSupabase {
+  id: string;
+  razao_social: string;
+  contrato_id?: string;
+  situacao: string;
+  responsavel?: string;
+  telefone?: string;
+  email?: string;
+  cnpj: string;
+  plano_id?: string;
+  created_at: string;
+  updated_at: string;
+  tipo?: string;
+}
+
 const Header: React.FC<HeaderProps> = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -62,23 +78,24 @@ const Header: React.FC<HeaderProps> = () => {
         if (error) throw error;
         
         if (data) {
+          const clienteData = data as ClienteSupabase;
           const transformedData: ClienteSistema = {
-            id: data.id,
-            razao_social: data.razao_social,
-            nome: data.razao_social,
-            tipo: data.tipo as string,
+            id: clienteData.id,
+            razao_social: clienteData.razao_social,
+            nome: clienteData.razao_social,
+            tipo: clienteData.tipo || "juridica",
             numeroEmpregados: 0,
-            dataInclusao: new Date(data.created_at).getTime(),
-            situacao: (data.situacao || "liberado") as ClienteStatus,
-            cnpj: data.cnpj,
-            cpfCnpj: data.cnpj,
-            email: data.email || "",
-            telefone: data.telefone || "",
-            responsavel: data.responsavel || "",
-            contato: data.responsavel,
-            planoId: data.plano_id || undefined,
-            contratoId: data.contrato_id || undefined,
-            clienteId: data.id,
+            dataInclusao: new Date(clienteData.created_at).getTime(),
+            situacao: (clienteData.situacao || "liberado") as ClienteStatus,
+            cnpj: clienteData.cnpj,
+            cpfCnpj: clienteData.cnpj,
+            email: clienteData.email || "",
+            telefone: clienteData.telefone || "",
+            responsavel: clienteData.responsavel || "",
+            contato: clienteData.responsavel || "",
+            planoId: clienteData.plano_id || "",
+            contratoId: clienteData.contrato_id || "",
+            clienteId: clienteData.id,
           };
           
           setCurrentClient(transformedData);

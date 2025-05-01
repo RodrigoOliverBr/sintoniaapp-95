@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Contrato, ClienteSistema, Plano } from "@/types/admin";
+import { Contrato, ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
 import { gerarFaturasAutomaticas } from "@/components/admin/contratos/InvoiceGenerator";
 
@@ -134,9 +135,10 @@ export const useContratos = () => {
         email: cliente.email || '',
         telefone: cliente.telefone || '',
         responsavel: cliente.responsavel || '',
-        contato: cliente.responsavel,
-        planoId: cliente.plano_id,
-        contratoId: cliente.contrato_id,
+        contato: cliente.responsavel || '',
+        planoId: cliente.plano_id || '',
+        contratoId: cliente.contrato_id || '',
+        clienteId: cliente.id,
       }));
       
       setClientes(clientesFormatados);
@@ -152,10 +154,12 @@ export const useContratos = () => {
         return;
       }
       
-      const planosFormatados = planosData.map(plano => ({
+      const planosFormatados: Plano[] = planosData.map(plano => ({
         id: plano.id,
         nome: plano.nome,
         descricao: plano.descricao || '',
+        valor: Number(plano.valor_mensal || 0), // Add valor from valor_mensal
+        numeroUsuarios: 0, // Default value
         valorMensal: Number(plano.valor_mensal),
         valorImplantacao: Number(plano.valor_implantacao),
         limiteEmpresas: plano.limite_empresas || 0,

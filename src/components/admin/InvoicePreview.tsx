@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Document,
@@ -153,18 +154,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice }) => {
 
             <View style={styles.statusContainer}>
               <Text style={styles.statusLabel}>Status:</Text>
-              {invoice.status === 'pendente' && (
-                <Badge variant="outline">Pendente</Badge>
-              )}
-              {invoice.status === 'pago' && (
-                <Badge variant="default">Pago</Badge>
-              )}
-              {invoice.status === 'atrasado' && (
-                <Badge variant="destructive">Atrasado</Badge>
-              )}
-              {invoice.status === 'programada' && (
-                <Badge variant="secondary" className="bg-yellow-500 hover:bg-yellow-600">Programada</Badge>
-              )}
+              {/* Badge component can't be used inside PDF, this is just for the UI preview */}
             </View>
 
             <Text style={styles.label}>Número da Fatura:</Text>

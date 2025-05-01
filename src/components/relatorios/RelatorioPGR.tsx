@@ -5,7 +5,7 @@ import { Company, Employee } from '@/types/cadastro';
 import { generatePGRData } from '@/utils/relatorios/pgrDataUtils';
 import { Question } from '@/types/form';
 
-interface RelatorioPGRProps {
+export interface RelatorioPGRProps {
   company: Company;
   employee: Employee;
   questions: Question[];

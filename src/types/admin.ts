@@ -3,6 +3,7 @@
 export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
 export type BatchSelection = Record<string, boolean>;
+export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
 
 export interface ClienteSistema {
   id: string;
@@ -62,7 +63,7 @@ export interface Contrato {
   status: StatusContrato;
   taxaImplantacao: number;
   observacoes: string;
-  cicloFaturamento?: string;
+  cicloFaturamento?: CicloFaturamento;
   proximaRenovacao?: number;
   ciclosGerados?: number;
 }
@@ -86,7 +87,7 @@ export interface Fatura {
 
 // Add these type definitions for the ClientesPage.tsx
 export type TipoPessoa = 'fisica' | 'juridica';
-export type StatusContrato = 'ativo' | 'inativo' | 'cancelado' | 'pendente' | 'vencido' | 'vencimento-proximo' | 'sem-contrato';
+export type StatusContrato = 'ativo' | 'inativo' | 'cancelado' | 'pendente' | 'vencido' | 'vencimento-proximo' | 'sem-contrato' | 'em-analise';
 
 // Fix for InvoicePreview display type
 export type Display = "flex" | "block" | "inline" | "inline-block" | "grid" | "inline-flex" | 

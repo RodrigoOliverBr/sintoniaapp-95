@@ -1,191 +1,180 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react"; // Using Loader2 from lucide-react as alternative
+import React, { useEffect, useState } from "react";
+import Layout from "@/components/Layout";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import PasswordChangeForm from "@/components/auth/PasswordChangeForm";
+import { toast } from "sonner";
 
-interface Perfil {
+interface PerfilUsuario {
   id: string;
-  nome: string;
-  email: string;
-  telefone?: string;
+  nome?: string;
+  email?: string;
   tipo: string;
+  telefone?: string;
   created_at: string;
   updated_at: string;
-  // Adicione outros campos conforme necessário
 }
 
 const UserAccountPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [perfil, setPerfil] = useState<Perfil | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [nome, setNome] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<PerfilUsuario | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
 
   useEffect(() => {
-    const checkAuth = async () => {
-      setIsLoading(true);
+    const fetchUserData = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        setIsLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
         
-        if (!session) {
-          navigate('/login');
+        if (!user) {
+          console.error("User not found");
           return;
         }
         
-        setUser(session.user);
-        await fetchPerfil(session.user.email);
+        const { data, error } = await supabase
+          .from("perfis")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching user profile:", error);
+          return;
+        }
+        
+        setUserProfile(data as PerfilUsuario);
+        setName(data.nome || "");
+        setEmail(data.email || user.email || "");
+        setPhone(data.telefone || "");
       } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
-        navigate('/login');
+        console.error("Error fetching user data:", error);
       } finally {
         setIsLoading(false);
       }
     };
     
-    checkAuth();
-  }, [navigate]);
+    fetchUserData();
+  }, []);
 
-  const fetchPerfil = async (email: string) => {
-    setLoading(true);
+  const handleUpdateProfile = async () => {
     try {
-      const { data, error } = await supabase
-        .from('perfis')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Erro ao buscar perfil:', error);
-        toast.error('Erro ao carregar informações do perfil.');
-      }
-
-      if (data) {
-        setPerfil(data as Perfil);
-        setNome(data.nome);
-        setTelefone(data.telefone || '');
-      }
-    } catch (error) {
-      console.error('Erro ao buscar perfil:', error);
-      toast.error('Erro ao carregar informações do perfil.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEditarClick = () => {
-    setIsEditing(true);
-  };
-
-  const handleSalvarClick = async () => {
-    setLoading(true);
-    try {
+      setIsLoading(true);
+      
+      if (!userProfile) return;
+      
       const { error } = await supabase
-        .from('perfis')
-        .update({ nome, telefone })
-        .eq('id', perfil?.id);
-
-      if (error) {
-        console.error('Erro ao atualizar perfil:', error);
-        toast.error('Erro ao atualizar informações do perfil.');
-        return;
-      }
-
-      // Atualiza o estado local com os novos dados
-      setPerfil({
-        ...perfil!,
-        nome,
-        telefone
+        .from("perfis")
+        .update({
+          nome: name,
+          email: email,
+          telefone: phone
+        })
+        .eq("id", userProfile.id);
+        
+      if (error) throw error;
+      
+      toast.success("Perfil atualizado com sucesso!");
+      
+      // Update local state
+      setUserProfile({
+        ...userProfile,
+        nome: name,
+        email: email,
+        telefone: phone
       });
-      setIsEditing(false);
-      toast.success('Perfil atualizado com sucesso!');
     } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      toast.error('Erro ao atualizar informações do perfil.');
+      console.error("Error updating profile:", error);
+      toast.error("Erro ao atualizar perfil");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
-
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">Carregando...</div>;
-  }
-
-  if (!user) {
-    return <div className="flex justify-center items-center h-screen">Redirecionando para login...</div>;
-  }
 
   return (
-    <div className="container mx-auto py-10">
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>Minha Conta</CardTitle>
-          <CardDescription>Gerencie suas informações de perfil.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loading ? (
-            <div className="flex justify-center items-center">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando...
-            </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" value={user.email} readOnly />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome</Label>
-                {isEditing ? (
+    <Layout title="Minha Conta">
+      <div className="container mx-auto py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="profile">Meu Perfil</TabsTrigger>
+            <TabsTrigger value="security">Segurança</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="profile" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Informações do Perfil</CardTitle>
+                <CardDescription>
+                  Atualize suas informações pessoais aqui.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome</Label>
                   <Input
-                    id="nome"
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Seu nome completo"
                   />
-                ) : (
-                  <Input id="nome" value={perfil?.nome || ''} readOnly />
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
-                {isEditing ? (
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
                   <Input
-                    id="telefone"
-                    value={telefone}
-                    onChange={(e) => setTelefone(e.target.value)}
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu.email@exemplo.com"
                   />
-                ) : (
-                  <Input id="telefone" value={perfil?.telefone || 'Não informado'} readOnly />
-                )}
-              </div>
-              <div className="flex justify-end">
-                {isEditing ? (
-                  <>
-                    <Button variant="outline" onClick={() => setIsEditing(false)} disabled={loading} className="mr-2">
-                      Cancelar
-                    </Button>
-                    <Button onClick={handleSalvarClick} disabled={loading}>
-                      Salvar
-                    </Button>
-                  </>
-                ) : (
-                  <Button onClick={handleEditarClick} disabled={loading}>
-                    Editar Perfil
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tipo de Usuário</Label>
+                  <div className="p-2 border rounded-md bg-gray-50">
+                    {userProfile?.tipo === "admin" ? "Administrador" : "Cliente"}
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button onClick={handleUpdateProfile} disabled={isLoading}>
+                  {isLoading ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="security" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Segurança</CardTitle>
+                <CardDescription>
+                  Gerencie suas credenciais de acesso.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <PasswordChangeForm />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </Layout>
   );
 };
 
