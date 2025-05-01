@@ -8,7 +8,9 @@ import MapaRiscoPsicossocial from "@/components/relatorios/MapaRiscoPsicossocial
 import RankingAreasCriticas from "@/components/relatorios/RankingAreasCriticas";
 import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import { useQuery } from "@tanstack/react-query";
-import { getCompanies, getEmployees } from "@/services/relatorios/relatoriosService";
+import { getRankingAreasCriticas } from "@/services/relatorios/relatoriosService";
+import { getCompanies } from "@/services/company/companyService";
+import { getEmployeesByCompanyId } from "@/services/employee/employeeService";
 import { Question } from "@/types/form";
 import { Company, Employee } from "@/types/cadastro";
 
@@ -17,27 +19,25 @@ const RelatoriosPage: React.FC = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("diagnostico");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Sample questions and answers for demonstration
   const sampleQuestions: Question[] = [
     {
       id: "q1",
       texto: "Você se sente sobrecarregado no trabalho?",
-      tipo: "boolean",
       required: true,
       secao_id: "s1"
     },
     {
       id: "q2",
       texto: "Você tem autonomia para tomar decisões no seu trabalho?",
-      tipo: "boolean",
       required: true,
       secao_id: "s1"
     },
     {
       id: "q3",
       texto: "Seu ambiente de trabalho é adequado para suas necessidades?",
-      tipo: "boolean",
       required: true,
       secao_id: "s2"
     }
@@ -56,7 +56,7 @@ const RelatoriosPage: React.FC = () => {
 
   const { data: employees = [] } = useQuery({
     queryKey: ["employees", selectedCompanyId],
-    queryFn: () => selectedCompanyId ? getEmployees(selectedCompanyId) : Promise.resolve([]),
+    queryFn: () => selectedCompanyId ? getEmployeesByCompanyId(selectedCompanyId) : Promise.resolve([]),
     enabled: !!selectedCompanyId
   });
 
@@ -73,21 +73,40 @@ const RelatoriosPage: React.FC = () => {
     setSelectedPeriod(period);
   };
 
+  const handleGenerateReport = () => {
+    setIsGenerating(true);
+    // Simulate report generation
+    setTimeout(() => {
+      setIsGenerating(false);
+    }, 1500);
+  };
+
   const selectedCompany = companies.find(c => c.id === selectedCompanyId);
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
+
+  // Sample form result for diagnostic
+  const sampleFormResult = {
+    id: "sample-result",
+    employee_id: selectedEmployeeId || "1",
+    company_id: selectedCompanyId || "1",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    answers: {
+      q1: { answer: true },
+      q2: { answer: false },
+      q3: { answer: true }
+    }
+  };
 
   return (
     <Layout title="Relatórios">
       <div className="space-y-4 px-4 py-6">
         <FilterSection
           companies={companies}
-          employees={employees}
           selectedCompanyId={selectedCompanyId}
-          selectedEmployeeId={selectedEmployeeId}
-          selectedPeriod={selectedPeriod}
           onCompanyChange={handleCompanyChange}
-          onEmployeeChange={handleEmployeeChange}
-          onPeriodChange={handlePeriodChange}
+          onGenerateReport={handleGenerateReport}
+          isGenerating={isGenerating}
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -99,15 +118,25 @@ const RelatoriosPage: React.FC = () => {
           </TabsList>
 
           <TabsContent value="diagnostico" className="mt-0">
-            <DiagnosticoIndividual />
+            <DiagnosticoIndividual
+              result={sampleFormResult}
+              questions={sampleQuestions}
+            />
           </TabsContent>
 
           <TabsContent value="mapa" className="mt-0">
-            <MapaRiscoPsicossocial />
+            <MapaRiscoPsicossocial 
+              companyId={selectedCompanyId}
+              departmentId=""
+              dateRange={{ from: new Date(), to: new Date() }}
+            />
           </TabsContent>
 
           <TabsContent value="areas" className="mt-0">
-            <RankingAreasCriticas />
+            <RankingAreasCriticas 
+              selectedCompanyId={selectedCompanyId}
+              companies={companies}
+            />
           </TabsContent>
 
           <TabsContent value="pgr" className="mt-0">
