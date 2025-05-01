@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getRankingAreasCriticas } from "@/services/relatorios/relatoriosService";
 import { getCompanies } from "@/services/company/companyService";
 import { getEmployeesByCompany } from "@/services/employee/employeeService";
-import { Question } from "@/types/form";
+import { Question, FormResult } from "@/types/form";
 import { Company, Employee } from "@/types/cadastro";
 
 const RelatoriosPage: React.FC = () => {
@@ -26,17 +26,23 @@ const RelatoriosPage: React.FC = () => {
     {
       id: "q1",
       texto: "Você se sente sobrecarregado no trabalho?",
-      secao_id: "s1"
+      secao_id: "s1",
+      formulario_id: "f1",
+      risco_id: "r1"
     },
     {
       id: "q2",
       texto: "Você tem autonomia para tomar decisões no seu trabalho?",
-      secao_id: "s1"
+      secao_id: "s1",
+      formulario_id: "f1",
+      risco_id: "r2"
     },
     {
       id: "q3",
       texto: "Seu ambiente de trabalho é adequado para suas necessidades?",
-      secao_id: "s2"
+      secao_id: "s2",
+      formulario_id: "f1",
+      risco_id: "r3"
     }
   ];
 
@@ -82,7 +88,7 @@ const RelatoriosPage: React.FC = () => {
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
 
   // Sample form result for diagnostic
-  const sampleFormResult = {
+  const sampleFormResult: FormResult = {
     id: "sample-result",
     employeeId: selectedEmployeeId || "1",
     empresa_id: selectedCompanyId || "1",
@@ -98,7 +104,10 @@ const RelatoriosPage: React.FC = () => {
     total_sim: 2,
     total_nao: 1,
     risco_id: "1",
-    observations: ""
+    observations: "",
+    is_complete: true,
+    last_updated: new Date().toISOString(),
+    formulario_id: "f1"
   };
 
   return (

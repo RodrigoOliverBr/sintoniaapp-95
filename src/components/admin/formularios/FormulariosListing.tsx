@@ -16,7 +16,11 @@ interface Formulario {
   created_at: string;
 }
 
-export const FormulariosListing = () => {
+interface FormulariosListingProps {
+  onFormularioSelect?: (formularioId: string) => void;
+}
+
+export const FormulariosListing: React.FC<FormulariosListingProps> = ({ onFormularioSelect }) => {
   const [formularios, setFormularios] = useState<Formulario[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -43,7 +47,11 @@ export const FormulariosListing = () => {
   };
 
   const handleFormularioClick = (formularioId: string) => {
-    navigate(`/admin/formularios/${formularioId}`);
+    if (onFormularioSelect) {
+      onFormularioSelect(formularioId);
+    } else {
+      navigate(`/admin/formularios/${formularioId}`);
+    }
   };
 
   if (loading) {

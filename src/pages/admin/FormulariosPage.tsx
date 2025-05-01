@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/AdminLayout";
-import FormulariosListing from "@/components/admin/formularios/FormulariosListing";
+import { FormulariosListing } from "@/components/admin/formularios/FormulariosListing";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PerguntasTab from "@/components/admin/formularios/PerguntasTab";
 import SecoesTab from "@/components/admin/formularios/SecoesTab";
@@ -80,7 +80,7 @@ const FormulariosPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Gestão de Formulários">
       <div className="container mx-auto py-6">
         <h1 className="text-2xl font-bold mb-6">Gestão de Formulários</h1>
 
@@ -113,15 +113,18 @@ const FormulariosPage: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="perguntas">
-                <PerguntasTab formularioId={selectedFormulario} secoes={secoes} />
+                <PerguntasTab 
+                  formularioId={selectedFormulario} 
+                  secoes={secoes}
+                />
               </TabsContent>
 
               <TabsContent value="riscos">
-                <RiscosTab />
+                <RiscosTab formularioId={selectedFormulario} />
               </TabsContent>
 
               <TabsContent value="mitigacoes">
-                <MitigacoesTab />
+                <MitigacoesTab formularioId={selectedFormulario} />
               </TabsContent>
             </>
           )}
