@@ -14,6 +14,7 @@ export const useContratos = () => {
 
   const refreshContratos = async () => {
     try {
+      console.log("Refreshing contratos...");
       const { data, error } = await supabase
         .from('contratos')
         .select('*');
@@ -109,6 +110,7 @@ export const useContratos = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
+      console.log("Loading contratos data...");
       
       const { data: clientesData, error: clientesError } = await supabase
         .from('clientes_sistema')
@@ -116,6 +118,7 @@ export const useContratos = () => {
       
       if (clientesError) {
         console.error('Erro ao carregar clientes:', clientesError);
+        toast.error("Erro ao carregar dados dos clientes");
         return;
       }
       
@@ -151,6 +154,7 @@ export const useContratos = () => {
       
       if (planosError) {
         console.error('Erro ao carregar planos:', planosError);
+        toast.error("Erro ao carregar dados dos planos");
         return;
       }
       
@@ -158,8 +162,8 @@ export const useContratos = () => {
         id: plano.id,
         nome: plano.nome,
         descricao: plano.descricao || '',
-        valor: Number(plano.valor_mensal || 0), // Add valor from valor_mensal
-        numeroUsuarios: 0, // Default value
+        valor: Number(plano.valor_mensal || 0),
+        numeroUsuarios: 0,
         valorMensal: Number(plano.valor_mensal),
         valorImplantacao: Number(plano.valor_implantacao),
         limiteEmpresas: plano.limite_empresas || 0,
@@ -175,9 +179,9 @@ export const useContratos = () => {
       console.log("Planos carregados:", planosFormatados);
       
       await refreshContratos();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
-      toast.error('Erro ao carregar dados');
+      toast.error(`Erro ao carregar dados: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +200,17 @@ export const useContratos = () => {
     formObservacoes: string
   ) => {
     try {
+      if (!formClienteId || !formPlanoId || !formNumeroContrato) {
+        toast.error("Cliente, Plano e Número do Contrato são obrigatórios");
+        return false;
+      }
+
       setIsLoading(true);
+      console.log("Adicionando contrato com dados:", {
+        cliente: formClienteId,
+        plano: formPlanoId,
+        numero: formNumeroContrato
+      });
       
       if (formStatus === 'ativo') {
         const { data: contratosAtivos, error: checkError } = await supabase
@@ -276,7 +290,7 @@ export const useContratos = () => {
       return true;
     } catch (error: any) {
       console.error("Erro ao adicionar contrato:", error);
-      toast.error("Erro ao adicionar contrato: " + error.message);
+      toast.error("Erro ao adicionar contrato: " + (error.message || "Erro desconhecido"));
       return false;
     } finally {
       setIsLoading(false);
@@ -297,7 +311,13 @@ export const useContratos = () => {
     formObservacoes: string
   ) => {
     try {
+      if (!formClienteId || !formPlanoId || !formNumeroContrato) {
+        toast.error("Cliente, Plano e Número do Contrato são obrigatórios");
+        return false;
+      }
+      
       setIsLoading(true);
+      console.log("Atualizando contrato ID:", id);
       
       if (formStatus === 'ativo') {
         const { data: contratoAtual, error: getError } = await supabase
@@ -367,7 +387,7 @@ export const useContratos = () => {
       return true;
     } catch (error: any) {
       console.error("Erro ao atualizar contrato:", error);
-      toast.error("Erro ao atualizar contrato: " + error.message);
+      toast.error("Erro ao atualizar contrato: " + (error.message || "Erro desconhecido"));
       return false;
     } finally {
       setIsLoading(false);

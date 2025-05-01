@@ -4,6 +4,7 @@ import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTit
 import { Button } from "@/components/ui/button";
 import ContractForm from "./ContractForm";
 import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
+import { toast } from "sonner";
 
 interface EditContractModalProps {
   formClienteId: string;
@@ -60,12 +61,53 @@ const EditContractModal: React.FC<EditContractModalProps> = ({
   onClose,
   onSave
 }) => {
+  const validateForm = () => {
+    if (!formClienteId) {
+      toast.error("Por favor, selecione um cliente");
+      return false;
+    }
+    if (!formPlanoId) {
+      toast.error("Por favor, selecione um plano");
+      return false;
+    }
+    if (!formNumeroContrato) {
+      toast.error("Por favor, informe o número do contrato");
+      return false;
+    }
+    if (!formDataInicio) {
+      toast.error("Por favor, selecione a data de início");
+      return false;
+    }
+    if (!formDataFim) {
+      toast.error("Por favor, selecione a data de fim");
+      return false;
+    }
+    if (!formValorMensal || formValorMensal <= 0) {
+      toast.error("Por favor, informe um valor mensal válido");
+      return false;
+    }
+    if (!formStatus) {
+      toast.error("Por favor, selecione um status");
+      return false;
+    }
+    if (formTaxaImplantacao < 0) {
+      toast.error("A taxa de implantação não pode ser negativa");
+      return false;
+    }
+    return true;
+  };
+  
+  const handleSave = () => {
+    if (!validateForm()) return;
+    onSave();
+  };
+
   return (
     <DialogContent className="sm:max-w-[600px]">
       <DialogHeader>
         <DialogTitle>Editar Contrato</DialogTitle>
         <DialogDescription>
-          Atualize as informações do contrato.
+          Atualize as informações do contrato. Campos com * são obrigatórios.
         </DialogDescription>
       </DialogHeader>
       <ContractForm
@@ -97,7 +139,7 @@ const EditContractModal: React.FC<EditContractModalProps> = ({
         <Button variant="outline" onClick={onClose} disabled={isLoading}>
           Cancelar
         </Button>
-        <Button onClick={onSave} disabled={isLoading}>
+        <Button onClick={handleSave} disabled={isLoading}>
           {isLoading ? "Salvando..." : "Salvar"}
         </Button>
       </DialogFooter>

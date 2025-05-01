@@ -87,6 +87,7 @@ const ContratosPage: React.FC = () => {
   };
   
   const handleOpenNewModal = () => {
+    clearForm();
     setOpenNewModal(true);
   };
   
@@ -127,76 +128,101 @@ const ContratosPage: React.FC = () => {
   };
 
   const handleAddContrato = async () => {
-    if (!formClienteId || !formPlanoId || !formNumeroContrato) {
-      toast.error("Cliente, Plano e Número do Contrato são obrigatórios");
-      return;
-    }
-
-    if (formStatus === 'ativo') {
-      const contratoAtivoExiste = await verificarContratoAtivoExistente(formClienteId);
-      if (contratoAtivoExiste) {
-        toast.error("Este cliente já possui um contrato ativo. Por favor, cancele o contrato existente antes de criar um novo.");
-        return;
+    try {
+      if (formStatus === 'ativo') {
+        const contratoAtivoExiste = await verificarContratoAtivoExistente(formClienteId);
+        if (contratoAtivoExiste) {
+          toast.error("Este cliente já possui um contrato ativo. Por favor, cancele o contrato existente antes de criar um novo.");
+          return;
+        }
       }
-    }
 
-    const success = await addContrato(
-      formClienteId,
-      formPlanoId,
-      formNumeroContrato,
-      formDataInicio,
-      formDataFim,
-      formDataPrimeiroVencimento,
-      formValorMensal,
-      formStatus,
-      formTaxaImplantacao,
-      formObservacoes
-    );
+      const success = await addContrato(
+        formClienteId,
+        formPlanoId,
+        formNumeroContrato,
+        formDataInicio,
+        formDataFim,
+        formDataPrimeiroVencimento,
+        formValorMensal,
+        formStatus,
+        formTaxaImplantacao,
+        formObservacoes
+      );
 
-    if (success) {
-      setOpenNewModal(false);
-      clearForm();
+      if (success) {
+        toast.success("Contrato adicionado com sucesso!");
+        setOpenNewModal(false);
+        clearForm();
+      } else {
+        toast.error("Erro ao salvar o contrato. Verifique os dados e tente novamente.");
+      }
+    } catch (error: any) {
+      console.error("Erro ao adicionar contrato:", error);
+      toast.error(`Erro ao adicionar contrato: ${error.message || 'Erro desconhecido'}`);
     }
   };
   
   const handleUpdateContrato = async () => {
-    if (!currentContrato) return;
-    
-    if (formStatus === 'ativo' && currentContrato.status !== 'ativo') {
-      const contratoAtivoExiste = await verificarContratoAtivoExistente(formClienteId);
-      if (contratoAtivoExiste) {
-        toast.error("Este cliente já possui um contrato ativo. Por favor, cancele o contrato existente antes de ativar este.");
+    try {
+      if (!currentContrato) {
+        toast.error("Nenhum contrato selecionado para edição");
         return;
       }
-    }
-    
-    const success = await updateContrato(
-      currentContrato.id,
-      formClienteId,
-      formPlanoId,
-      formNumeroContrato,
-      formDataInicio,
-      formDataFim,
-      formDataPrimeiroVencimento,
-      formValorMensal,
-      formStatus,
-      formTaxaImplantacao,
-      formObservacoes
-    );
+      
+      if (formStatus === 'ativo' && currentContrato.status !== 'ativo') {
+        const contratoAtivoExiste = await verificarContratoAtivoExistente(formClienteId);
+        if (contratoAtivoExiste) {
+          toast.error("Este cliente já possui um contrato ativo. Por favor, cancele o contrato existente antes de ativar este.");
+          return;
+        }
+      }
+      
+      const success = await updateContrato(
+        currentContrato.id,
+        formClienteId,
+        formPlanoId,
+        formNumeroContrato,
+        formDataInicio,
+        formDataFim,
+        formDataPrimeiroVencimento,
+        formValorMensal,
+        formStatus,
+        formTaxaImplantacao,
+        formObservacoes
+      );
 
-    if (success) {
-      setOpenEditModal(false);
-      clearForm();
+      if (success) {
+        toast.success("Contrato atualizado com sucesso!");
+        setOpenEditModal(false);
+        clearForm();
+      } else {
+        toast.error("Erro ao atualizar o contrato. Verifique os dados e tente novamente.");
+      }
+    } catch (error: any) {
+      console.error("Erro ao atualizar contrato:", error);
+      toast.error(`Erro ao atualizar contrato: ${error.message || 'Erro desconhecido'}`);
     }
   };
   
   const handleDeleteContrato = async () => {
-    if (!currentContrato) return;
-    
-    const success = await deleteContrato(currentContrato.id, currentContrato.clienteSistemaId);
+    try {
+      if (!currentContrato) {
+        toast.error("Nenhum contrato selecionado para exclusão");
+        return;
+      }
+      
+      const success = await deleteContrato(currentContrato.id, currentContrato.clienteSistemaId);
 
-    if (success) {
-      setOpenDeleteModal(false);
+      if (success) {
+        toast.success("Contrato excluído com sucesso!");
+        setOpenDeleteModal(false);
+      } else {
+        toast.error("Erro ao excluir o contrato.");
+      }
+    } catch (error: any) {
+      console.error("Erro ao excluir contrato:", error);
+      toast.error(`Erro ao excluir contrato: ${error.message || 'Erro desconhecido'}`);
     }
   };
 

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +10,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ContractFormProps {
   formClienteId: string;
@@ -39,6 +35,7 @@ interface ContractFormProps {
   clientes: ClienteSistema[];
   planos: Plano[];
   isLoading: boolean;
+  validateForm?: () => boolean;
 }
 
 const ContractForm: React.FC<ContractFormProps> = ({
@@ -66,47 +63,18 @@ const ContractForm: React.FC<ContractFormProps> = ({
   planos,
   isLoading,
 }) => {
-  const navigate = useNavigate();
-
-  const validateForm = () => {
-    if (!formClienteId) {
-      toast.error("Por favor, selecione um cliente");
-      return false;
-    }
-    if (!formPlanoId) {
-      toast.error("Por favor, selecione um plano");
-      return false;
-    }
-    if (!formDataInicio) {
-      toast.error("Por favor, selecione a data de início");
-      return false;
-    }
-    if (!formDataFim) {
-      toast.error("Por favor, selecione a data de fim");
-      return false;
-    }
-    if (!formValorMensal || formValorMensal <= 0) {
-      toast.error("Por favor, informe um valor mensal válido");
-      return false;
-    }
-    if (!formStatus) {
-      toast.error("Por favor, selecione um status");
-      return false;
-    }
-    if (formTaxaImplantacao < 0) {
-      toast.error("A taxa de implantação não pode ser negativa");
-      return false;
-    }
-    return true;
-  };
-
-  // Verificar se temos dados de clientes para debug
-  console.log("Clientes disponíveis:", clientes);
+  console.log("Rendering ContractForm with data:", {
+    formClienteId,
+    formPlanoId,
+    formNumeroContrato,
+    clientesLength: clientes?.length,
+    planosLength: planos?.length
+  });
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
       <div className="space-y-2">
-        <Label htmlFor="cliente">Cliente</Label>
+        <Label htmlFor="cliente">Cliente *</Label>
         <Select 
           value={formClienteId} 
           onValueChange={(value) => setFormClienteId(value)}
@@ -135,7 +103,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
         </Select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="plano">Plano</Label>
+        <Label htmlFor="plano">Plano *</Label>
         <Select 
           value={formPlanoId} 
           onValueChange={(value) => setFormPlanoId(value)}
@@ -154,7 +122,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
         </Select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="numeroContrato">Número do Contrato</Label>
+        <Label htmlFor="numeroContrato">Número do Contrato *</Label>
         <Input
           id="numeroContrato"
           value={formNumeroContrato}
@@ -269,7 +237,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="status">Status</Label>
+        <Label htmlFor="status">Status *</Label>
         <Select 
           value={formStatus} 
           onValueChange={(value: StatusContrato) => setFormStatus(value)}
