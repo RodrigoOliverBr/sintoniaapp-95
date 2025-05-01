@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   tableDisplay: {
-    display: 'table',
+    display: "flex",
     width: 'auto',
     borderStyle: 'solid',
     borderWidth: 1,

@@ -1,395 +1,464 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { getDefaultRiskId } from "@/services/form/formService";
-import { Section } from "@/types/form";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
+import { Section } from '@/types/form';
 
 interface SecoesTabProps {
-  formularioId: string;
+  formularioId: string | null;
+  secoes: Section[];
+  setSecoes: React.Dispatch<React.SetStateAction<Section[]>>;
+  onOpen?: (id: string) => void;
+  activeTab: string;
+  refreshPerguntas?: () => void;
 }
 
-const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId }) => {
-  const [secoes, setSections] = useState<Section[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [formTitle, setFormTitle] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentSecao, setCurrentSecao] = useState<Section | null>(null);
-  const [formData, setFormData] = useState({
-    titulo: "",
-    descricao: "",
-    ordem: 0
+const SecoesTab: React.FC<SecoesTabProps> = ({ 
+  formularioId, 
+  secoes, 
+  setSecoes, 
+  onOpen = () => {}, 
+  activeTab,
+  refreshPerguntas 
+}) => {
+  const [novaSecao, setNovaSecao] = useState({ 
+    id: '', 
+    titulo: '', 
+    descricao: '', 
+    ordem: 1
   });
-  const [submitting, setSubmitting] = useState(false);
-
-  const fetchSecoes = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch sections from new secoes table
-      const { data: sectionsData, error: sectionsError } = await supabase
-        .from('secoes')
-        .select('*')
-        .eq('formulario_id', formularioId)
-        .order('ordem', { ascending: true });
-      
-      if (sectionsError) throw sectionsError;
-      
-      // For each section, count how many questions are there
-      const sectionsWithCounts = await Promise.all(sectionsData.map(async (section) => {
-        const { count, error: countError } = await supabase
-          .from('perguntas')
-          .select('id', { count: 'exact', head: true })
-          .eq('secao_id', section.id);
-          
-        if (countError) throw countError;
-        
-        return {
-          ...section,
-          count: count || 0
-        };
-      }));
-      
-      setSections(sectionsWithCounts);
-    } catch (error) {
-      toast.error("Erro ao carregar seções");
-      console.error("Erro ao carregar seções:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const fetchFormTitle = async () => {
-      const { data } = await supabase
-        .from('formularios')
-        .select('titulo')
-        .eq('id', formularioId)
-        .single();
-      
-      if (data) {
-        setFormTitle(data.titulo);
-      }
-    };
-
-    fetchFormTitle();
-    fetchSecoes();
-  }, [formularioId]);
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleEdit = (secao: Section) => {
-    setIsEditing(true);
-    setCurrentSecao(secao);
-    setFormData({
-      titulo: secao.titulo || "",
-      descricao: secao.descricao || "",
-      ordem: secao.ordem
-    });
-    setDialogOpen(true);
-  };
-
-  const handleNew = () => {
-    setIsEditing(false);
-    setCurrentSecao(null);
-    // Definir a ordem para a próxima posição disponível
-    const nextOrder = secoes.length > 0 
-      ? Math.max(...secoes.map(s => s.ordem)) + 1 
-      : 1;
-    setFormData({ titulo: "", descricao: "", ordem: nextOrder });
-    setDialogOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-
-    try {
-      if (formData.titulo.trim() === "") {
-        toast.error("O título da seção é obrigatório");
-        setSubmitting(false);
-        return;
-      }
-
-      // Garantir que ordem seja um número inteiro
-      const ordem = parseInt(String(formData.ordem)) || 0;
-
-      if (isEditing && currentSecao) {
-        // Update section in secoes table
-        const { error: updateSectionError } = await supabase
-          .from('secoes')
-          .update({
-            titulo: formData.titulo,
-            descricao: formData.descricao || null,
-            ordem: ordem
-          })
-          .eq('id', currentSecao.id);
-
-        if (updateSectionError) throw updateSectionError;
-          
-        // Also update secao and secao_descricao in perguntas table for backwards compatibility
-        const { error: updatePerguntasError } = await supabase
-          .from('perguntas')
-          .update({
-            secao: formData.titulo,
-            secao_descricao: formData.descricao || null,
-            ordem: ordem
-          })
-          .eq('secao_id', currentSecao.id);
-          
-        if (updatePerguntasError) throw updatePerguntasError;
-
-        toast.success("Seção atualizada com sucesso");
-      } else {
-        // Insert new section into secoes table
-        const { data: newSection, error: insertSectionError } = await supabase
-          .from('secoes')
-          .insert({
-            titulo: formData.titulo,
-            descricao: formData.descricao || null,
-            ordem: ordem,
-            formulario_id: formularioId
-          })
-          .select()
-          .single();
-
-        if (insertSectionError) throw insertSectionError;
-        
-        // Create a sample question for this section
-        try {
-          const defaultRiskId = await getDefaultRiskId();
-          
-          const { error: insertPerguntaError } = await supabase
-            .from('perguntas')
-            .insert({
-              texto: "Pergunta Exemplo",
-              secao_id: newSection.id,
-              risco_id: defaultRiskId,
-              formulario_id: formularioId
-            });
+  const [editingSecao, setEditingSecao] = useState<Section | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
   
-          if (insertPerguntaError) {
-            console.error("Erro detalhado ao criar pergunta de exemplo:", insertPerguntaError);
-            toast.error("Criada a seção, mas não foi possível criar uma pergunta de exemplo");
-            return;
-          }
-        } catch (error: any) {
-          console.error("Erro ao criar pergunta de exemplo:", error);
-          toast.error(`Criada a seção, mas não foi possível criar uma pergunta de exemplo: ${error.message}`);
-          return;
-        }
+  // Estado para a nova pergunta
+  const [novaPergunta, setNovaPergunta] = useState({
+    texto: '',
+    tipo: 'simples',
+    ordem: 1,
+    secao_id: '',
+    opcoes: [],
+    novaOpcao: '',
+    obrigatoria: true
+  });
+  
+  const [showAddPerguntaDialog, setShowAddPerguntaDialog] = useState(false);
+  
+  const handleAddSecao = async () => {
+    if (!formularioId) {
+      toast.error('Formulário não selecionado');
+      return;
+    }
 
-        toast.success("Seção criada com sucesso");
+    try {
+      const { data, error } = await supabase
+        .from('secoes')
+        .insert([
+          {
+            titulo: novaSecao.titulo,
+            descricao: novaSecao.descricao,
+            formulario_id: formularioId,
+            ordem: novaSecao.ordem || secoes.length + 1
+          }
+        ])
+        .select();
+
+      if (error) {
+        throw error;
       }
 
-      setDialogOpen(false);
-      fetchSecoes();
+      const newSecoes = [...secoes, data[0] as Section];
+      setSecoes(newSecoes);
+      setNovaSecao({ id: '', titulo: '', descricao: '', ordem: newSecoes.length + 1 });
+      setShowAddDialog(false);
+      
+      toast.success('Seção criada com sucesso!');
     } catch (error) {
-      console.error("Erro ao salvar seção:", error);
-      toast.error("Erro ao salvar seção");
-    } finally {
-      setSubmitting(false);
+      toast.error('Erro ao criar seção');
+      console.error(error);
     }
   };
 
-  const handleDelete = async (secaoId: string) => {
-    if (confirm("Tem certeza que deseja excluir esta seção? Isso também excluirá todas as perguntas associadas.")) {
+  const handleUpdateSecao = async () => {
+    if (!editingSecao) return;
+    
+    try {
+      const { error } = await supabase
+        .from('secoes')
+        .update({
+          titulo: editingSecao.titulo,
+          descricao: editingSecao.descricao,
+          ordem: editingSecao.ordem
+        })
+        .eq('id', editingSecao.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setSecoes(prev => prev.map(s => s.id === editingSecao.id ? editingSecao : s));
+      setEditingSecao(null);
+      toast.success('Seção atualizada com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao atualizar seção');
+      console.error(error);
+    }
+  };
+
+  const handleDeleteSecao = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta seção? Todas as perguntas associadas também serão excluídas.')) {
       try {
-        setLoading(true);
-        
-        console.log("Excluindo seção:", secaoId, "do formulário:", formularioId);
-        
-        // Check if there are questions in this section
-        const { data: perguntasNaSecao, error: checkError } = await supabase
-          .from('perguntas')
-          .select('id')
-          .eq('secao_id', secaoId);
-        
-        if (checkError) {
-          console.error("Erro ao verificar perguntas na seção:", checkError);
-          throw checkError;
-        }
-        
-        console.log("Perguntas encontradas na seção:", perguntasNaSecao?.length || 0);
-        
-        // Delete questions first (cascade should handle this, but just to be safe)
-        if (perguntasNaSecao && perguntasNaSecao.length > 0) {
-          const { error: deleteQuestionsError } = await supabase
-            .from('perguntas')
-            .delete()
-            .eq('secao_id', secaoId);
-            
-          if (deleteQuestionsError) {
-            console.error("Erro ao excluir perguntas da seção:", deleteQuestionsError);
-            throw deleteQuestionsError;
-          }
-        }
-        
-        // Then delete the section
-        const { error: deleteSectionError } = await supabase
+        const { error } = await supabase
           .from('secoes')
           .delete()
-          .eq('id', secaoId);
-          
-        if (deleteSectionError) {
-          console.error("Erro ao excluir seção:", deleteSectionError);
-          throw deleteSectionError;
+          .eq('id', id);
+
+        if (error) {
+          throw error;
         }
 
-        toast.success("Seção excluída com sucesso");
-        fetchSecoes(); // Atualizar a lista após a exclusão
+        setSecoes(prev => prev.filter(s => s.id !== id));
+        toast.success('Seção excluída com sucesso!');
+        if (refreshPerguntas) {
+          refreshPerguntas();
+        }
       } catch (error) {
-        console.error("Erro ao excluir seção:", error);
-        toast.error("Erro ao excluir seção");
-      } finally {
-        setLoading(false);
+        toast.error('Erro ao excluir seção');
+        console.error(error);
       }
     }
+  };
+
+  const handleAddPergunta = async () => {
+    if (!novaPergunta.texto || !novaPergunta.secao_id) {
+      toast.error('Preencha o texto da pergunta e selecione uma seção');
+      return;
+    }
+
+    try {
+      const perguntaData = {
+        texto: novaPergunta.texto,
+        tipo: novaPergunta.tipo,
+        ordem_pergunta: novaPergunta.ordem,
+        secao_id: novaPergunta.secao_id,
+        opcoes: novaPergunta.opcoes.length > 0 ? novaPergunta.opcoes : null,
+        obrigatoria: novaPergunta.obrigatoria
+      };
+
+      const { data, error } = await supabase
+        .from('perguntas')
+        .insert([perguntaData])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Pergunta criada com sucesso!');
+      if (refreshPerguntas) {
+        refreshPerguntas();
+      }
+      
+      setNovaPergunta({
+        texto: '',
+        tipo: 'simples',
+        ordem: 1,
+        secao_id: '',
+        opcoes: [],
+        novaOpcao: '',
+        obrigatoria: true
+      });
+      
+      setShowAddPerguntaDialog(false);
+    } catch (error) {
+      toast.error('Erro ao criar pergunta');
+      console.error(error);
+    }
+  };
+
+  const handleAddOpcao = () => {
+    if (!novaPergunta.novaOpcao) return;
+    
+    setNovaPergunta(prev => ({
+      ...prev,
+      opcoes: [...prev.opcoes, prev.novaOpcao],
+      novaOpcao: ''
+    }));
+  };
+
+  const handleRemoveOpcao = (index: number) => {
+    setNovaPergunta(prev => ({
+      ...prev,
+      opcoes: prev.opcoes.filter((_, i) => i !== index)
+    }));
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Seções do Formulário</h2>
-          <p className="text-muted-foreground">Formulário: {formTitle}</p>
-        </div>
-        <Button onClick={handleNew}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Seção
-        </Button>
-      </div>
-      
-      {loading ? (
-        <div className="flex justify-center py-8">
-          <p>Carregando seções...</p>
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Título</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Quantidade de Perguntas</TableHead>
-              <TableHead>Ordem</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {secoes.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  Nenhuma seção cadastrada. Clique em 'Nova Seção' para adicionar.
-                </TableCell>
-              </TableRow>
-            ) : (
-              secoes.map((secao) => (
-                <TableRow key={secao.id}>
-                  <TableCell className="font-medium">{secao.titulo}</TableCell>
-                  <TableCell>{secao.descricao || "-"}</TableCell>
-                  <TableCell>{secao.count}</TableCell>
-                  <TableCell>{secao.ordem}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleEdit(secao)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => handleDelete(secao.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+    <div className={activeTab === 'secoes' ? 'block' : 'hidden'}>
+      <div className="flex justify-between mb-4">
+        <h2 className="text-xl font-semibold">Seções do Formulário</h2>
+        <div className="flex space-x-2">
+          <Dialog open={showAddPerguntaDialog} onOpenChange={setShowAddPerguntaDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline">Nova Pergunta</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Nova Pergunta</DialogTitle>
+                <DialogDescription>Crie uma nova pergunta para o formulário</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="secao">Seção</Label>
+                  <Select 
+                    value={novaPergunta.secao_id} 
+                    onValueChange={value => setNovaPergunta({...novaPergunta, secao_id: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma seção" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {secoes.map(secao => (
+                        <SelectItem key={secao.id} value={secao.id}>{secao.titulo}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="perguntaTexto">Texto da Pergunta</Label>
+                  <Textarea 
+                    id="perguntaTexto" 
+                    value={novaPergunta.texto}
+                    onChange={e => setNovaPergunta({...novaPergunta, texto: e.target.value})}
+                    rows={3}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tipoPergunta">Tipo de Pergunta</Label>
+                  <Select 
+                    value={novaPergunta.tipo} 
+                    onValueChange={value => setNovaPergunta({...novaPergunta, tipo: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="simples">Simples (Sim/Não)</SelectItem>
+                      <SelectItem value="multipla">Múltipla Escolha</SelectItem>
+                      <SelectItem value="texto">Resposta de Texto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {novaPergunta.tipo === 'multipla' && (
+                  <div className="space-y-2">
+                    <Label>Opções de Resposta</Label>
+                    <div className="flex space-x-2">
+                      <Input 
+                        value={novaPergunta.novaOpcao}
+                        onChange={e => setNovaPergunta({...novaPergunta, novaOpcao: e.target.value})}
+                        placeholder="Nova opção"
+                      />
+                      <Button type="button" onClick={handleAddOpcao} variant="outline">Adicionar</Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      )}
+                    {novaPergunta.opcoes.length > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {novaPergunta.opcoes.map((opcao, index) => (
+                          <li key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                            <span>{opcao}</span>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={() => handleRemoveOpcao(index)}
+                            >
+                              Remover
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="obrigatoria"
+                    checked={novaPergunta.obrigatoria}
+                    onCheckedChange={checked => setNovaPergunta({...novaPergunta, obrigatoria: checked})}
+                  />
+                  <Label htmlFor="obrigatoria">Resposta obrigatória</Label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleAddPergunta}>Adicionar Pergunta</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button>Nova Seção</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Nova Seção</DialogTitle>
+                <DialogDescription>Crie uma nova seção para o formulário</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="titulo">Título</Label>
+                  <Input 
+                    id="titulo" 
+                    value={novaSecao.titulo} 
+                    onChange={e => setNovaSecao({...novaSecao, titulo: e.target.value})} 
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="descricao">Descrição</Label>
+                  <Textarea 
+                    id="descricao" 
+                    value={novaSecao.descricao} 
+                    onChange={e => setNovaSecao({...novaSecao, descricao: e.target.value})} 
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="ordem">Ordem</Label>
+                  <Input 
+                    id="ordem" 
+                    type="number" 
+                    value={novaSecao.ordem} 
+                    onChange={e => setNovaSecao({...novaSecao, ordem: parseInt(e.target.value)})} 
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleAddSecao}>Adicionar Seção</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {isEditing ? "Editar Seção" : "Nova Seção"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="titulo">Nome da Seção</Label>
-                <Input
-                  id="titulo"
-                  name="titulo"
-                  value={formData.titulo}
-                  onChange={handleInputChange}
-                  placeholder="Digite o nome da seção"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="descricao">Descrição (opcional)</Label>
-                <Textarea
-                  id="descricao"
-                  name="descricao"
-                  value={formData.descricao}
-                  onChange={handleInputChange}
-                  placeholder="Descreva a seção brevemente"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ordem">Ordem</Label>
-                <Input
-                  id="ordem"
-                  name="ordem"
-                  type="number"
-                  min="0"
-                  value={formData.ordem}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? "Salvando..." : "Salvar"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {secoes.length === 0 ? (
+        <Card>
+          <CardContent className="p-6 text-center text-gray-500">
+            <p>Nenhuma seção encontrada para este formulário</p>
+            <Button className="mt-4" onClick={() => setShowAddDialog(true)}>Criar primeira seção</Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {secoes.map((secao, index) => (
+            <Card key={secao.id} className="relative">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-medium">
+                      {index + 1}. {secao.titulo}
+                    </h3>
+                    <p className="text-gray-500 mt-1">{secao.descricao}</p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onOpen(secao.id);
+                      }}
+                    >
+                      Ver Perguntas
+                    </Button>
+                    
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingSecao(secao)}
+                        >
+                          Editar
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Editar Seção</DialogTitle>
+                          <DialogDescription>Atualize as informações da seção</DialogDescription>
+                        </DialogHeader>
+                        {editingSecao && (
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <Label htmlFor="edit-titulo">Título</Label>
+                              <Input 
+                                id="edit-titulo" 
+                                value={editingSecao.titulo} 
+                                onChange={e => setEditingSecao({...editingSecao, titulo: e.target.value})} 
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="edit-descricao">Descrição</Label>
+                              <Textarea 
+                                id="edit-descricao" 
+                                value={editingSecao.descricao} 
+                                onChange={e => setEditingSecao({...editingSecao, descricao: e.target.value})} 
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="edit-ordem">Ordem</Label>
+                              <Input 
+                                id="edit-ordem" 
+                                type="number" 
+                                value={editingSecao.ordem} 
+                                onChange={e => setEditingSecao({...editingSecao, ordem: parseInt(e.target.value)})} 
+                              />
+                            </div>
+                          </div>
+                        )}
+                        <DialogFooter>
+                          <Button onClick={handleUpdateSecao}>Salvar Alterações</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteSecao(secao.id)}
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                </div>
+                
+                <Separator className="my-4" />
+                
+                <div className="flex justify-between items-center">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setNovaPergunta({...novaPergunta, secao_id: secao.id});
+                      setShowAddPerguntaDialog(true);
+                    }}
+                  >
+                    Nova pergunta nesta seção
+                  </Button>
+                  <span className="text-sm text-gray-500">ID: {secao.id}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

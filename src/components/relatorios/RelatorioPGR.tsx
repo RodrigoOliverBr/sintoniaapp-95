@@ -1,191 +1,75 @@
-import React, { useState, useRef } from 'react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
-import { Company, Employee, Form } from "@/types/cadastro";
-import { Question } from "@/types/form";
+
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Company, Employee } from '@/types/cadastro';
 import { generatePGRData } from '@/utils/relatorios/pgrDataUtils';
-import { generateTableData } from '@/utils/relatorios/tableDataUtils';
-import { formatDate } from '@/utils/formatDate';
+import { Question } from '@/types/form';
 
 interface RelatorioPGRProps {
-  companyId: string;
+  company: Company;
+  employee: Employee;
+  questions: Question[];
+  answers: Record<string, any>;
 }
 
-// Placeholder components and data until we integrate with real API
-const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ companyId }) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const componentRef = useRef<HTMLDivElement>(null);
-
-  // Using placeholders for these objects until we fetch real data
-  const mockCompany: Company = { 
-    id: companyId, 
-    name: 'Empresa de Exemplo',
-    address: 'Endereço de Exemplo' 
-  };
-  
-  const mockEmployee: Employee = { 
-    id: '1', 
-    name: 'Funcionário de Exemplo',
-    department_id: '1',
-    email: 'exemplo@empresa.com'
-  };
-  
-  const mockForm: Form = { 
-    id: '1', 
-    titulo: 'Formulário de Exemplo',
-    descricao: 'Descrição do formulário',
-    ativo: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-
-  const mockQuestions: Question[] = [];
-  const mockAnswers: Record<string, any> = {};
-
-  const generatePDF = async () => {
-    setIsGenerating(true);
-    try {
-      const doc = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-
-      // Function to add header and footer to each page
-      const addHeaderFooter = (doc: jsPDF) => {
-        const headerText = 'Relatório do Programa de Gerenciamento de Riscos (PGR)';
-        const footerText = 'Confidencial';
-        const dateText = `Gerado em: ${formatDate(new Date())}`;
-
-        // Header
-        doc.setFontSize(10);
-        doc.setTextColor(128);
-        doc.text(headerText, pageWidth / 2, 10, {
-          align: 'center',
-        });
-
-        // Footer
-        doc.setFontSize(8);
-        doc.text(footerText, 10, pageHeight - 10);
-        doc.text(dateText, pageWidth - 10, pageHeight - 10, {
-          align: 'right',
-        });
-      };
-
-      // Add header and footer to the first page
-      addHeaderFooter(doc);
-
-      // Function to add a new page with header and footer
-      const addNewPage = (doc: jsPDF) => {
-        doc.addPage();
-        addHeaderFooter(doc);
-      };
-
-      // Title
-      doc.setFontSize(18);
-      doc.setTextColor(0);
-      doc.text('Relatório do Programa de Gerenciamento de Riscos (PGR)', pageWidth / 2, 25, {
-        align: 'center',
-      });
-
-      // Company and Employee Information
-      doc.setFontSize(12);
-      doc.text(`Empresa: ${mockCompany.name}`, 20, 40);
-      doc.text(`Funcionário: ${mockEmployee.name}`, 20, 48);
-      doc.text(`Formulário: ${mockForm.titulo}`, 20, 56);
-
-      let currentY = 70;
-
-      const pgrData = generatePGRData(mockQuestions, mockAnswers);
-
-      // Function to render a section with a table
-      const renderTable = (sectionIndex: number) => {
-        const section = pgrData[sectionIndex];
-        if (!section) return;
-
-        // Section Title
-        doc.setFontSize(14);
-        doc.setTextColor(0);
-        doc.text(section.title, 20, currentY);
-        currentY += 8;
-
-        const tableData = generateTableData(section.questions, mockAnswers);
-
-        if (tableData.length === 0) {
-          doc.setFontSize(10);
-          doc.setTextColor(100);
-          doc.text('Nenhuma informação disponível para esta seção.', 20, currentY);
-          currentY += 8;
-          return;
-        }
-
-        autoTable(doc, {
-          head: [["Questão", "Resposta", "Observação"]],
-          body: tableData,
-          startY: currentY,
-          margin: { horizontal: 20 },
-          columnStyles: {
-            0: { cellWidth: 70 },
-            1: { cellWidth: 50 },
-            2: { cellWidth: 50 },
-          },
-          didParseCell: (data) => {
-            if (data.section === 'head') {
-              doc.setFontSize(12);
-              doc.setTextColor(0);
-            } else {
-              doc.setFontSize(10);
-              doc.setTextColor(50);
-            }
-          },
-        });
-
-        const tableHeight = (doc as any).lastAutoTable.finalY - currentY;
-        currentY += tableHeight + 10;
-      };
-
-      // Render each section
-      for (let i = 0; i < pgrData.length; i++) {
-        if (currentY > pageHeight - 50) {
-          addNewPage(doc);
-          currentY = 30;
-        }
-        renderTable(i);
-      }
-
-      // Save the PDF
-      doc.save(`Relatorio_PGR_${mockCompany.name}.pdf`);
-    } catch (error) {
-      console.error("Erro ao gerar o PDF:", error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+const RelatorioPGR: React.FC<RelatorioPGRProps> = ({ company, employee, questions, answers }) => {
+  const pgrSections = generatePGRData(questions, answers);
 
   return (
-    <div ref={componentRef} className="container mx-auto p-4">
-      <div className="flex justify-end mb-4">
-        <Button
-          onClick={generatePDF}
-          disabled={isGenerating}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          {isGenerating ? (
-            <>Gerando PDF... </>
-          ) : (
-            <>
-              Gerar Relatório PGR
-              <Download className="ml-2 h-4 w-4" />
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
+    <Card className="mb-8">
+      <CardHeader>
+        <CardTitle>Relatório de Programa de Gerenciamento de Riscos (PGR)</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-6">
+          <h3 className="text-lg font-medium">Dados da Empresa</h3>
+          <p>Nome: {company.name}</p>
+          <p>CNPJ/CPF: {company.cpfCnpj || '00.000.000/0000-00'}</p>
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-lg font-medium">Dados do Funcionário</h3>
+          <p>Nome: {employee.name}</p>
+          <p>Email: {employee.email || 'N/A'}</p>
+          <p>CPF: {employee.cpf || 'N/A'}</p>
+          <p>Cargo: {employee.role || 'N/A'}</p>
+          <p>Empresa: {company.name}</p>
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-lg font-medium">Avaliação de Riscos Psicossociais</h3>
+          {pgrSections.map((section, idx) => (
+            <div key={idx} className="mb-4">
+              <h4 className="font-medium mt-4">{section.title}</h4>
+              <ul className="list-disc pl-5 space-y-2 mt-2">
+                {section.questions.map((question) => (
+                  <li key={question.id}>
+                    <p className="font-medium">{question.texto}</p>
+                    <p className="text-gray-600">
+                      Resposta: {answers[question.id] ? 'Sim' : 'Não'}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-lg font-medium">Conclusões e Recomendações</h3>
+          <p className="text-gray-600">
+            Com base na avaliação realizada, foram identificados fatores de risco psicossocial
+            que devem ser abordados no plano de ação. Recomenda-se a implementação de medidas
+            preventivas e corretivas conforme descrito nas normas regulamentadoras aplicáveis.
+          </p>
+        </div>
+
+        <div className="text-right text-sm text-gray-500 mt-8">
+          <p>Data de emissão: {new Date().toLocaleDateString('pt-BR')}</p>
+          <p>Validade: 12 meses</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ClienteSistema } from "@/types/admin";
+import { ClienteSistema, ClienteStatus, TipoPessoa } from "@/types/admin";
 import { getClienteIdAtivo } from "@/utils/clientContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeProvider } from "next-themes";
@@ -20,10 +20,6 @@ import { ThemeProvider } from "next-themes";
 interface HeaderProps {
   title?: string;
 }
-
-// Adicionando tipos temporários enquanto não atualizamos os arquivos de tipos
-type TipoPessoa = "fisica" | "juridica";
-type ClienteStatus = "liberado" | "bloqueado" | "ativo" | "em-analise" | "sem-contrato" | "bloqueado-manualmente";
 
 const Header: React.FC<HeaderProps> = () => {
   const navigate = useNavigate();
@@ -70,7 +66,7 @@ const Header: React.FC<HeaderProps> = () => {
             id: data.id,
             razao_social: data.razao_social,
             nome: data.razao_social,
-            tipo: "juridica" as TipoPessoa,
+            tipo: data.tipo as string,
             numeroEmpregados: 0,
             dataInclusao: new Date(data.created_at).getTime(),
             situacao: (data.situacao || "liberado") as ClienteStatus,
@@ -123,7 +119,7 @@ const Header: React.FC<HeaderProps> = () => {
             </div>
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex items-center text-sm text-gray-600 mr-4">
-                <span className="font-medium">{getClientName()}</span>
+                <span className="font-medium">{currentClient?.razao_social || currentClient?.razaoSocial || currentClient?.nome || 'eSocial Brasil'}</span>
                 <span className="mx-2">•</span>
                 <span>{currentClient?.responsavel || 'Admin'}</span>
               </div>
@@ -149,7 +145,12 @@ const Header: React.FC<HeaderProps> = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleLogout}
+                onClick={() => {
+                  localStorage.removeItem("sintonia:userType");
+                  localStorage.removeItem("sintonia:currentCliente");
+                  sessionStorage.removeItem("impersonatedClientId");
+                  navigate("/login");
+                }}
                 className="flex items-center gap-1"
               >
                 <LogOut size={16} />

@@ -1,5 +1,8 @@
+
 // Define the client status type
 export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
+export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
+export type BatchSelection = Record<string, boolean>;
 
 export interface ClienteSistema {
   id: string;
@@ -18,11 +21,13 @@ export interface ClienteSistema {
   planoId: string;
   contratoId: string;
   razaoSocial?: string;
+  clienteId?: string;
 }
 
 export interface ClienteComContrato extends ClienteSistema {
   statusContrato?: StatusContrato;
   diasParaVencimento?: number;
+  contrato?: Contrato;
 }
 
 export interface Plano {
@@ -31,20 +36,35 @@ export interface Plano {
   descricao: string;
   valor: number;
   numeroUsuarios: number;
+  
+  // Fields used in the components
+  valorMensal: number;
+  valorImplantacao: number;
+  limiteEmpresas: number;
+  empresasIlimitadas: boolean;
+  limiteEmpregados: number;
+  empregadosIlimitados: boolean;
+  dataValidade: number | null;
+  semVencimento: boolean;
+  ativo: boolean;
 }
 
 export interface Contrato {
   id: string;
   numero: string;
   clienteSistemaId: string;
+  clienteId: string;
   planoId: string;
   dataInicio: number;
   dataFim: number;
   dataPrimeiroVencimento: number;
   valorMensal: number;
-  status: string;
+  status: StatusContrato;
   taxaImplantacao: number;
   observacoes: string;
+  cicloFaturamento?: string;
+  proximaRenovacao?: number;
+  ciclosGerados?: number;
 }
 
 export interface Fatura {
@@ -55,11 +75,19 @@ export interface Fatura {
   dataEmissao: number;
   dataVencimento: number;
   valor: number;
-  status: 'pendente' | 'pago' | 'atrasado' | 'programada';
+  status: StatusFatura;
   linkBoleto?: string;
   linkNotaFiscal?: string;
+  clienteSistemaId?: string;
+  contratoId?: string;
+  contratoNumero?: string;
+  referencia?: string;
 }
 
 // Add these type definitions for the ClientesPage.tsx
 export type TipoPessoa = 'fisica' | 'juridica';
 export type StatusContrato = 'ativo' | 'inativo' | 'cancelado' | 'pendente' | 'vencido' | 'vencimento-proximo' | 'sem-contrato';
+
+// Fix for InvoicePreview display type
+export type Display = "flex" | "block" | "inline" | "inline-block" | "grid" | "inline-flex" | 
+                      "flow-root" | "contents" | "list-item" | "none" | "hidden";
