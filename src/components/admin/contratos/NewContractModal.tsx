@@ -1,11 +1,11 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import ContractForm from "./ContractForm";
 import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
-import { supabase, ensureAuthenticated } from "@/integrations/supabase/client";
+import { supabase, ensureAuthenticated, logAuthStatus } from "@/integrations/supabase/client";
 
 interface NewContractModalProps {
   formClienteId: string;
@@ -98,6 +98,15 @@ const NewContractModal: React.FC<NewContractModalProps> = ({
     return true;
   };
   
+  // Verificar autenticação quando o modal for aberto
+  useEffect(() => {
+    const checkAuth = async () => {
+      await logAuthStatus();
+    };
+    
+    checkAuth();
+  }, []);
+  
   const handleSave = async () => {
     console.log("Tentando salvar novo contrato com dados:", {
       cliente: formClienteId,
@@ -112,13 +121,16 @@ const NewContractModal: React.FC<NewContractModalProps> = ({
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
       console.error("Usuário não autenticado para criar contrato");
-      toast.error("Você precisa estar autenticado para criar o contrato");
+      toast.error("Você precisa estar autenticado como administrador para criar o contrato");
       return;
     }
     
     // Log da sessão atual para debug
     const { data: sessionData } = await supabase.auth.getSession();
     console.log("Sessão atual durante handleSave (NewContractModal):", sessionData?.session?.user?.id);
+    
+    // Log das permissões do usuário
+    await logAuthStatus();
     
     if (!validateForm()) return;
     onSave();

@@ -63,7 +63,7 @@ export const handleSupabaseError = (error: any): string => {
   console.error("Erro Supabase detalhado:", error);
   
   if (error?.code === '42501' || error?.message?.includes('permission denied')) {
-    return 'Erro de permissão: você não tem autorização para realizar esta ação. Verifique se você está autenticado.';
+    return 'Erro de permissão: você não tem autorização para realizar esta ação. Verifique se você está autenticado como administrador.';
   } else if (error?.code === 'auth/email-already-in-use' || error?.message?.includes('already registered')) {
     return 'Este e-mail já está registrado. Por favor, use outro e-mail.';
   } else if (error?.message?.includes('violates row-level security policy')) {
@@ -83,40 +83,60 @@ export const ensureAuthenticated = async (): Promise<boolean> => {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      console.log("Não há sessão ativa. Tentando recuperar do localStorage...");
+      console.log("Não há sessão ativa. Tentando recuperar...");
       
-      // Se não há sessão, tentar reutilizar o token armazenado localmente
-      const userType = localStorage.getItem("sintonia:userType");
-      if (!userType) {
-        console.error("Usuário não autenticado. Redirecionando para login...");
+      // Tentar obter sessão atual novamente com refresh
+      const { data: refreshResult, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshResult.session) {
+        console.error("Erro ao recuperar sessão:", refreshError);
+        toast.error("Sessão expirada. Por favor, faça login novamente.");
         return false;
       }
       
-      // Verificar se o cliente está disponível no localStorage
-      if (userType === 'client') {
-        const clienteData = localStorage.getItem("sintonia:currentCliente");
-        if (!clienteData) {
-          console.error("Dados do cliente não encontrados");
-          return false;
-        }
-      }
-      
-      // Tentar obter sessão atual
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        console.error("Erro ao recuperar usuário:", userError);
-        return false;
-      }
-      
-      console.log("Sessão recuperada com sucesso!", user);
+      console.log("Sessão recuperada com sucesso após refresh!", refreshResult.session.user.id);
       return true;
     }
     
     console.log("Sessão já estava ativa:", session.user.id);
+    
+    // Verificar se o usuário é admin para operações de admin
+    const { data: perfil } = await supabase
+      .from('perfis')
+      .select('tipo')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    
+    if (window.location.pathname.includes('/admin/') && (!perfil || perfil.tipo !== 'admin')) {
+      console.error("Usuário não é administrador mas está acessando área admin");
+      toast.error("Você não tem permissão para acessar esta área");
+      return false;
+    }
+    
     return true;
   } catch (error) {
     console.error("Erro ao verificar autenticação:", error);
+    toast.error("Erro ao verificar autenticação. Por favor, faça login novamente.");
+    return false;
+  }
+};
+
+// Função auxiliar para debug de autenticação
+export const logAuthStatus = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    console.log("Usuário autenticado:", session.user.id);
+    
+    const { data: perfil } = await supabase
+      .from('perfis')
+      .select('*')
+      .eq('id', session.user.id)
+      .maybeSingle();
+      
+    console.log("Perfil do usuário:", perfil);
+    return true;
+  } else {
+    console.log("Usuário não autenticado");
     return false;
   }
 };

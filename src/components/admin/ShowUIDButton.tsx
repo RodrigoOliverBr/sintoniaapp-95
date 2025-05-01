@@ -1,31 +1,37 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, logAuthStatus } from "@/integrations/supabase/client";
 import { InfoIcon } from "lucide-react";
+import { toast } from "sonner";
 
 const ShowUIDButton: React.FC = () => {
   const handleClick = async () => {
     try {
-      const { data, error } = await supabase.auth.getUser();
-      
-      if (error) {
-        console.error("Erro ao obter usuário:", error);
-        alert(`Erro ao obter UID: ${error.message}`);
-        return;
-      }
-      
-      console.log('Meu UID:', data.user?.id);
-      
       // Verificar se há sessão ativa
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
         console.error("Erro ao obter sessão:", sessionError);
-        alert(`Erro ao obter sessão: ${sessionError.message}`);
+        toast.error(`Erro ao obter sessão: ${sessionError.message}`);
         return;
       }
       
+      if (!sessionData.session) {
+        toast.warning("Você não está autenticado. Por favor, faça login.");
+        console.log('Não há sessão ativa');
+        return;
+      }
+      
+      const { data, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.error("Erro ao obter usuário:", error);
+        toast.error(`Erro ao obter UID: ${error.message}`);
+        return;
+      }
+      
+      console.log('Meu UID:', data.user?.id);
       console.log('Dados da sessão:', sessionData.session);
       
       // Verificar perfil do usuário
@@ -37,6 +43,7 @@ const ShowUIDButton: React.FC = () => {
       
       if (perfilError) {
         console.error("Erro ao obter perfil:", perfilError);
+        toast.error(`Erro ao obter perfil: ${perfilError.message}`);
       } else {
         console.log('Perfil:', perfilData);
       }
@@ -46,12 +53,21 @@ const ShowUIDButton: React.FC = () => {
         Email: ${data.user?.email || 'N/A'}
         Tipo: ${perfilData?.tipo || 'N/A'}
         Sessão ativa: ${sessionData.session ? 'Sim' : 'Não'}
+        
+        Verifique o console para mais detalhes.
       `;
       
+      toast.success("Informações de autenticação disponíveis no console");
       alert(message);
+      
+      // Verificar as políticas RLS que se aplicam ao usuário
+      const isAdmin = await logAuthStatus();
+      if (isAdmin) {
+        toast.success("Você está autenticado como administrador");
+      }
     } catch (err) {
       console.error("Erro inesperado:", err);
-      alert("Erro ao obter UID do usuário");
+      toast.error("Erro ao obter UID do usuário");
     }
   };
 
