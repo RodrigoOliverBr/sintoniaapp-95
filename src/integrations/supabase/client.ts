@@ -21,8 +21,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 export const handleSupabaseError = (error: any): string => {
   console.error("Erro Supabase detalhado:", error);
   
-  if (error?.code === '42501') {
-    return 'Erro de permissão: você não tem autorização para realizar esta ação.';
+  if (error?.code === '42501' || error?.message?.includes('permission denied')) {
+    return 'Erro de permissão: você não tem autorização para realizar esta ação. Verifique se você está autenticado.';
   } else if (error?.code === 'auth/email-already-in-use' || error?.message?.includes('already registered')) {
     return 'Este e-mail já está registrado. Por favor, use outro e-mail.';
   } else if (error?.message?.includes('violates row-level security policy')) {

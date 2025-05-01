@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { Contrato, ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
 import { gerarFaturasAutomaticas } from "@/components/admin/contratos/InvoiceGenerator";
@@ -212,6 +212,7 @@ export const useContratos = () => {
         numero: formNumeroContrato
       });
       
+      // Verificar se o cliente já tem contratos ativos
       if (formStatus === 'ativo') {
         const { data: contratosAtivos, error: checkError } = await supabase
           .from('contratos')
@@ -221,7 +222,7 @@ export const useContratos = () => {
           
         if (checkError) {
           console.error("Erro ao verificar contratos existentes:", checkError);
-          toast.error("Erro ao verificar contratos existentes");
+          toast.error("Erro ao verificar contratos existentes: " + checkError.message);
           return false;
         }
         
@@ -231,6 +232,23 @@ export const useContratos = () => {
         }
       }
       
+      // Adicionando log detalhado dos dados que serão inseridos
+      console.log("Inserindo contrato com os seguintes dados:", {
+        numero: formNumeroContrato,
+        cliente_sistema_id: formClienteId,
+        cliente_id: formClienteId,
+        plano_id: formPlanoId,
+        data_inicio: formDataInicio.toISOString(),
+        data_fim: formDataFim.toISOString(),
+        data_primeiro_vencimento: formDataPrimeiroVencimento.toISOString(),
+        valor_mensal: formValorMensal,
+        status: formStatus,
+        taxa_implantacao: formTaxaImplantacao,
+        observacoes: formObservacoes,
+        ciclo_faturamento: 'mensal'
+      });
+      
+      // Tentativa de inserção do contrato
       const { data, error } = await supabase
         .from('contratos')
         .insert({
@@ -251,16 +269,22 @@ export const useContratos = () => {
 
       if (error) {
         console.error("Erro ao adicionar contrato:", error);
-        toast.error("Erro ao adicionar contrato: " + error.message);
+        const errorMessage = handleSupabaseError(error);
+        toast.error("Erro ao adicionar contrato: " + errorMessage);
         return false;
       }
 
-      console.log("Contrato adicionado:", data[0]);
+      console.log("Contrato adicionado com sucesso:", data[0]);
 
-      await supabase
+      // Atualiza o ID do contrato no cliente
+      const { error: updateError } = await supabase
         .from('clientes_sistema')
         .update({ contrato_id: data[0].id })
         .eq('id', formClienteId);
+        
+      if (updateError) {
+        console.error("Erro ao atualizar cliente com contrato ID:", updateError);
+      }
 
       await atualizarSituacaoCliente(formClienteId, formStatus);
       
@@ -353,6 +377,22 @@ export const useContratos = () => {
         }
       }
       
+      // Log detalhado dos dados que serão atualizados
+      console.log("Atualizando contrato com os seguintes dados:", {
+        numero: formNumeroContrato,
+        cliente_sistema_id: formClienteId,
+        cliente_id: formClienteId,
+        plano_id: formPlanoId,
+        data_inicio: formDataInicio.toISOString(),
+        data_fim: formDataFim.toISOString(),
+        data_primeiro_vencimento: formDataPrimeiroVencimento.toISOString(),
+        valor_mensal: formValorMensal,
+        status: formStatus,
+        taxa_implantacao: formTaxaImplantacao,
+        observacoes: formObservacoes,
+        ciclo_faturamento: 'mensal'
+      });
+      
       const { error } = await supabase
         .from('contratos')
         .update({
@@ -373,7 +413,8 @@ export const useContratos = () => {
 
       if (error) {
         console.error("Erro ao atualizar contrato:", error);
-        toast.error("Erro ao atualizar contrato: " + error.message);
+        const errorMessage = handleSupabaseError(error);
+        toast.error("Erro ao atualizar contrato: " + errorMessage);
         return false;
       }
       
@@ -424,7 +465,8 @@ export const useContratos = () => {
 
       if (error) {
         console.error("Erro ao excluir contrato:", error);
-        toast.error("Erro ao excluir contrato: " + error.message);
+        const errorMessage = handleSupabaseError(error);
+        toast.error("Erro ao excluir contrato: " + errorMessage);
         return false;
       }
 

@@ -98,6 +98,15 @@ const EditContractModal: React.FC<EditContractModalProps> = ({
   };
   
   const handleSave = () => {
+    console.log("Tentando salvar edição de contrato com dados:", {
+      cliente: formClienteId,
+      plano: formPlanoId,
+      dataInicio: formDataInicio,
+      dataFim: formDataFim,
+      valor: formValorMensal,
+      status: formStatus
+    });
+    
     if (!validateForm()) return;
     onSave();
   };
@@ -134,6 +143,7 @@ const EditContractModal: React.FC<EditContractModalProps> = ({
         clientes={clientes}
         planos={planos}
         isLoading={isLoading}
+        validateForm={validateForm}
       />
       <DialogFooter>
         <Button variant="outline" onClick={onClose} disabled={isLoading}>

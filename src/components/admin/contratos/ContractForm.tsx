@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,7 +133,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="dataInicio">Data de Início</Label>
+        <Label htmlFor="dataInicio">Data de Início *</Label>
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -163,7 +164,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
         </Popover>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="dataFim">Data de Fim</Label>
+        <Label htmlFor="dataFim">Data de Fim *</Label>
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -195,7 +196,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
         </Popover>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="dataPrimeiroVencimento">Data do Primeiro Vencimento</Label>
+        <Label htmlFor="dataPrimeiroVencimento">Data do Primeiro Vencimento *</Label>
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -226,7 +227,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
         </Popover>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="valorMensal">Valor Mensal</Label>
+        <Label htmlFor="valorMensal">Valor Mensal *</Label>
         <Input 
           id="valorMensal" 
           type="number" 
