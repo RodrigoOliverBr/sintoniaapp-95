@@ -1,3 +1,4 @@
+
 import { ClienteSistema, Plano, Contrato, Fatura, StatusFatura, StatusContrato, ClienteStatus, TipoPessoa, CicloFaturamento } from "@/types/admin";
 
 // Keys de localStorage
@@ -769,3 +770,12 @@ export const checkClienteCredentials = (email: string, password: string): Client
     }
 
     // Verificação simplificada: aceita 'client123' como senha padrão
+    if (password === 'client123') {
+      console.log("Senha válida, cliente autenticado");
+      return cliente;
+    }
+  }
+
+  console.log("Autenticação falhou");
+  return null;
+};
