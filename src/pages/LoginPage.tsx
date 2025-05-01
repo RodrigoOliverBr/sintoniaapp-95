@@ -133,7 +133,13 @@ const LoginPage: React.FC = () => {
           throw new Error("Dados do cliente não encontrados. Verifique se o email está correto.");
         }
         
-        if (clienteData.situacao !== 'liberado') {
+        // Array com status permitidos para login
+        const statusPermitidos = ['liberado', 'ativo'];
+        console.log("Status do cliente:", clienteData.situacao);
+        console.log("Status permitidos:", statusPermitidos);
+        console.log("Cliente pode logar?", statusPermitidos.includes(clienteData.situacao));
+        
+        if (!statusPermitidos.includes(clienteData.situacao)) {
           await supabase.auth.signOut();
           throw new Error(`Seu acesso está ${clienteData.situacao}. Entre em contato com o administrador.`);
         }

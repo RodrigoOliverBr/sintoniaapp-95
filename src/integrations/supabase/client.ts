@@ -134,6 +134,23 @@ export const logAuthStatus = async () => {
       .maybeSingle();
       
     console.log("Perfil do usuário:", perfil);
+    
+    // Se for cliente, verificar também o status no clientes_sistema
+    if (perfil && perfil.tipo.toLowerCase() === 'client') {
+      const { data: clienteData } = await supabase
+        .from('clientes_sistema')
+        .select('*')
+        .eq('email', session.user.email)
+        .maybeSingle();
+        
+      console.log("Dados do cliente:", clienteData);
+      console.log("Status do cliente:", clienteData?.situacao);
+      
+      // Verificar se o status é permitido
+      const statusPermitidos = ['liberado', 'ativo'];
+      console.log("Cliente pode acessar?", clienteData && statusPermitidos.includes(clienteData.situacao));
+    }
+    
     return true;
   } else {
     console.log("Usuário não autenticado");
