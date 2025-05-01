@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeProvider } from "next-themes";
+import ShowUIDButton from "./admin/ShowUIDButton";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -121,6 +122,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                     <span className="mx-2">•</span>
                     <span>Admin</span>
                   </div>
+
+                  <ShowUIDButton />
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
