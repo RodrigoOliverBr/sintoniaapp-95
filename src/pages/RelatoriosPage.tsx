@@ -10,7 +10,7 @@ import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import { useQuery } from "@tanstack/react-query";
 import { getRankingAreasCriticas } from "@/services/relatorios/relatoriosService";
 import { getCompanies } from "@/services/company/companyService";
-import { getEmployeesByCompanyId } from "@/services/employee/employeeService";
+import { getEmployeesByCompany } from "@/services/employee/employeeService";
 import { Question } from "@/types/form";
 import { Company, Employee } from "@/types/cadastro";
 
@@ -26,19 +26,16 @@ const RelatoriosPage: React.FC = () => {
     {
       id: "q1",
       texto: "Você se sente sobrecarregado no trabalho?",
-      required: true,
       secao_id: "s1"
     },
     {
       id: "q2",
       texto: "Você tem autonomia para tomar decisões no seu trabalho?",
-      required: true,
       secao_id: "s1"
     },
     {
       id: "q3",
       texto: "Seu ambiente de trabalho é adequado para suas necessidades?",
-      required: true,
       secao_id: "s2"
     }
   ];
@@ -56,7 +53,7 @@ const RelatoriosPage: React.FC = () => {
 
   const { data: employees = [] } = useQuery({
     queryKey: ["employees", selectedCompanyId],
-    queryFn: () => selectedCompanyId ? getEmployeesByCompanyId(selectedCompanyId) : Promise.resolve([]),
+    queryFn: () => selectedCompanyId ? getEmployeesByCompany(selectedCompanyId) : Promise.resolve([]),
     enabled: !!selectedCompanyId
   });
 
@@ -87,7 +84,9 @@ const RelatoriosPage: React.FC = () => {
   // Sample form result for diagnostic
   const sampleFormResult = {
     id: "sample-result",
-    employee_id: selectedEmployeeId || "1",
+    employeeId: selectedEmployeeId || "1",
+    empresa_id: selectedCompanyId || "1",
+    employee_id: selectedEmployeeId || "1", 
     company_id: selectedCompanyId || "1",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -95,7 +94,11 @@ const RelatoriosPage: React.FC = () => {
       q1: { answer: true },
       q2: { answer: false },
       q3: { answer: true }
-    }
+    },
+    total_sim: 2,
+    total_nao: 1,
+    risco_id: "1",
+    observations: ""
   };
 
   return (
