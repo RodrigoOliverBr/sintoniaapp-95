@@ -1,9 +1,10 @@
 
-// Define the client status type
-export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
+import { supabase } from '@/integrations/supabase/client';
 
-// This utility file contains helper functions and types related to client context
-// You can add any client-related utility functions here
+/**
+ * Define the client status type
+ */
+export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
 
 /**
  * Function to format client status to display text
@@ -53,8 +54,6 @@ export const getStatusColor = (status: ClienteStatus): string => {
       return 'text-gray-500';
   }
 };
-
-import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Function to get the active client ID from session storage and login session

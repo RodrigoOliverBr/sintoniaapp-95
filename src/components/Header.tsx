@@ -54,7 +54,7 @@ const Header: React.FC<HeaderProps> = () => {
   
   useEffect(() => {
     const loadCurrentClient = async () => {
-      const clienteId = getClienteIdAtivo();
+      const clienteId = await getClienteIdAtivo();
       
       if (!clienteId) {
         const currentClientData = localStorage.getItem("sintonia:currentCliente");

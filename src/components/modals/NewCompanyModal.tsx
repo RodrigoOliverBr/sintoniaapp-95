@@ -12,7 +12,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addCompany } from "@/services"; 
-import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -78,6 +77,8 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       // Set more user-friendly error message
       if (error?.message?.includes("perfil não foi encontrado")) {
         setErrorMessage("Seu perfil não está configurado corretamente. Entre em contato com o suporte.");
+      } else if (error?.message?.includes("row-level security")) {
+        setErrorMessage("Você não tem permissão para cadastrar empresas. Apenas clientes podem cadastrar empresas.");
       } else {
         setErrorMessage(error?.message || "Não foi possível cadastrar a empresa");
       }
