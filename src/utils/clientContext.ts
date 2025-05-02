@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -69,20 +70,6 @@ export const getClienteIdAtivo = async (): Promise<string | null> => {
       return impersonatedClientId;
     }
     
-    // Check for client ID in localStorage
-    const storedClient = localStorage.getItem("sintonia:currentCliente");
-    if (storedClient) {
-      try {
-        const client = JSON.parse(storedClient);
-        if (client.id) {
-          console.log("Usando ID do cliente do localStorage:", client.id);
-          return client.id;
-        }
-      } catch (error) {
-        console.error("Erro ao analisar cliente armazenado:", error);
-      }
-    }
-    
     // Get authenticated user ID via Supabase
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
@@ -104,25 +91,52 @@ export const getClienteIdAtivo = async (): Promise<string | null> => {
     
     console.log("Obtido ID do usuário autenticado:", userId);
     
-    // Check if this ID exists in perfis table
+    // Verificar tipo do usuário
     const { data: perfil, error: perfilError } = await supabase
       .from('perfis')
-      .select('id, tipo, email')
+      .select('tipo')
       .eq('id', userId)
       .maybeSingle();
-      
+    
     if (perfilError) {
       console.error("Erro ao verificar perfil:", perfilError);
       return null;
-    } 
-    
-    if (!perfil) {
-      console.log("Nenhum perfil encontrado para o usuário ID:", userId);
-      return null;
     }
     
-    console.log("Perfil encontrado para usuário:", perfil);
-    return userId; // Return the user ID which is the same as the profile ID
+    // Se o perfil não existir ou não for do tipo cliente, retorna o ID do usuário para administradores
+    if (!perfil) {
+      console.warn("Perfil não encontrado para o usuário ID:", userId);
+      return userId; // Retorna userId mesmo se não encontrar perfil (consistente com função anterior)
+    }
+    
+    console.log("Perfil encontrado:", perfil);
+    
+    // Para clientes normais, retorna o ID do usuário como clienteId
+    if (perfil.tipo.toLowerCase() === 'client') {
+      console.log("Retornando ID do usuário como ID do cliente:", userId);
+      return userId;
+    }
+    
+    // Para administradores, verifica se há um clientId específico no localStorage
+    if (perfil.tipo.toLowerCase() === 'admin') {
+      const storedClient = localStorage.getItem("sintonia:currentCliente");
+      if (storedClient) {
+        try {
+          const client = JSON.parse(storedClient);
+          if (client.id) {
+            console.log("Admin: usando ID do cliente do localStorage:", client.id);
+            return client.id;
+          }
+        } catch (error) {
+          console.error("Erro ao analisar cliente armazenado:", error);
+        }
+      }
+      
+      console.log("Admin: sem cliente específico, retornando ID do admin:", userId);
+      return userId;
+    }
+    
+    return userId;
   } catch (error) {
     console.error("Erro ao obter cliente ativo:", error);
     return null;
@@ -133,10 +147,23 @@ export const getClienteIdAtivo = async (): Promise<string | null> => {
  * Verifica se o usuário atual é do tipo administrador
  * @returns Boolean indicando se o usuário é admin
  */
-export const isUserAdmin = (): boolean => {
+export const isUserAdmin = async (): Promise<boolean> => {
   try {
-    const userType = localStorage.getItem("sintonia:userType");
-    return userType === 'admin';
+    // Verificar a sessão autenticada
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return false;
+    
+    const userId = session.user.id;
+    
+    // Verificar o tipo de usuário no banco de dados
+    const { data: perfil } = await supabase
+      .from('perfis')
+      .select('tipo')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    // Retorna true se o tipo for 'admin'
+    return perfil?.tipo === 'admin';
   } catch (error) {
     console.error("Erro ao verificar tipo de usuário:", error);
     return false;
@@ -147,10 +174,23 @@ export const isUserAdmin = (): boolean => {
  * Verifica se o usuário atual é do tipo cliente
  * @returns Boolean indicando se o usuário é cliente
  */
-export const isUserClient = (): boolean => {
+export const isUserClient = async (): Promise<boolean> => {
   try {
-    const userType = localStorage.getItem("sintonia:userType");
-    return userType === 'client';
+    // Verificar a sessão autenticada
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return false;
+    
+    const userId = session.user.id;
+    
+    // Verificar o tipo de usuário no banco de dados
+    const { data: perfil } = await supabase
+      .from('perfis')
+      .select('tipo')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    // Retorna true se o tipo for 'client'
+    return perfil?.tipo === 'client';
   } catch (error) {
     console.error("Erro ao verificar tipo de usuário:", error);
     return false;

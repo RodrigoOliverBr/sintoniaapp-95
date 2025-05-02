@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Company } from "@/types/cadastro";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,12 @@ const CompanySelect = ({
   onNewEmployee,
 }: CompanySelectProps) => {
   const safeCompanies = Array.isArray(companies) ? companies : [];
+  
+  // Log para depuração
+  useEffect(() => {
+    console.log("CompanySelect: Empresas carregadas:", safeCompanies.length, safeCompanies);
+    console.log("CompanySelect: Empresa selecionada:", selectedCompanyId);
+  }, [safeCompanies, selectedCompanyId]);
 
   return (
     <div className="flex items-center gap-2 w-full justify-between">
@@ -35,7 +41,11 @@ const CompanySelect = ({
           onValueChange={onCompanyChange}
         >
           <SelectTrigger className="w-full max-w-[300px]">
-            <SelectValue placeholder="Selecione uma empresa" />
+            <SelectValue placeholder={
+              safeCompanies.length === 0 
+                ? "Carregando empresas..." 
+                : "Selecione uma empresa"
+            } />
           </SelectTrigger>
           <SelectContent>
             <ScrollArea className="h-[200px]">

@@ -1,44 +1,71 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Company } from '@/types/cadastro';
 import { getClienteIdAtivo } from '@/utils/clientContext';
 
 export const getCompanies = async (): Promise<Company[]> => {
-  // Obter o ID do cliente ativo (real ou impersonado)
-  const clienteId = await getClienteIdAtivo();
+  console.log("Iniciando busca de empresas...");
   
-  let query = supabase
-    .from('empresas')
-    .select('*');
-  
-  // Se houver um cliente ativo, filtrar empresas por esse cliente
-  if (clienteId) {
-    query = query.eq('perfil_id', clienteId);
-  }
-  
-  const { data, error } = await query;
+  try {
+    // Verificar sessão atual
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error("Nenhuma sessão ativa encontrada");
+      return [];
+    }
+    
+    const userId = session.user.id;
+    console.log("ID do usuário autenticado:", userId);
+    
+    // Verificar tipo de usuário
+    const { data: perfil } = await supabase
+      .from('perfis')
+      .select('tipo')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    console.log("Perfil encontrado:", perfil);
+    
+    // Consultar empresas baseado no tipo de usuário
+    let query = supabase.from('empresas').select('*');
+    
+    if (perfil?.tipo === 'admin') {
+      console.log("Usuário admin: buscando todas empresas");
+      // Admin vê todas as empresas
+    } else {
+      console.log("Usuário cliente: buscando empresas do perfil", userId);
+      // Cliente vê apenas suas próprias empresas
+      query = query.eq('perfil_id', userId);
+    }
+    
+    const { data, error } = await query;
 
-  if (error) {
-    console.error("Erro ao buscar empresas:", error);
-    throw error;
+    if (error) {
+      console.error("Erro ao buscar empresas:", error);
+      throw error;
+    }
+    
+    console.log(`Empresas encontradas: ${data?.length || 0}`, data);
+    
+    return (data || []).map(company => ({
+      id: company.id,
+      name: company.nome,
+      cpfCnpj: company.cpf_cnpj,
+      telefone: company.telefone,
+      email: company.email,
+      address: company.endereco,
+      type: company.tipo,
+      status: company.situacao,
+      contact: company.contato,
+      zipCode: company.cep,
+      state: company.estado,
+      city: company.cidade,
+      createdAt: company.created_at,
+      updatedAt: company.updated_at
+    }));
+  } catch (error) {
+    console.error("Erro na função getCompanies:", error);
+    return [];
   }
-  
-  return (data || []).map(company => ({
-    id: company.id,
-    name: company.nome,
-    cpfCnpj: company.cpf_cnpj,
-    telefone: company.telefone,
-    email: company.email,
-    address: company.endereco,
-    type: company.tipo,
-    status: company.situacao,
-    contact: company.contato,
-    zipCode: company.cep,
-    state: company.estado,
-    city: company.cidade,
-    createdAt: company.created_at,
-    updatedAt: company.updated_at
-  }));
 };
 
 export const getCompanyById = async (companyId: string): Promise<Company | null> => {

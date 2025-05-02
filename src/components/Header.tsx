@@ -114,19 +114,24 @@ const Header: React.FC<HeaderProps> = () => {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      // Clear local storage items
+      console.log("Iniciando processo de logout...");
+      
+      // Clear local storage and session storage BEFORE signOut
       localStorage.removeItem("sintonia:userType");
       localStorage.removeItem("sintonia:currentCliente");
       sessionStorage.removeItem("impersonatedClientId");
       
+      console.log("Armazenamento local limpo. Executando signOut...");
+      
       // Sign out from Supabase
       await supabase.auth.signOut();
       
-      // Navigate to login page
-      navigate("/login");
+      console.log("Logout bem-sucedido, redirecionando para /login");
+      
+      // Use replace instead of navigate to prevent back button from returning to dashboard
+      window.location.href = "/login";
     } catch (error) {
-      console.error("Error during logout:", error);
-    } finally {
+      console.error("Erro durante o logout:", error);
       setIsLoggingOut(false);
     }
   };
