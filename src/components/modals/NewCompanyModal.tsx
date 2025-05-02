@@ -29,6 +29,15 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
 }) => {
   const [name, setName] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState("");
+
+  // Clear form and error when modal opens/closes
+  React.useEffect(() => {
+    if (open) {
+      setName("");
+      setErrorMessage("");
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +48,7 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
     }
 
     setIsSubmitting(true);
+    setErrorMessage("");
     
     try {
       // Verificar se o usuário está autenticado
@@ -64,6 +74,14 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       if (onCompanyAdded) onCompanyAdded();
     } catch (error: any) {
       console.error("Erro ao cadastrar empresa:", error);
+      
+      // Set more user-friendly error message
+      if (error?.message?.includes("perfil não foi encontrado")) {
+        setErrorMessage("Seu perfil não está configurado corretamente. Entre em contato com o suporte.");
+      } else {
+        setErrorMessage(error?.message || "Não foi possível cadastrar a empresa");
+      }
+      
       toast.error(error?.message || "Não foi possível cadastrar a empresa");
     } finally {
       setIsSubmitting(false);
@@ -94,6 +112,9 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
                 disabled={isSubmitting}
               />
             </div>
+            {errorMessage && (
+              <div className="text-red-500 text-sm px-4">{errorMessage}</div>
+            )}
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>

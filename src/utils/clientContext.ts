@@ -54,6 +54,8 @@ export const getStatusColor = (status: ClienteStatus): string => {
   }
 };
 
+import { supabase } from '@/integrations/supabase/client';
+
 /**
  * Function to get the active client ID from session storage and login session
  * @returns The active client ID or null if none exists
@@ -83,11 +85,11 @@ export const getClienteIdAtivo = async (): Promise<string | null> => {
       }
     }
     
-    // Se não encontrou, tentar pegar o ID do usuário autenticado via Supabase
-    const { data: { session }, error } = await supabase.auth.getSession();
+    // Obter o ID do usuário autenticado via Supabase
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (error) {
-      console.error("Erro ao obter sessão:", error);
+    if (sessionError) {
+      console.error("Erro ao obter sessão:", sessionError);
       return null;
     }
     
@@ -97,28 +99,33 @@ export const getClienteIdAtivo = async (): Promise<string | null> => {
     }
     
     const userId = session.user.id;
-    if (userId) {
-      console.log("Obtido ID do usuário autenticado:", userId);
-      
-      // Verificar se este ID existe na tabela perfis
-      const { data: perfil, error: perfilError } = await supabase
-        .from('perfis')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-        
-      if (perfilError) {
-        console.error("Erro ao verificar perfil:", perfilError);
-      } else if (!perfil) {
-        console.error("Perfil não encontrado para o ID:", userId);
-      } else {
-        console.log("Perfil encontrado:", perfil);
-        return userId;
-      }
+    if (!userId) {
+      console.error("ID de usuário não encontrado na sessão");
+      return null;
     }
     
-    console.warn("Nenhum ID de cliente encontrado");
-    return null;
+    console.log("Obtido ID do usuário autenticado:", userId);
+    
+    // Verificar se este ID existe na tabela perfis usando maybeSingle() em vez de single()
+    const { data: perfil, error: perfilError } = await supabase
+      .from('perfis')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (perfilError) {
+      console.error("Erro ao verificar perfil:", perfilError);
+      return null;
+    } 
+    
+    if (!perfil) {
+      console.log("Nenhum perfil encontrado para o usuário ID:", userId);
+      return null;
+    }
+    
+    console.log("Perfil encontrado para usuário:", perfil);
+    return userId;
+    
   } catch (error) {
     console.error("Erro ao obter cliente ativo:", error);
     return null;

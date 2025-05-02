@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Company } from '@/types/cadastro';
 import { getClienteIdAtivo } from '@/utils/clientContext';
@@ -88,22 +87,20 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
 
   console.log("Cliente ID para adicionar empresa:", clienteId);
 
-  // Primeiro, vamos verificar se o perfil existe na tabela de perfis
+  // Verificar se o perfil existe na tabela de perfis
   const { data: perfilExists, error: perfilError } = await supabase
     .from('perfis')
     .select('id, tipo, email')
     .eq('id', clienteId)
-    .single();
+    .maybeSingle();
 
   if (perfilError) {
     console.error("Erro ao verificar perfil:", perfilError);
-    if (perfilError.code === 'PGRST116') {
-      throw new Error("Seu perfil não foi encontrado no sistema. Por favor, contate o suporte.");
-    }
-    throw perfilError;
+    throw new Error("Erro ao verificar seu perfil. Por favor, tente novamente mais tarde.");
   }
 
   if (!perfilExists) {
+    console.error("Perfil não encontrado para ID:", clienteId);
     throw new Error("Seu perfil não foi encontrado no sistema. Por favor, contate o suporte.");
   }
 
