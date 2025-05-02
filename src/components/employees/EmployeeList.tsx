@@ -54,7 +54,9 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
             <TableRow key={employee.id}>
               <TableCell>{employee.name}</TableCell>
               <TableCell>{employee.email}</TableCell>
-              <TableCell>{employee.role || 'Não definido'}</TableCell>
+              <TableCell>
+                {employee.role && roleNames[employee.role] ? roleNames[employee.role] : 'Não definido'}
+              </TableCell>
               <TableCell>{getStatusComponent(employee.id)}</TableCell>
               <TableCell className="text-right">
                 <Button

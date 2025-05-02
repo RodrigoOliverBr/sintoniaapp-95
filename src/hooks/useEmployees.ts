@@ -24,10 +24,18 @@ export const useEmployees = () => {
   const loadCompanies = async () => {
     setIsLoading(true);
     try {
+      console.log("useEmployees: Carregando empresas...");
       const companiesData = await getCompanies();
+      console.log("useEmployees: Empresas carregadas:", companiesData.length, companiesData);
+      
       setCompanies(Array.isArray(companiesData) ? companiesData : []);
+      
+      if (Array.isArray(companiesData) && companiesData.length > 0 && !selectedCompanyId) {
+        console.log("useEmployees: Selecionando primeira empresa:", companiesData[0].id);
+        setSelectedCompanyId(companiesData[0].id);
+      }
     } catch (error) {
-      console.error("Erro ao carregar empresas:", error);
+      console.error("useEmployees: Erro ao carregar empresas:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar as empresas",
@@ -39,12 +47,46 @@ export const useEmployees = () => {
     }
   };
 
+  const loadJobRoleNames = useCallback(async (roleIds: string[]) => {
+    if (!roleIds.length) return {};
+    
+    console.log("useEmployees: Carregando nomes de cargos para IDs:", roleIds);
+    
+    const uniqueRoleIds = [...new Set(roleIds)];
+    const newRoleNames: JobRoleMap = {};
+    
+    await Promise.all(
+      uniqueRoleIds.map(async (roleId) => {
+        try {
+          console.log("useEmployees: Buscando cargo com ID:", roleId);
+          const jobRole = await getJobRoleById(roleId);
+          if (jobRole) {
+            console.log("useEmployees: Cargo encontrado:", jobRole);
+            newRoleNames[roleId] = jobRole.name;
+          }
+        } catch (error) {
+          console.error(`useEmployees: Erro ao buscar nome do cargo ${roleId}:`, error);
+        }
+      })
+    );
+    
+    console.log("useEmployees: Mapeamento de cargos gerado:", newRoleNames);
+    return newRoleNames;
+  }, []);
+
   const loadEmployees = useCallback(async (companyId: string) => {
-    if (!companyId) return;
+    if (!companyId) {
+      console.warn("useEmployees: Tentativa de carregar funcionários sem ID de empresa");
+      return;
+    }
     
     setIsLoading(true);
     try {
+      console.log("useEmployees: Carregando funcionários para empresa:", companyId);
+      
       const employeesData = await getEmployeesByCompany(companyId);
+      console.log("useEmployees: Funcionários carregados:", employeesData.length, employeesData);
+      
       setEmployees(Array.isArray(employeesData) ? employeesData : []);
       
       const roleIds = Array.isArray(employeesData) 
@@ -53,50 +95,45 @@ export const useEmployees = () => {
             .map(emp => emp.role as string)
         : [];
       
-      const uniqueRoleIds = [...new Set(roleIds)];
-      const newRoleNames: JobRoleMap = {};
-      
-      await Promise.all(
-        uniqueRoleIds.map(async (roleId) => {
-          try {
-            const jobRole = await getJobRoleById(roleId);
-            if (jobRole) {
-              newRoleNames[roleId] = jobRole.name;
-            }
-          } catch (error) {
-            console.error(`Error fetching role name for ${roleId}:`, error);
-          }
-        })
-      );
-      
-      setRoleNames(newRoleNames);
+      if (roleIds.length > 0) {
+        const newRoleNames = await loadJobRoleNames(roleIds);
+        setRoleNames(newRoleNames);
+      }
     } catch (error) {
-      console.error("Erro ao carregar funcionários:", error);
+      console.error("useEmployees: Erro ao carregar funcionários:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar os funcionários",
         variant: "destructive",
       });
       setEmployees([]);
+      setRoleNames({});
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [loadJobRoleNames, toast]);
 
   const handleDeleteEmployee = async (employeeId: string) => {
-    if (!employeeId) return;
+    if (!employeeId) {
+      console.warn("useEmployees: Tentativa de excluir funcionário sem ID");
+      return;
+    }
     
     try {
+      console.log("useEmployees: Excluindo funcionário com ID:", employeeId);
+      
       await deleteEmployee(employeeId);
       toast({
         title: "Sucesso",
         description: "Funcionário removido com sucesso!",
       });
+      
       if (selectedCompanyId) {
+        console.log("useEmployees: Recarregando lista após exclusão");
         loadEmployees(selectedCompanyId);
       }
     } catch (error) {
-      console.error("Erro ao remover funcionário:", error);
+      console.error("useEmployees: Erro ao remover funcionário:", error);
       toast({
         title: "Erro",
         description: "Não foi possível remover o funcionário",

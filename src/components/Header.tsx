@@ -114,24 +114,32 @@ const Header: React.FC<HeaderProps> = () => {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      console.log("Iniciando processo de logout...");
+      console.log("Header: Iniciando processo de logout completo...");
       
-      // Clear local storage and session storage BEFORE signOut
-      localStorage.removeItem("sintonia:userType");
-      localStorage.removeItem("sintonia:currentCliente");
-      sessionStorage.removeItem("impersonatedClientId");
+      // Clear all storage completely
+      localStorage.clear();
+      sessionStorage.clear();
       
-      console.log("Armazenamento local limpo. Executando signOut...");
+      console.log("Header: Armazenamento local e de sessão limpos completamente");
       
       // Sign out from Supabase
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
       
-      console.log("Logout bem-sucedido, redirecionando para /login");
+      if (error) {
+        console.error("Header: Erro ao fazer logout do Supabase:", error);
+        return;
+      }
       
-      // Use replace instead of navigate to prevent back button from returning to dashboard
-      window.location.href = "/login";
+      console.log("Header: Logout do Supabase bem-sucedido");
+      
+      // Force a hard redirect to login page after a slight delay
+      // to ensure signOut completes properly
+      setTimeout(() => {
+        console.log("Header: Redirecionando para /login via window.location.replace");
+        window.location.replace("/login");
+      }, 100);
     } catch (error) {
-      console.error("Erro durante o logout:", error);
+      console.error("Header: Erro durante o logout:", error);
       setIsLoggingOut(false);
     }
   };

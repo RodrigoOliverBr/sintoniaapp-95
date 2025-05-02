@@ -47,7 +47,7 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      console.log("Enviando dados do setor:", { name, companyId });
+      console.log("NewDepartmentModal: Enviando dados do setor:", { name, companyId });
       
       // Using the correct parameter structure from our service
       await addDepartmentToCompany({
@@ -62,9 +62,11 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
       
       setName("");
       onOpenChange(false);
+      
       // Garantindo que a função de callback seja chamada após sucesso
+      // com um pequeno delay para garantir que o banco seja atualizado
       if (onDepartmentAdded) {
-        console.log("Chamando callback onDepartmentAdded");
+        console.log("NewDepartmentModal: Chamando callback onDepartmentAdded após setor ser adicionado");
         setTimeout(() => {
           onDepartmentAdded();
         }, 300);

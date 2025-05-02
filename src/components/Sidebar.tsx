@@ -13,24 +13,31 @@ const Sidebar = () => {
 
   const handleLogout = async () => {
     try {
-      console.log("Iniciando processo de logout do Sidebar...");
+      console.log("Sidebar: Iniciando processo de logout completo...");
       
-      // Clear local storage and session storage BEFORE signOut
-      localStorage.removeItem("sintonia:userType");
-      localStorage.removeItem("sintonia:currentCliente");
-      sessionStorage.removeItem("impersonatedClientId");
+      // Clear all storage before signOut
+      localStorage.clear();
+      sessionStorage.clear();
       
-      console.log("Armazenamento local limpo. Executando signOut...");
+      console.log("Sidebar: Armazenamento local e de sessão limpos");
       
       // Sign out from Supabase
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
       
-      console.log("Logout bem-sucedido, redirecionando para /login");
+      if (error) {
+        console.error("Sidebar: Erro ao fazer logout:", error);
+        return;
+      }
       
-      // Use replace instead of navigate to prevent back button from returning to dashboard
-      window.location.href = "/login";
+      console.log("Sidebar: Logout do Supabase bem-sucedido");
+      
+      // Force a hard redirect to login page to ensure clean state
+      setTimeout(() => {
+        console.log("Sidebar: Redirecionando para /login");
+        window.location.replace("/login");
+      }, 100);
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.error("Sidebar: Erro ao fazer logout:", error);
     }
   };
 

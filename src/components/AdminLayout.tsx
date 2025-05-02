@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeProvider } from "next-themes";
 import ShowUIDButton from "./admin/ShowUIDButton";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -36,10 +37,34 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
     document.body.style.color = "black";
   }, []);
   
-  const handleLogout = () => {
-    localStorage.removeItem("sintonia:userType");
-    localStorage.removeItem("sintonia:currentCliente");
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      console.log("AdminLayout: Iniciando processo de logout completo...");
+      
+      // Clear all storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      console.log("AdminLayout: Armazenamento local e de sessão limpos completamente");
+      
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("AdminLayout: Erro ao fazer logout do Supabase:", error);
+        return;
+      }
+      
+      console.log("AdminLayout: Logout do Supabase bem-sucedido");
+      
+      // Force a hard redirect to login page
+      setTimeout(() => {
+        console.log("AdminLayout: Redirecionando para /login via window.location.replace");
+        window.location.replace("/login");
+      }, 100);
+    } catch (error) {
+      console.error("AdminLayout: Erro durante o logout:", error);
+    }
   };
 
   return (
