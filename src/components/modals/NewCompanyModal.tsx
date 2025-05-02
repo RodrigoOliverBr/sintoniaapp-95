@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addCompany } from "@/services"; 
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NewCompanyModalProps {
   open: boolean;
@@ -27,32 +29,31 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
 }) => {
   const [name, setName] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim()) {
-      toast({
-        title: "Erro",
-        description: "O nome da empresa é obrigatório",
-        variant: "destructive",
-      });
+      toast.error("O nome da empresa é obrigatório");
       return;
     }
 
     setIsSubmitting(true);
     
     try {
+      // Verificar se o usuário está autenticado
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Você precisa estar autenticado para adicionar uma empresa");
+      }
+      
+      console.log("Usuário autenticado:", session.user.id);
       console.log("Iniciando processo de cadastro da empresa:", name.trim());
       
-      // Simplificando ao máximo - apenas enviando o nome da empresa
+      // Enviar dados para cadastro
       await addCompany({ name: name.trim() });
       
-      toast({
-        title: "Sucesso",
-        description: "Empresa cadastrada com sucesso!",
-      });
+      toast.success("Empresa cadastrada com sucesso!");
       
       setName("");
       
@@ -63,11 +64,7 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       if (onCompanyAdded) onCompanyAdded();
     } catch (error: any) {
       console.error("Erro ao cadastrar empresa:", error);
-      toast({
-        title: "Erro",
-        description: error?.message || "Não foi possível cadastrar a empresa",
-        variant: "destructive",
-      });
+      toast.error(error?.message || "Não foi possível cadastrar a empresa");
     } finally {
       setIsSubmitting(false);
     }

@@ -58,8 +58,10 @@ export const getStatusColor = (status: ClienteStatus): string => {
  * Function to get the active client ID from session storage and login session
  * @returns The active client ID or null if none exists
  */
-export const getClienteIdAtivo = (): string | null => {
+export const getClienteIdAtivo = async (): Promise<string | null> => {
   try {
+    console.log("Obtendo ID do cliente ativo...");
+    
     // Check for impersonated client ID in session storage
     const impersonatedClientId = sessionStorage.getItem("impersonatedClientId");
     if (impersonatedClientId) {
@@ -81,20 +83,38 @@ export const getClienteIdAtivo = (): string | null => {
       }
     }
     
-    // Se não encontrou, tentar pegar o ID do usuário autenticado
-    try {
-      const authDataStr = localStorage.getItem("supabase.auth.token");
-      if (authDataStr) {
-        const authData = JSON.parse(authDataStr);
-        const userId = authData?.currentSession?.user?.id;
+    // Se não encontrou, tentar pegar o ID do usuário autenticado via Supabase
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error("Erro ao obter sessão:", error);
+      return null;
+    }
+    
+    if (!session) {
+      console.log("Nenhuma sessão ativa encontrada");
+      return null;
+    }
+    
+    const userId = session.user.id;
+    if (userId) {
+      console.log("Obtido ID do usuário autenticado:", userId);
+      
+      // Verificar se este ID existe na tabela perfis
+      const { data: perfil, error: perfilError } = await supabase
+        .from('perfis')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
         
-        if (userId) {
-          console.log("Usando ID do usuário autenticado:", userId);
-          return userId;
-        }
+      if (perfilError) {
+        console.error("Erro ao verificar perfil:", perfilError);
+      } else if (!perfil) {
+        console.error("Perfil não encontrado para o ID:", userId);
+      } else {
+        console.log("Perfil encontrado:", perfil);
+        return userId;
       }
-    } catch (error) {
-      console.error("Erro ao obter ID do usuário autenticado:", error);
     }
     
     console.warn("Nenhum ID de cliente encontrado");

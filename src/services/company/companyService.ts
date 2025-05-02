@@ -5,7 +5,7 @@ import { getClienteIdAtivo } from '@/utils/clientContext';
 
 export const getCompanies = async (): Promise<Company[]> => {
   // Obter o ID do cliente ativo (real ou impersonado)
-  const clienteId = getClienteIdAtivo();
+  const clienteId = await getClienteIdAtivo();
   
   let query = supabase
     .from('empresas')
@@ -42,7 +42,7 @@ export const getCompanies = async (): Promise<Company[]> => {
 };
 
 export const getCompanyById = async (companyId: string): Promise<Company | null> => {
-  const clienteId = getClienteIdAtivo();
+  const clienteId = await getClienteIdAtivo();
   
   let query = supabase
     .from('empresas')
@@ -79,17 +79,19 @@ export const getCompanyById = async (companyId: string): Promise<Company | null>
 };
 
 export const addCompany = async (companyData: Partial<Company>): Promise<Company> => {
-  const clienteId = getClienteIdAtivo();
+  const clienteId = await getClienteIdAtivo();
   
   if (!clienteId) {
     console.error("Nenhum cliente do sistema ativo para associar a empresa");
     throw new Error("Você precisa estar autenticado para adicionar uma empresa");
   }
 
+  console.log("Cliente ID para adicionar empresa:", clienteId);
+
   // Primeiro, vamos verificar se o perfil existe na tabela de perfis
   const { data: perfilExists, error: perfilError } = await supabase
     .from('perfis')
-    .select('id')
+    .select('id, tipo, email')
     .eq('id', clienteId)
     .single();
 
@@ -104,7 +106,8 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
   if (!perfilExists) {
     throw new Error("Seu perfil não foi encontrado no sistema. Por favor, contate o suporte.");
   }
-  
+
+  console.log("Perfil encontrado:", perfilExists);
   console.log("Adicionando empresa para o perfil:", clienteId);
   
   const dbData = {
@@ -155,7 +158,7 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
 };
 
 export const updateCompany = async (companyId: string, companyData: Partial<Company>): Promise<Company> => {
-  const clienteId = getClienteIdAtivo();
+  const clienteId = await getClienteIdAtivo();
   const updateData: any = {};
   
   if (companyData.name) updateData.nome = companyData.name;
@@ -203,7 +206,7 @@ export const updateCompany = async (companyId: string, companyData: Partial<Comp
 };
 
 export const deleteCompany = async (companyId: string): Promise<void> => {
-  const clienteId = getClienteIdAtivo();
+  const clienteId = await getClienteIdAtivo();
   
   let query = supabase
     .from('empresas')
