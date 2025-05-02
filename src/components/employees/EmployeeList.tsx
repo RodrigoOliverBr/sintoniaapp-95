@@ -29,6 +29,8 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
   onDelete,
   getStatusComponent,
 }) => {
+  console.log("EmployeeList: Rendering with roleNames:", roleNames);
+  
   return (
     <Table>
       <TableHeader>
@@ -50,34 +52,37 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
             <TableCell colSpan={5} className="text-center">Nenhum funcionário cadastrado</TableCell>
           </TableRow>
         ) : (
-          employees.map((employee) => (
-            <TableRow key={employee.id}>
-              <TableCell>{employee.name}</TableCell>
-              <TableCell>{employee.email}</TableCell>
-              <TableCell>
-                {employee.role && roleNames[employee.role] ? roleNames[employee.role] : 'Não definido'}
-              </TableCell>
-              <TableCell>{getStatusComponent(employee.id)}</TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(employee)}
-                >
-                  <PenLine className="h-4 w-4 mr-2" />
-                  Editar
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(employee.id)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))
+          employees.map((employee) => {
+            console.log(`Employee ${employee.id} role:`, employee.role, "Display name:", roleNames[employee.role]);
+            return (
+              <TableRow key={employee.id}>
+                <TableCell>{employee.name}</TableCell>
+                <TableCell>{employee.email}</TableCell>
+                <TableCell>
+                  {employee.role && roleNames[employee.role] ? roleNames[employee.role] : 'Não definido'}
+                </TableCell>
+                <TableCell>{getStatusComponent(employee.id)}</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(employee)}
+                  >
+                    <PenLine className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(employee.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })
         )}
       </TableBody>
     </Table>

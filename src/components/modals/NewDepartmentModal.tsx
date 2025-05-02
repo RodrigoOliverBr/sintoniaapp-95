@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addDepartmentToCompany } from "@/services";
+import { addDepartmentToCompany, getDepartmentsByCompany } from "@/services";
 import { useToast } from "@/hooks/use-toast";
 import { handleSupabaseError } from "@/integrations/supabase/client";
 
@@ -67,9 +67,13 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
       // com um pequeno delay para garantir que o banco seja atualizado
       if (onDepartmentAdded) {
         console.log("NewDepartmentModal: Chamando callback onDepartmentAdded após setor ser adicionado");
+        
+        // Execute callback immediately AND with a delay to ensure data is reloaded
+        onDepartmentAdded();
         setTimeout(() => {
+          console.log("NewDepartmentModal: Chamando callback novamente após delay");
           onDepartmentAdded();
-        }, 300);
+        }, 500);
       }
     } catch (error) {
       console.error("Erro ao adicionar setor:", error);

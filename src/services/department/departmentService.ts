@@ -23,11 +23,21 @@ export const getDepartmentsByCompany = async (companyId: string): Promise<Depart
     
     console.log(`getDepartmentsByCompany: ${data?.length || 0} setores encontrados para empresa ${companyId}:`, data);
     
-    return (data || []).map(dept => ({
+    // Forçar devolução de array vazio em vez de null se não houver dados
+    if (!data || data.length === 0) {
+      console.log("getDepartmentsByCompany: Nenhum setor encontrado, retornando array vazio");
+      return [];
+    }
+    
+    const mappedDepartments = data.map(dept => ({
       id: dept.id,
       name: dept.nome,
       companyId: dept.empresa_id
     }));
+    
+    console.log("getDepartmentsByCompany: Setores após mapeamento:", mappedDepartments);
+    
+    return mappedDepartments;
   } catch (error) {
     console.error("getDepartmentsByCompany: Exceção ao buscar setores:", error);
     throw error;

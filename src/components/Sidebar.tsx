@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 import SidebarLinks from "./SidebarLinks";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Sidebar = () => {
   const location = useLocation();
@@ -15,29 +16,39 @@ const Sidebar = () => {
     try {
       console.log("Sidebar: Iniciando processo de logout completo...");
       
-      // Clear all storage before signOut
+      // Clear all storage before signOut to ensure complete cleanup
       localStorage.clear();
       sessionStorage.clear();
       
+      // Clean any cookies related to the session
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
       console.log("Sidebar: Armazenamento local e de sessão limpos");
       
-      // Sign out from Supabase
-      const { error } = await supabase.auth.signOut();
+      // Sign out from Supabase with specific options to force complete logout
+      const { error } = await supabase.auth.signOut({ 
+        scope: 'global' // This ensures a complete sign out of all tabs/windows
+      });
       
       if (error) {
         console.error("Sidebar: Erro ao fazer logout:", error);
+        toast.error("Erro ao fazer logout. Tente novamente.");
         return;
       }
       
       console.log("Sidebar: Logout do Supabase bem-sucedido");
       
       // Force a hard redirect to login page to ensure clean state
-      setTimeout(() => {
-        console.log("Sidebar: Redirecionando para /login");
-        window.location.replace("/login");
-      }, 100);
+      // Adding random parameter to prevent caching
+      console.log("Sidebar: Redirecionando para /login");
+      window.location.href = `/login?t=${new Date().getTime()}`;
     } catch (error) {
       console.error("Sidebar: Erro ao fazer logout:", error);
+      toast.error("Ocorreu um erro ao fazer logout.");
     }
   };
 

@@ -1,21 +1,25 @@
 
 import React from "react";
-import { Card } from "@/components/ui/card";
-import { Employee } from "@/types/cadastro";
-import { getEmployeeStatusComponent } from "./EmployeeStatus";
+import { CompanySelect } from "./CompanySelect";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import EmployeeList from "./EmployeeList";
-import CompanySelect from "./CompanySelect";
+import EmployeeStatus from "./EmployeeStatus";
+import { Company, Employee, Department } from "@/types/cadastro";
+import { Plus } from "lucide-react";
 
 interface EmployeeContentProps {
-  companies: any[];
+  companies: Company[];
   employees: Employee[];
   selectedCompanyId: string | null;
   isLoading: boolean;
   roleNames: Record<string, string>;
+  departments?: Department[];
   onCompanyChange: (companyId: string) => void;
   onNewEmployee: () => void;
   onEditEmployee: (employee: Employee) => void;
   onDeleteEmployee: (employeeId: string) => void;
+  onRefreshDepartments?: () => void;
 }
 
 const EmployeeContent: React.FC<EmployeeContentProps> = ({
@@ -24,33 +28,46 @@ const EmployeeContent: React.FC<EmployeeContentProps> = ({
   selectedCompanyId,
   isLoading,
   roleNames,
+  departments,
   onCompanyChange,
   onNewEmployee,
   onEditEmployee,
   onDeleteEmployee,
+  onRefreshDepartments,
 }) => {
+  const getStatusComponent = (employeeId: string) => {
+    return <EmployeeStatus employeeId={employeeId} />;
+  };
+
   return (
-    <Card>
-      <div className="flex items-center justify-between p-4">
-        <h2 className="text-lg font-semibold">Lista de Funcionários</h2>
-        <CompanySelect
-          companies={companies}
-          selectedCompanyId={selectedCompanyId}
-          onCompanyChange={onCompanyChange}
-          onNewEmployee={onNewEmployee}
-        />
+    <div className="space-y-4">
+      <div className="flex justify-between">
+        <div className="flex-1 max-w-xs">
+          <CompanySelect
+            companies={companies}
+            value={selectedCompanyId || ""}
+            onChange={onCompanyChange}
+            disabled={isLoading}
+          />
+        </div>
+        <Button onClick={onNewEmployee} disabled={!selectedCompanyId || isLoading}>
+          <Plus className="h-4 w-4 mr-2" /> Novo Funcionário
+        </Button>
       </div>
+
       <Card>
-        <EmployeeList
-          employees={employees}
-          isLoading={isLoading}
-          roleNames={roleNames}
-          onEdit={onEditEmployee}
-          onDelete={onDeleteEmployee}
-          getStatusComponent={getEmployeeStatusComponent}
-        />
+        <CardContent className="pt-6">
+          <EmployeeList
+            employees={employees}
+            isLoading={isLoading}
+            roleNames={roleNames}
+            onEdit={onEditEmployee}
+            onDelete={onDeleteEmployee}
+            getStatusComponent={getStatusComponent}
+          />
+        </CardContent>
       </Card>
-    </Card>
+    </div>
   );
 };
 

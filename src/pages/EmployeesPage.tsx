@@ -1,15 +1,17 @@
 
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
-import { Employee } from "@/types/cadastro";
+import { Employee, Department } from "@/types/cadastro";
 import { useEmployees } from "@/hooks/useEmployees";
 import EmployeeContent from "@/components/employees/EmployeeContent";
 import EmployeeModals from "@/components/employees/EmployeeModals";
+import { getDepartmentsByCompany } from "@/services";
 
 const EmployeesPage: React.FC = () => {
   const [openNewModal, setOpenNewModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
   
   const {
     companies,
@@ -30,8 +32,21 @@ const EmployeesPage: React.FC = () => {
   useEffect(() => {
     if (selectedCompanyId) {
       loadEmployees(selectedCompanyId);
+      loadDepartments(selectedCompanyId);
     }
   }, [selectedCompanyId, loadEmployees]);
+
+  const loadDepartments = async (companyId: string) => {
+    console.log("EmployeesPage: Loading departments for company:", companyId);
+    try {
+      const departmentsData = await getDepartmentsByCompany(companyId);
+      console.log("EmployeesPage: Departments loaded:", departmentsData);
+      setDepartments(departmentsData);
+    } catch (error) {
+      console.error("EmployeesPage: Error loading departments:", error);
+      setDepartments([]);
+    }
+  };
 
   const handleCompanyChange = (companyId: string) => {
     setSelectedCompanyId(companyId);
@@ -40,6 +55,12 @@ const EmployeesPage: React.FC = () => {
   const handleEmployeeUpdated = () => {
     if (selectedCompanyId) {
       loadEmployees(selectedCompanyId);
+    }
+  };
+  
+  const handleRefreshDepartments = () => {
+    if (selectedCompanyId) {
+      loadDepartments(selectedCompanyId);
     }
   };
 
@@ -51,6 +72,7 @@ const EmployeesPage: React.FC = () => {
         selectedCompanyId={selectedCompanyId}
         isLoading={isLoading}
         roleNames={roleNames}
+        departments={departments}
         onCompanyChange={handleCompanyChange}
         onNewEmployee={() => setOpenNewModal(true)}
         onEditEmployee={(employee) => {
@@ -58,6 +80,7 @@ const EmployeesPage: React.FC = () => {
           setOpenEditModal(true);
         }}
         onDeleteEmployee={handleDeleteEmployee}
+        onRefreshDepartments={handleRefreshDepartments}
       />
 
       <EmployeeModals
@@ -68,6 +91,7 @@ const EmployeesPage: React.FC = () => {
         onNewModalOpenChange={setOpenNewModal}
         onEditModalOpenChange={setOpenEditModal}
         onEmployeeUpdated={handleEmployeeUpdated}
+        departments={departments}
       />
     </Layout>
   );
