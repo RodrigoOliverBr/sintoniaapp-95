@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +10,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ContractFormProps {
   formClienteId: string;
@@ -69,8 +69,20 @@ const ContractForm: React.FC<ContractFormProps> = ({
     formPlanoId,
     formNumeroContrato,
     clientesLength: clientes?.length,
-    planosLength: planos?.length
+    planosLength: planos?.length,
+    clientesData: clientes?.map(c => ({ id: c.id, nome: c.razao_social })),
+    planosData: planos?.map(p => ({ id: p.id, nome: p.nome }))
   });
+  
+  useEffect(() => {
+    if (!Array.isArray(clientes) || clientes.length === 0) {
+      console.warn("Clientes list is empty or not an array");
+    }
+    
+    if (!Array.isArray(planos) || planos.length === 0) {
+      console.warn("Planos list is empty or not an array");
+    }
+  }, [clientes, planos]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
@@ -84,22 +96,24 @@ const ContractForm: React.FC<ContractFormProps> = ({
           <SelectTrigger id="cliente" className="text-sm bg-white">
             <SelectValue placeholder="Selecione o cliente" />
           </SelectTrigger>
-          <SelectContent className="bg-white max-h-[300px] overflow-y-auto">
-            {clientes && clientes.length > 0 ? (
-              clientes.map(cliente => (
-                <SelectItem 
-                  key={cliente.id} 
-                  value={cliente.id}
-                  className="py-2 px-4 hover:bg-gray-100 text-sm"
-                >
-                  {cliente.razao_social || cliente.nome}
+          <SelectContent className="bg-white max-h-[300px]">
+            <ScrollArea className="h-[200px]">
+              {Array.isArray(clientes) && clientes.length > 0 ? (
+                clientes.map(cliente => (
+                  <SelectItem 
+                    key={cliente.id} 
+                    value={cliente.id}
+                    className="py-2 px-4 hover:bg-gray-100 text-sm"
+                  >
+                    {cliente.razao_social || cliente.nome}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-clients" disabled className="text-sm">
+                  {isLoading ? "Carregando clientes..." : "Nenhum cliente disponível"}
                 </SelectItem>
-              ))
-            ) : (
-              <SelectItem value="no-clients" disabled className="text-sm">
-                Nenhum cliente disponível
-              </SelectItem>
-            )}
+              )}
+            </ScrollArea>
           </SelectContent>
         </Select>
       </div>
@@ -114,11 +128,23 @@ const ContractForm: React.FC<ContractFormProps> = ({
             <SelectValue placeholder="Selecione o plano" />
           </SelectTrigger>
           <SelectContent className="bg-white">
-            {planos.map(plano => (
-              <SelectItem key={plano.id} value={plano.id} className="text-sm">
-                {plano.nome}
-              </SelectItem>
-            ))}
+            <ScrollArea className="h-[200px]">
+              {Array.isArray(planos) && planos.length > 0 ? (
+                planos.map(plano => (
+                  <SelectItem 
+                    key={plano.id} 
+                    value={plano.id} 
+                    className="py-2 px-4 hover:bg-gray-100 text-sm"
+                  >
+                    {plano.nome}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-plans" disabled className="text-sm">
+                  {isLoading ? "Carregando planos..." : "Nenhum plano disponível"}
+                </SelectItem>
+              )}
+            </ScrollArea>
           </SelectContent>
         </Select>
       </div>

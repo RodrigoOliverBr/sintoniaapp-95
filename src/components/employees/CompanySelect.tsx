@@ -40,14 +40,14 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
           value={selectedCompanyId || undefined}
           onValueChange={onCompanyChange}
         >
-          <SelectTrigger className="w-full max-w-[300px]">
+          <SelectTrigger className="w-full max-w-[300px] bg-white">
             <SelectValue placeholder={
               safeCompanies.length === 0 
                 ? "Carregando empresas..." 
                 : "Selecione uma empresa"
             } />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white">
             <ScrollArea className="h-[200px]">
               {safeCompanies.length > 0 ? (
                 safeCompanies.map((company) => (

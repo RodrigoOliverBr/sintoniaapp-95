@@ -60,7 +60,7 @@ const NewContractModal: React.FC<NewContractModalProps> = ({
   planos,
   isLoading,
   onClose,
-  onSave
+  onSave,
 }) => {
   const validateForm = () => {
     if (!formClienteId) {
@@ -101,11 +101,16 @@ const NewContractModal: React.FC<NewContractModalProps> = ({
   // Verificar autenticação quando o modal for aberto
   useEffect(() => {
     const checkAuth = async () => {
+      console.log("Verificando autenticação no NewContractModal...");
       await logAuthStatus();
+      
+      // Verificar se há clientes e planos disponíveis
+      console.log("Clientes disponíveis:", Array.isArray(clientes) ? clientes.length : 0);
+      console.log("Planos disponíveis:", Array.isArray(planos) ? planos.length : 0);
     };
     
     checkAuth();
-  }, []);
+  }, [clientes, planos]);
   
   const handleSave = async () => {
     console.log("Tentando salvar novo contrato com dados:", {

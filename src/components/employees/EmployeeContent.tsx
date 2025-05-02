@@ -4,7 +4,7 @@ import CompanySelect from "./CompanySelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import EmployeeList from "./EmployeeList";
-import { EmployeeStatus } from "./EmployeeStatus";
+import EmployeeStatus from "./EmployeeStatus";
 import { Company, Employee, Department } from "@/types/cadastro";
 import { Plus } from "lucide-react";
 

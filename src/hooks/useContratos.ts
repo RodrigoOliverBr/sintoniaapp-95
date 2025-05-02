@@ -147,8 +147,19 @@ export const useContratos = () => {
       }
       
       console.log("Dados brutos de clientes:", clientesData);
+      console.log("Número de clientes carregados:", clientesData?.length || 0);
       
-      const clientesFormatados: ClienteSistema[] = clientesData.map(cliente => ({
+      if (!clientesData || clientesData.length === 0) {
+        console.warn("Nenhum cliente foi encontrado no banco de dados");
+        // Tentar uma consulta mais simples para ver se há problemas de permissão
+        const { data: clienteCheckData, error: clienteCheckError } = await supabase
+          .from('clientes_sistema')
+          .select('count');
+          
+        console.log("Verificação de contagem de clientes:", clienteCheckData, clienteCheckError);
+      }
+      
+      const clientesFormatados: ClienteSistema[] = Array.isArray(clientesData) ? clientesData.map(cliente => ({
         id: cliente.id,
         razao_social: cliente.razao_social,
         razaoSocial: cliente.razao_social,
@@ -166,7 +177,7 @@ export const useContratos = () => {
         planoId: cliente.plano_id || '',
         contratoId: cliente.contrato_id || '',
         clienteId: cliente.id,
-      }));
+      })) : [];
       
       setClientes(clientesFormatados);
       console.log("Clientes formatados para exibição:", clientesFormatados);
@@ -183,7 +194,10 @@ export const useContratos = () => {
         return;
       }
       
-      const planosFormatados: Plano[] = planosData.map(plano => ({
+      console.log("Dados brutos de planos:", planosData);
+      console.log("Número de planos carregados:", planosData?.length || 0);
+      
+      const planosFormatados: Plano[] = Array.isArray(planosData) ? planosData.map(plano => ({
         id: plano.id,
         nome: plano.nome,
         descricao: plano.descricao || '',
@@ -198,10 +212,10 @@ export const useContratos = () => {
         dataValidade: plano.data_validade ? new Date(plano.data_validade).getTime() : null,
         semVencimento: plano.sem_vencimento || false,
         ativo: plano.ativo
-      }));
+      })) : [];
       
       setPlanos(planosFormatados);
-      console.log("Planos carregados:", planosFormatados);
+      console.log("Planos formatados para exibição:", planosFormatados);
       
       await refreshContratos();
     } catch (error: any) {
@@ -564,6 +578,7 @@ export const useContratos = () => {
     const initializeWithAuth = async () => {
       const isAuth = await ensureAuthenticated();
       if (isAuth) {
+        console.log("Usuario autenticado, iniciando carregamento de dados");
         loadData();
       } else {
         console.error("Não foi possível carregar dados devido a problemas de autenticação");
