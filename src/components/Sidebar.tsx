@@ -5,16 +5,27 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import SidebarLinks from "./SidebarLinks";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem("sintonia:userType");
-    localStorage.removeItem("sintonia:currentCliente");
-    sessionStorage.removeItem("impersonatedClientId");
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      // Clear local storage items
+      localStorage.removeItem("sintonia:userType");
+      localStorage.removeItem("sintonia:currentCliente");
+      sessionStorage.removeItem("impersonatedClientId");
+      
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Navigate to login page
+      navigate("/login");
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
   };
 
   // Verificação se está em uma rota de admin ou cliente

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -84,7 +83,7 @@ export const getClienteIdAtivo = async (): Promise<string | null> => {
       }
     }
     
-    // Obter o ID do usuário autenticado via Supabase
+    // Get authenticated user ID via Supabase
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError) {
@@ -105,10 +104,10 @@ export const getClienteIdAtivo = async (): Promise<string | null> => {
     
     console.log("Obtido ID do usuário autenticado:", userId);
     
-    // Verificar se este ID existe na tabela perfis usando maybeSingle() em vez de single()
+    // Check if this ID exists in perfis table
     const { data: perfil, error: perfilError } = await supabase
       .from('perfis')
-      .select('*')
+      .select('id, tipo, email')
       .eq('id', userId)
       .maybeSingle();
       
@@ -123,8 +122,7 @@ export const getClienteIdAtivo = async (): Promise<string | null> => {
     }
     
     console.log("Perfil encontrado para usuário:", perfil);
-    return userId;
-    
+    return userId; // Return the user ID which is the same as the profile ID
   } catch (error) {
     console.error("Erro ao obter cliente ativo:", error);
     return null;

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Company } from '@/types/cadastro';
 import { getClienteIdAtivo } from '@/utils/clientContext';
@@ -78,7 +79,11 @@ export const getCompanyById = async (companyId: string): Promise<Company | null>
 };
 
 export const addCompany = async (companyData: Partial<Company>): Promise<Company> => {
+  console.log("Iniciando addCompany...");
+  
+  // Get active client ID
   const clienteId = await getClienteIdAtivo();
+  console.log("Client ID from getClienteIdAtivo:", clienteId);
   
   if (!clienteId) {
     console.error("Nenhum cliente do sistema ativo para associar a empresa");
@@ -87,71 +92,92 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
 
   console.log("Cliente ID para adicionar empresa:", clienteId);
 
-  // Verificar se o perfil existe na tabela de perfis
-  const { data: perfilExists, error: perfilError } = await supabase
-    .from('perfis')
-    .select('id, tipo, email')
-    .eq('id', clienteId)
-    .maybeSingle();
+  try {
+    // Verificar a sessão atual
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      console.error("Erro ao verificar sessão ou sessão não encontrada:", sessionError);
+      throw new Error("Sua sessão expirou. Por favor, faça login novamente.");
+    }
+    
+    console.log("Session user ID:", session.user.id);
+    
+    // Verificar se o perfil existe na tabela de perfis
+    const { data: perfilExists, error: perfilError } = await supabase
+      .from('perfis')
+      .select('id, tipo, email')
+      .eq('id', session.user.id)
+      .maybeSingle();
 
-  if (perfilError) {
-    console.error("Erro ao verificar perfil:", perfilError);
-    throw new Error("Erro ao verificar seu perfil. Por favor, tente novamente mais tarde.");
-  }
+    if (perfilError) {
+      console.error("Erro ao verificar perfil:", perfilError);
+      throw new Error("Erro ao verificar seu perfil. Por favor, tente novamente mais tarde.");
+    }
 
-  if (!perfilExists) {
-    console.error("Perfil não encontrado para ID:", clienteId);
-    throw new Error("Seu perfil não foi encontrado no sistema. Por favor, contate o suporte.");
-  }
+    if (!perfilExists) {
+      console.error("Perfil não encontrado para ID:", session.user.id);
+      throw new Error("Seu perfil não foi encontrado no sistema. Por favor, contate o suporte.");
+    }
 
-  console.log("Perfil encontrado:", perfilExists);
-  console.log("Adicionando empresa para o perfil:", clienteId);
-  
-  const dbData = {
-    nome: companyData.name,
-    cpf_cnpj: companyData.cpfCnpj,
-    telefone: companyData.telefone,
-    email: companyData.email,
-    endereco: companyData.address,
-    tipo: companyData.type || 'juridica',
-    situacao: companyData.status || 'ativo',
-    contato: companyData.contact,
-    cep: companyData.zipCode,
-    estado: companyData.state,
-    cidade: companyData.city,
-    perfil_id: clienteId // Associar a empresa ao cliente do sistema atual
-  };
+    console.log("Perfil encontrado:", perfilExists);
+    
+    // Verificar se o usuário é do tipo cliente
+    if (perfilExists.tipo.toLowerCase() !== 'client') {
+      console.error("Usuário não é do tipo cliente:", perfilExists.tipo);
+      throw new Error("Apenas clientes podem cadastrar empresas.");
+    }
+    
+    console.log("Adicionando empresa para o perfil:", session.user.id);
+    
+    const dbData = {
+      nome: companyData.name,
+      cpf_cnpj: companyData.cpfCnpj,
+      telefone: companyData.telefone,
+      email: companyData.email,
+      endereco: companyData.address,
+      tipo: companyData.type || 'juridica',
+      situacao: companyData.status || 'ativo',
+      contato: companyData.contact,
+      cep: companyData.zipCode,
+      estado: companyData.state,
+      cidade: companyData.city,
+      perfil_id: session.user.id // Use the session user ID directly
+    };
 
-  console.log("Dados para inserção:", dbData);
+    console.log("Dados para inserção:", dbData);
 
-  const { data, error } = await supabase
-    .from('empresas')
-    .insert(dbData)
-    .select()
-    .single();
+    const { data, error } = await supabase
+      .from('empresas')
+      .insert(dbData)
+      .select()
+      .single();
 
-  if (error) {
-    console.error("Erro detalhado ao cadastrar empresa:", error);
+    if (error) {
+      console.error("Erro detalhado ao cadastrar empresa:", error);
+      throw error;
+    }
+    
+    console.log("Empresa cadastrada com sucesso:", data);
+    return {
+      id: data.id,
+      name: data.nome,
+      cpfCnpj: data.cpf_cnpj,
+      telefone: data.telefone,
+      email: data.email,
+      address: data.endereco,
+      type: data.tipo,
+      status: data.situacao,
+      contact: data.contato,
+      zipCode: data.cep,
+      state: data.estado,
+      city: data.cidade,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  } catch (error) {
+    console.error("Erro ao adicionar empresa:", error);
     throw error;
   }
-  
-  console.log("Empresa cadastrada com sucesso:", data);
-  return {
-    id: data.id,
-    name: data.nome,
-    cpfCnpj: data.cpf_cnpj,
-    telefone: data.telefone,
-    email: data.email,
-    address: data.endereco,
-    type: data.tipo,
-    status: data.situacao,
-    contact: data.contato,
-    zipCode: data.cep,
-    state: data.estado,
-    city: data.cidade,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at
-  };
 };
 
 export const updateCompany = async (companyId: string, companyData: Partial<Company>): Promise<Company> => {

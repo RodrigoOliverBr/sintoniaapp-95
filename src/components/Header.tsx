@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ClienteSistema, ClienteStatus, TipoPessoa } from "@/types/admin";
+import { ClienteSistema, ClienteStatus } from "@/types/admin";
 import { getClienteIdAtivo } from "@/utils/clientContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeProvider } from "next-themes";
@@ -41,6 +41,7 @@ const Header: React.FC<HeaderProps> = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentClient, setCurrentClient] = useState<ClienteSistema | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   // Force remove dark class to ensure light mode
   useEffect(() => {
@@ -110,11 +111,24 @@ const Header: React.FC<HeaderProps> = () => {
     loadCurrentClient();
   }, [location.pathname]);
   
-  const handleLogout = () => {
-    localStorage.removeItem("sintonia:userType");
-    localStorage.removeItem("sintonia:currentCliente");
-    sessionStorage.removeItem("impersonatedClientId");
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      // Clear local storage items
+      localStorage.removeItem("sintonia:userType");
+      localStorage.removeItem("sintonia:currentCliente");
+      sessionStorage.removeItem("impersonatedClientId");
+      
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Navigate to login page
+      navigate("/login");
+    } catch (error) {
+      console.error("Error during logout:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   const getClientName = () => {
@@ -162,16 +176,12 @@ const Header: React.FC<HeaderProps> = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  localStorage.removeItem("sintonia:userType");
-                  localStorage.removeItem("sintonia:currentCliente");
-                  sessionStorage.removeItem("impersonatedClientId");
-                  navigate("/login");
-                }}
+                onClick={handleLogout}
+                disabled={isLoggingOut}
                 className="flex items-center gap-1"
               >
                 <LogOut size={16} />
-                <span className="hidden sm:inline">Sair</span>
+                <span className="hidden sm:inline">{isLoggingOut ? "Saindo..." : "Sair"}</span>
               </Button>
               
               <div className="p-2">
