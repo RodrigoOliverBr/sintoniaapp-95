@@ -1,10 +1,10 @@
 
 import React from "react";
-import { CompanySelect } from "./CompanySelect";
+import CompanySelect from "./CompanySelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import EmployeeList from "./EmployeeList";
-import EmployeeStatus from "./EmployeeStatus";
+import { EmployeeStatus } from "./EmployeeStatus";
 import { Company, Employee, Department } from "@/types/cadastro";
 import { Plus } from "lucide-react";
 
@@ -45,14 +45,11 @@ const EmployeeContent: React.FC<EmployeeContentProps> = ({
         <div className="flex-1 max-w-xs">
           <CompanySelect
             companies={companies}
-            value={selectedCompanyId || ""}
-            onChange={onCompanyChange}
-            disabled={isLoading}
+            selectedCompanyId={selectedCompanyId}
+            onCompanyChange={onCompanyChange}
+            onNewEmployee={onNewEmployee}
           />
         </div>
-        <Button onClick={onNewEmployee} disabled={!selectedCompanyId || isLoading}>
-          <Plus className="h-4 w-4 mr-2" /> Novo Funcionário
-        </Button>
       </div>
 
       <Card>

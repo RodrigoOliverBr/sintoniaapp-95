@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FolderMinus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getDepartmentsByCompany } from "@/services";
+import { toast } from "sonner";
 
 interface DepartmentSelectProps {
   departments: Department[];
@@ -15,15 +16,22 @@ interface DepartmentSelectProps {
   onRefreshDepartments?: () => void;
 }
 
-const DepartmentSelect = ({
+const DepartmentSelect: React.FC<DepartmentSelectProps> = ({
   departments,
   selectedDepartments,
   onDepartmentToggle,
   companyId,
   onRefreshDepartments,
-}: DepartmentSelectProps) => {
+}) => {
   const [isLoading, setIsLoading] = useState(false);
-  const hasDepartments = departments && departments.length > 0;
+  const [localDepartments, setLocalDepartments] = useState<Department[]>(departments);
+  const hasDepartments = localDepartments && localDepartments.length > 0;
+  
+  // Update local departments when prop changes
+  useEffect(() => {
+    console.log("DepartmentSelect: Updated departments from props:", departments);
+    setLocalDepartments(departments);
+  }, [departments]);
   
   const handleRefreshClick = async () => {
     if (!companyId || isLoading) return;
@@ -31,15 +39,29 @@ const DepartmentSelect = ({
     setIsLoading(true);
     try {
       console.log("DepartmentSelect: Refresh manual de departamentos para empresa:", companyId);
+      
+      // Fetch departments directly here to update local state and parent 
+      const refreshedDepartments = await getDepartmentsByCompany(companyId);
+      console.log("DepartmentSelect: Departamentos atualizados:", refreshedDepartments);
+      
+      // Update local state first
+      setLocalDepartments(refreshedDepartments);
+      
+      // Then notify parent to update its state
       if (onRefreshDepartments) {
         onRefreshDepartments();
       }
+      
+      toast.success("Lista de setores atualizada com sucesso!");
+    } catch (error) {
+      console.error("DepartmentSelect: Erro ao atualizar departamentos:", error);
+      toast.error("Erro ao atualizar lista de setores");
     } finally {
       setTimeout(() => setIsLoading(false), 500);
     }
   };
 
-  console.log("DepartmentSelect: Rendering with departments:", departments);
+  console.log("DepartmentSelect: Rendering with departments:", localDepartments);
 
   return (
     <div className="grid grid-cols-4 items-start gap-4">
@@ -50,7 +72,7 @@ const DepartmentSelect = ({
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm text-muted-foreground">
             {hasDepartments 
-              ? `${departments.length} setores disponíveis` 
+              ? `${localDepartments.length} setores disponíveis` 
               : companyId 
                 ? "Nenhum setor cadastrado ainda" 
                 : "Selecione uma empresa primeiro"}
@@ -71,7 +93,7 @@ const DepartmentSelect = ({
         </div>
         
         {hasDepartments ? (
-          departments.map((department) => (
+          localDepartments.map((department) => (
             <div key={department.id} className="flex items-center space-x-2">
               <Checkbox
                 id={`dept-${department.id}`}

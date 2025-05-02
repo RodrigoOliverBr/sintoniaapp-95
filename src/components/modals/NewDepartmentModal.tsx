@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { addDepartmentToCompany, getDepartmentsByCompany } from "@/services";
 import { useToast } from "@/hooks/use-toast";
 import { handleSupabaseError } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface NewDepartmentModalProps {
   open: boolean;
@@ -30,17 +31,13 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
 }) => {
   const [name, setName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
+  const { toast: legacyToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim()) {
-      toast({
-        title: "Erro",
-        description: "O nome do setor é obrigatório",
-        variant: "destructive",
-      });
+      toast.error("O nome do setor é obrigatório");
       return;
     }
 
@@ -55,25 +52,35 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
         companyId: companyId
       });
       
-      toast({
-        title: "Sucesso",
-        description: "Setor cadastrado com sucesso!",
-      });
-      
+      // Limpar o formulário e fechar o modal
       setName("");
       onOpenChange(false);
       
-      // Garantindo que a função de callback seja chamada após sucesso
-      // com um pequeno delay para garantir que o banco seja atualizado
+      // Garantindo que a função de callback seja chamada após sucesso com múltiplas tentativas
       if (onDepartmentAdded) {
         console.log("NewDepartmentModal: Chamando callback onDepartmentAdded após setor ser adicionado");
         
-        // Execute callback immediately AND with a delay to ensure data is reloaded
+        // Execute callback immediately
         onDepartmentAdded();
+        
+        // And with progressive delays to ensure data is fully propagated
         setTimeout(() => {
-          console.log("NewDepartmentModal: Chamando callback novamente após delay");
+          console.log("NewDepartmentModal: Chamando callback novamente após delay (500ms)");
           onDepartmentAdded();
+          
+          // Try one more time after 1.5 seconds just to be sure
+          setTimeout(() => {
+            console.log("NewDepartmentModal: Chamando callback final após delay (1.5s)");
+            onDepartmentAdded();
+          }, 1000);
         }, 500);
+      }
+      
+      // Forced refresh to ensure UI is updated with the latest data
+      try {
+        await getDepartmentsByCompany(companyId);
+      } catch (refreshErr) {
+        console.error("Erro ao atualizar lista de setores:", refreshErr);
       }
     } catch (error) {
       console.error("Erro ao adicionar setor:", error);
@@ -81,11 +88,7 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
         ? error.message 
         : handleSupabaseError(error);
       
-      toast({
-        title: "Erro",
-        description: errorMessage || "Não foi possível adicionar o setor",
-        variant: "destructive",
-      });
+      toast.error(errorMessage || "Não foi possível adicionar o setor");
     } finally {
       setIsSubmitting(false);
     }

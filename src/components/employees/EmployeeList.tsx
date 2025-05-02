@@ -53,14 +53,16 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
           </TableRow>
         ) : (
           employees.map((employee) => {
-            console.log(`Employee ${employee.id} role:`, employee.role, "Display name:", roleNames[employee.role]);
+            console.log(`Employee ${employee.id} role:`, employee.role, "Display name:", roleNames[employee.role || '']);
+            const roleName = employee.role && roleNames 
+              ? (roleNames[employee.role] || 'Não definido')
+              : 'Não definido';
+              
             return (
               <TableRow key={employee.id}>
                 <TableCell>{employee.name}</TableCell>
-                <TableCell>{employee.email}</TableCell>
-                <TableCell>
-                  {employee.role && roleNames[employee.role] ? roleNames[employee.role] : 'Não definido'}
-                </TableCell>
+                <TableCell>{employee.email || '-'}</TableCell>
+                <TableCell>{roleName}</TableCell>
                 <TableCell>{getStatusComponent(employee.id)}</TableCell>
                 <TableCell className="text-right">
                   <Button

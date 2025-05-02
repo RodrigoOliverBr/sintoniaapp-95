@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Department } from '@/types/cadastro';
+import { toast } from 'sonner';
 
 export const getDepartmentsByCompany = async (companyId: string): Promise<Department[]> => {
   console.log("getDepartmentsByCompany: Buscando setores para a empresa:", companyId);
@@ -11,6 +12,10 @@ export const getDepartmentsByCompany = async (companyId: string): Promise<Depart
   }
   
   try {
+    // Adicionar um pequeno delay para garantir que os dados estejam atualizados
+    // em caso de uma operação recente de insert/update
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     const { data, error } = await supabase
       .from('setores')
       .select('*')
@@ -111,6 +116,21 @@ export const addDepartmentToCompany = async (departmentData: Partial<Department>
     }
     
     console.log("addDepartmentToCompany: Setor adicionado com sucesso:", data);
+    
+    // Notify user of success
+    toast.success("Setor cadastrado com sucesso!");
+    
+    // Force a refresh of departments after adding
+    // We'll add a small delay to ensure the database has processed the insert
+    setTimeout(async () => {
+      try {
+        // This forces a refresh of cache data if any
+        console.log("addDepartmentToCompany: Forçando refresh dos setores após inserção");
+        await getDepartmentsByCompany(departmentData.companyId!);
+      } catch (err) {
+        console.error("Error during forced refresh:", err);
+      }
+    }, 500);
     
     return {
       id: data.id,

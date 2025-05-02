@@ -19,12 +19,12 @@ interface CompanySelectProps {
   onNewEmployee: () => void;
 }
 
-const CompanySelect = ({
+const CompanySelect: React.FC<CompanySelectProps> = ({
   companies,
   selectedCompanyId,
   onCompanyChange,
   onNewEmployee,
-}: CompanySelectProps) => {
+}) => {
   const safeCompanies = Array.isArray(companies) ? companies : [];
   
   // Log para depuração

@@ -410,7 +410,7 @@ const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId, secoes, setSecoes, 
             <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)} disabled={isLoading}>
               Cancelar
             </Button>
-            <Button variant="primary" onClick={deleteSecao} disabled={isLoading}>
+            <Button variant="destructive" onClick={deleteSecao} disabled={isLoading}>
               Excluir
             </Button>
           </DialogFooter>

@@ -4,6 +4,7 @@ import { Employee, Department, JobRole } from "@/types/cadastro";
 import NewEmployeeModal from "@/components/modals/NewEmployeeModal";
 import EditEmployeeModal from "@/components/modals/EditEmployeeModal";
 import { getDepartmentsByCompany } from "@/services";
+import { toast } from "sonner";
 
 interface EmployeeModalsProps {
   openNewModal: boolean;
@@ -43,6 +44,12 @@ const EmployeeModals: React.FC<EmployeeModalsProps> = ({
         try {
           const depts = await getDepartmentsByCompany(selectedCompanyId);
           console.log("EmployeeModals: Refreshed departments:", depts);
+          
+          if (depts && depts.length === 0) {
+            console.log("EmployeeModals: No departments found for company");
+            toast.info("Esta empresa não possui setores cadastrados. Considere adicionar setores antes de cadastrar funcionários.");
+          }
+          
           setLocalDepartments(depts);
         } catch (error) {
           console.error("EmployeeModals: Error refreshing departments:", error);
@@ -60,7 +67,6 @@ const EmployeeModals: React.FC<EmployeeModalsProps> = ({
         onOpenChange={onNewModalOpenChange}
         preselectedCompanyId={selectedCompanyId || ""}
         onEmployeeAdded={onEmployeeUpdated}
-        departments={localDepartments}
       />
 
       {selectedEmployee && (
