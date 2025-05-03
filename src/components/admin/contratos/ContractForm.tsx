@@ -96,7 +96,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
           <SelectTrigger id="cliente" className="text-sm bg-white">
             <SelectValue placeholder="Selecione o cliente" />
           </SelectTrigger>
-          <SelectContent className="bg-white max-h-[300px]">
+          <SelectContent className="bg-white max-h-[300px] z-50">
             <ScrollArea className="h-[200px]">
               {Array.isArray(clientes) && clientes.length > 0 ? (
                 clientes.map(cliente => (
@@ -127,7 +127,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
           <SelectTrigger id="plano" className="text-sm bg-white">
             <SelectValue placeholder="Selecione o plano" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
+          <SelectContent className="bg-white z-50">
             <ScrollArea className="h-[200px]">
               {Array.isArray(planos) && planos.length > 0 ? (
                 planos.map(plano => (

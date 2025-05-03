@@ -1,179 +1,157 @@
-
-import React, { useEffect, useState } from "react";
-import Layout from "@/components/Layout";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
-import PasswordChangeForm from "@/components/auth/PasswordChangeForm";
+import React, { useState, useEffect } from 'react';
+import { useUser } from '@supabase/auth-helpers-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useRouter } from 'next/router';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast"
+import { handleSupabaseError } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface PerfilUsuario {
-  id: string;
-  nome?: string;
-  email?: string;
-  tipo: string;
-  telefone?: string;
-  created_at: string;
-  updated_at: string;
-}
-
 const UserAccountPage: React.FC = () => {
-  const [userProfile, setUserProfile] = useState<PerfilUsuario | null>(null);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
+  const user = useUser();
+  const router = useRouter();
+  const [userProfile, setUserProfile] = useState<{ nome?: string; email?: string; telefone?: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast: legacyToast } = useToast();
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchUserProfile = async () => {
+      setIsLoading(true);
       try {
-        setIsLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          console.error("User not found");
-          return;
+        if (user) {
+          const { data, error } = await supabase
+            .from('perfis')
+            .select('nome, email, telefone')
+            .eq('id', user.id)
+            .single();
+
+          if (error) {
+            console.error("Erro ao buscar perfil do usuário:", error);
+            legacyToast({
+              variant: "destructive",
+              title: "Erro!",
+              description: handleSupabaseError(error),
+            })
+          } else {
+            setUserProfile(data);
+          }
+        } else {
+          router.push('/login');
         }
-        
-        const { data, error } = await supabase
-          .from("perfis")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-          
-        if (error) {
-          console.error("Error fetching user profile:", error);
-          return;
-        }
-        
-        setUserProfile(data as PerfilUsuario);
-        setName(data.nome || "");
-        setEmail(data.email || user.email || "");
-        setPhone(data.telefone || "");
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("Erro ao buscar perfil do usuário:", error);
+        legacyToast({
+          variant: "destructive",
+          title: "Erro!",
+          description: "Não foi possível carregar o perfil do usuário.",
+        })
       } finally {
         setIsLoading(false);
       }
     };
-    
-    fetchUserData();
-  }, []);
 
-  const handleUpdateProfile = async () => {
+    fetchUserProfile();
+  }, [user, router, legacyToast]);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+
     try {
-      setIsLoading(true);
-      
-      if (!userProfile) return;
-      
+      if (!user) {
+        throw new Error("Usuário não autenticado.");
+      }
+
+      const nome = (e.target.elements.namedItem('nome') as HTMLInputElement).value;
+      const email = (e.target.elements.namedItem('email') as HTMLInputElement).value;
+      const telefone = (e.target.elements.namedItem('telefone') as HTMLInputElement).value;
+
       const { error } = await supabase
-        .from("perfis")
+        .from('perfis')
         .update({
-          nome: name,
-          email: email,
-          telefone: phone
+          nome,
+          email,
+          telefone,
+          updated_at: new Date().toISOString(),
         })
-        .eq("id", userProfile.id);
-        
-      if (error) throw error;
-      
-      toast.success("Perfil atualizado com sucesso!");
-      
-      // Update local state
-      setUserProfile({
-        ...userProfile,
-        nome: name,
-        email: email,
-        telefone: phone
-      });
+        .eq('id', user.id);
+
+      if (error) {
+        console.error("Erro ao atualizar perfil:", error);
+        toast.error(handleSupabaseError(error) || "Erro ao atualizar perfil.");
+      } else {
+        setUserProfile({ nome, email, telefone });
+        toast.success("Perfil atualizado com sucesso!");
+      }
     } catch (error) {
-      console.error("Error updating profile:", error);
-      toast.error("Erro ao atualizar perfil");
+      console.error("Erro ao atualizar perfil:", error);
+      toast.error((error as Error).message || "Erro ao atualizar perfil.");
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
+  if (isLoading) {
+    return <Layout title="Perfil">Carregando...</Layout>;
+  }
+
+  if (!userProfile) {
+    return <Layout title="Perfil">Não foi possível carregar o perfil.</Layout>;
+  }
+
+  const telefoneDisplay = userProfile?.telefone || '-';
+
   return (
-    <Layout title="Minha Conta">
-      <div className="container mx-auto py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="profile">Meu Perfil</TabsTrigger>
-            <TabsTrigger value="security">Segurança</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="profile" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informações do Perfil</CardTitle>
-                <CardDescription>
-                  Atualize suas informações pessoais aqui.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Seu nome completo"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu.email@exemplo.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tipo de Usuário</Label>
-                  <div className="p-2 border rounded-md bg-gray-50">
-                    {userProfile?.tipo === "admin" ? "Administrador" : "Cliente"}
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={handleUpdateProfile} disabled={isLoading}>
-                  {isLoading ? "Salvando..." : "Salvar Alterações"}
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="security" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Segurança</CardTitle>
-                <CardDescription>
-                  Gerencie suas credenciais de acesso.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <PasswordChangeForm />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+    <Layout title="Perfil">
+      <Card>
+        <CardHeader>
+          <CardTitle>Detalhes da Conta</CardTitle>
+          <CardDescription>Atualize as informações da sua conta aqui.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6">
+          <form onSubmit={handleUpdateProfile} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                type="text"
+                id="name"
+                name="nome"
+                defaultValue={userProfile.nome || ""}
+                required
+                className="bg-white"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                type="email"
+                id="email"
+                name="email"
+                defaultValue={userProfile.email || ""}
+                required
+                className="bg-white"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="telefone">Telefone</Label>
+              <Input
+                type="tel"
+                id="telefone"
+                name="telefone"
+                defaultValue={telefoneDisplay}
+                className="bg-white"
+              />
+            </div>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </Layout>
   );
 };

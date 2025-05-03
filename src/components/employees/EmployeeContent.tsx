@@ -39,6 +39,12 @@ const EmployeeContent: React.FC<EmployeeContentProps> = ({
     return <EmployeeStatus employeeId={employeeId} />;
   };
 
+  // Log important data for debugging
+  console.log("EmployeeContent: Rendering with companies:", companies.length);
+  console.log("EmployeeContent: Selected company ID:", selectedCompanyId);
+  console.log("EmployeeContent: Available departments:", departments?.length || 0);
+  console.log("EmployeeContent: Role names mapping:", roleNames);
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between">

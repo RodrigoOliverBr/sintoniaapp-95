@@ -1,387 +1,161 @@
-import { useState, useEffect } from "react";
-import { supabase, handleSupabaseError, ensureAuthenticated } from "@/integrations/supabase/client";
+import { useState, useEffect, useCallback } from "react";
 import { Contrato, ClienteSistema, Plano, StatusContrato } from "@/types/admin";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { gerarFaturasAutomaticas } from "@/components/admin/contratos/InvoiceGenerator";
 
-export const useContratos = () => {
+interface UseContratosResult {
+  contratos: Contrato[];
+  clientes: ClienteSistema[];
+  planos: Plano[];
+  isLoading: boolean;
+  currentContrato: Contrato | null;
+  setCurrentContrato: (contrato: Contrato | null) => void;
+  addContrato: (
+    clienteId: string,
+    planoId: string,
+    numeroContrato: string,
+    dataInicio: Date,
+    dataFim: Date,
+    dataPrimeiroVencimento: Date,
+    valorMensal: number,
+    status: StatusContrato,
+    taxaImplantacao: number,
+    observacoes: string
+  ) => Promise<boolean>;
+  updateContrato: (
+    id: string,
+    clienteId: string,
+    planoId: string,
+    numeroContrato: string,
+    dataInicio: Date,
+    dataFim: Date,
+    dataPrimeiroVencimento: Date,
+    valorMensal: number,
+    status: StatusContrato,
+    taxaImplantacao: number,
+    observacoes: string
+  ) => Promise<boolean>;
+  deleteContrato: (contratoId: string, clienteId: string) => Promise<boolean>;
+}
+
+export const useContratos = (): UseContratosResult => {
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentContrato, setCurrentContrato] = useState<Contrato | null>(null);
 
-  const refreshContratos = async () => {
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
-      console.log("Refreshing contratos...");
+      console.log("useContratos: Iniciando carregamento de dados");
       
-      // Verificar autenticação antes da operação
-      const isAuthenticated = await ensureAuthenticated();
-      if (!isAuthenticated) {
-        console.error("Usuário não autenticado para operação refreshContratos");
-        toast.error("Você precisa estar autenticado para acessar os contratos");
-        return;
-      }
-      
-      const { data, error } = await supabase
-        .from('contratos')
-        .select('*');
-      
-      if (error) {
-        console.error('Erro ao recarregar contratos:', error);
-        const errorMessage = handleSupabaseError(error);
-        toast.error(`Erro ao carregar contratos: ${errorMessage}`);
-        return;
-      }
-      
-      const contratosFormatados = data.map(contrato => ({
-        id: contrato.id,
-        numero: contrato.numero,
-        clienteSistemaId: contrato.cliente_sistema_id || contrato.cliente_id,
-        clienteId: contrato.cliente_id,
-        planoId: contrato.plano_id,
-        dataInicio: new Date(contrato.data_inicio).getTime(),
-        dataFim: new Date(contrato.data_fim).getTime(),
-        dataPrimeiroVencimento: new Date(contrato.data_primeiro_vencimento).getTime(),
-        valorMensal: Number(contrato.valor_mensal),
-        status: contrato.status as any,
-        taxaImplantacao: Number(contrato.taxa_implantacao),
-        observacoes: contrato.observacoes || '',
-        cicloFaturamento: contrato.ciclo_faturamento as any,
-        proximaRenovacao: contrato.proxima_renovacao ? new Date(contrato.proxima_renovacao).getTime() : undefined,
-        ciclosGerados: contrato.ciclos_gerados || 0
-      }));
-      
-      setContratos(contratosFormatados);
-      console.log("Contratos atualizados:", contratosFormatados);
-    } catch (error) {
-      console.error('Erro ao recarregar contratos:', error);
-      toast.error("Erro ao carregar contratos. Verifique sua conexão e autenticação.");
-    }
-  };
-
-  const atualizarSituacaoCliente = async (
-    clienteId: string,
-    statusContrato: string
-  ) => {
-    try {
-      console.log(`Atualizando situação do cliente ${clienteId} com base no status do contrato: ${statusContrato}`);
-      
-      const { data: clienteData, error: clienteError } = await supabase
-        .from('clientes_sistema')
-        .select('situacao')
-        .eq('id', clienteId)
-        .single();
-      
-      if (clienteError) {
-        console.error('Erro ao verificar situação do cliente:', clienteError);
-        return;
-      }
-      
-      if (clienteData?.situacao === 'bloqueado-manualmente') {
-        console.log('Cliente está bloqueado manualmente, não atualizando situação');
-        return;
-      }
-      
-      let novaSituacao;
-      switch (statusContrato) {
-        case 'ativo':
-          novaSituacao = 'ativo';
-          break;
-        case 'em-analise':
-          novaSituacao = 'em-analise';
-          break;
-        case 'cancelado':
-          novaSituacao = 'sem-contrato';
-          break;
-        case 'bloqueado-manualmente':
-          novaSituacao = 'bloqueado-manualmente';
-          break;
-        default:
-          novaSituacao = 'sem-contrato';
-      }
-      
-      console.log(`Atualizando cliente ${clienteId} para situação: ${novaSituacao}`);
-      
-      const { error } = await supabase
-        .from('clientes_sistema')
-        .update({ situacao: novaSituacao })
-        .eq('id', clienteId);
-      
-      if (error) {
-        console.error('Erro ao atualizar situação do cliente:', error);
-      } else {
-        console.log(`Situação do cliente ${clienteId} atualizada para ${novaSituacao}`);
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar situação do cliente:', error);
-    }
-  };
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      console.log("Loading contratos data...");
-      
-      // Verificar autenticação antes da operação
-      const isAuthenticated = await ensureAuthenticated();
-      if (!isAuthenticated) {
-        console.error("Usuário não autenticado para operação loadData");
-        toast.error("Você precisa estar autenticado para acessar os dados");
-        return;
-      }
-      
-      // Log da sessão atual para debug
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log("Sessão atual durante loadData:", sessionData?.session?.user?.id);
-      
+      console.log("useContratos: Carregando clientes do sistema...");
       const { data: clientesData, error: clientesError } = await supabase
         .from('clientes_sistema')
         .select('*');
       
       if (clientesError) {
-        console.error('Erro ao carregar clientes:', clientesError);
-        const errorMessage = handleSupabaseError(clientesError);
-        toast.error(`Erro ao carregar dados dos clientes: ${errorMessage}`);
+        console.error("useContratos: Erro ao carregar clientes:", clientesError);
+        toast.error("Erro ao carregar clientes");
         return;
       }
       
-      console.log("Dados brutos de clientes:", clientesData);
-      console.log("Número de clientes carregados:", clientesData?.length || 0);
-      
       if (!clientesData || clientesData.length === 0) {
-        console.warn("Nenhum cliente foi encontrado no banco de dados");
-        // Tentar uma consulta mais simples para ver se há problemas de permissão
-        const { data: clienteCheckData, error: clienteCheckError } = await supabase
-          .from('clientes_sistema')
-          .select('count');
-          
-        console.log("Verificação de contagem de clientes:", clienteCheckData, clienteCheckError);
+        console.log("useContratos: Nenhum cliente encontrado na consulta");
+      } else {
+        console.log(`useContratos: ${clientesData.length} clientes carregados com sucesso:`, 
+          clientesData.map(c => ({ id: c.id, nome: c.razao_social || c.nome }))
+        );
       }
       
-      const clientesFormatados: ClienteSistema[] = Array.isArray(clientesData) ? clientesData.map(cliente => ({
-        id: cliente.id,
-        razao_social: cliente.razao_social,
-        razaoSocial: cliente.razao_social,
-        nome: cliente.razao_social,
-        tipo: 'juridica' as const,
-        numeroEmpregados: 0,
-        dataInclusao: Date.now(),
-        situacao: cliente.situacao as 'liberado' | 'bloqueado' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente',
-        cnpj: cliente.cnpj,
-        cpfCnpj: cliente.cnpj,
-        email: cliente.email || '',
-        telefone: cliente.telefone || '',
-        responsavel: cliente.responsavel || '',
-        contato: cliente.responsavel || '',
-        planoId: cliente.plano_id || '',
-        contratoId: cliente.contrato_id || '',
-        clienteId: cliente.id,
-      })) : [];
+      setClientes(clientesData || []);
       
-      setClientes(clientesFormatados);
-      console.log("Clientes formatados para exibição:", clientesFormatados);
-      
+      console.log("useContratos: Carregando planos ativos...");
       const { data: planosData, error: planosError } = await supabase
         .from('planos')
         .select('*')
         .eq('ativo', true);
       
       if (planosError) {
-        console.error('Erro ao carregar planos:', planosError);
-        const errorMessage = handleSupabaseError(planosError);
-        toast.error(`Erro ao carregar dados dos planos: ${errorMessage}`);
+        console.error("useContratos: Erro ao carregar planos:", planosError);
+        toast.error("Erro ao carregar planos");
         return;
       }
       
-      console.log("Dados brutos de planos:", planosData);
-      console.log("Número de planos carregados:", planosData?.length || 0);
+      console.log(`useContratos: ${planosData?.length || 0} planos ativos carregados`);
+      setPlanos(planosData || []);
       
-      const planosFormatados: Plano[] = Array.isArray(planosData) ? planosData.map(plano => ({
-        id: plano.id,
-        nome: plano.nome,
-        descricao: plano.descricao || '',
-        valor: Number(plano.valor_mensal || 0),
-        numeroUsuarios: 0,
-        valorMensal: Number(plano.valor_mensal),
-        valorImplantacao: Number(plano.valor_implantacao),
-        limiteEmpresas: plano.limite_empresas || 0,
-        empresasIlimitadas: plano.empresas_ilimitadas || false,
-        limiteEmpregados: plano.limite_empregados || 0,
-        empregadosIlimitados: plano.empregados_ilimitados || false,
-        dataValidade: plano.data_validade ? new Date(plano.data_validade).getTime() : null,
-        semVencimento: plano.sem_vencimento || false,
-        ativo: plano.ativo
-      })) : [];
+      console.log("useContratos: Carregando contratos...");
+      const { data: contratosData, error: contratosError } = await supabase
+        .from('contratos')
+        .select('*')
+        .order('created_at', { ascending: false });
       
-      setPlanos(planosFormatados);
-      console.log("Planos formatados para exibição:", planosFormatados);
+      if (contratosError) {
+        console.error("useContratos: Erro ao carregar contratos:", contratosError);
+        toast.error("Erro ao carregar contratos");
+        return;
+      }
       
-      await refreshContratos();
-    } catch (error: any) {
-      console.error('Erro ao carregar dados:', error);
-      toast.error(`Erro ao carregar dados: ${error.message || 'Erro desconhecido'}`);
+      console.log(`useContratos: ${contratosData?.length || 0} contratos carregados`);
+      setContratos(contratosData || []);
+      
+      console.log("useContratos: Carregamento de dados concluído com sucesso");
+    } catch (error) {
+      console.error("useContratos: Erro inesperado ao carregar dados:", error);
+      toast.error("Erro ao carregar dados");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const addContrato = async (
-    formClienteId: string,
-    formPlanoId: string,
-    formNumeroContrato: string,
-    formDataInicio: Date,
-    formDataFim: Date,
-    formDataPrimeiroVencimento: Date,
-    formValorMensal: number,
-    formStatus: string,
-    formTaxaImplantacao: number,
-    formObservacoes: string
-  ) => {
+    clienteId: string,
+    planoId: string,
+    numeroContrato: string,
+    dataInicio: Date,
+    dataFim: Date,
+    dataPrimeiroVencimento: Date,
+    valorMensal: number,
+    status: StatusContrato,
+    taxaImplantacao: number,
+    observacoes: string
+  ): Promise<boolean> => {
+    setIsLoading(true);
     try {
-      if (!formClienteId || !formPlanoId || !formNumeroContrato) {
-        toast.error("Cliente, Plano e Número do Contrato são obrigatórios");
-        return false;
-      }
-
-      setIsLoading(true);
-      console.log("Adicionando contrato com dados:", {
-        cliente: formClienteId,
-        plano: formPlanoId,
-        numero: formNumeroContrato
-      });
-      
-      // Verificar autenticação antes da operação
-      const isAuthenticated = await ensureAuthenticated();
-      if (!isAuthenticated) {
-        console.error("Usuário não autenticado para operação addContrato");
-        toast.error("Você precisa estar autenticado para adicionar contratos");
-        return false;
-      }
-      
-      // Log da sessão atual para debug
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log("Sessão atual durante addContrato:", sessionData?.session?.user?.id);
-      
-      // Verificar se o cliente já tem contratos ativos
-      if (formStatus === 'ativo') {
-        const { data: contratosAtivos, error: checkError } = await supabase
-          .from('contratos')
-          .select('id')
-          .eq('cliente_sistema_id', formClienteId)
-          .eq('status', 'ativo');
-          
-        if (checkError) {
-          console.error("Erro ao verificar contratos existentes:", checkError);
-          toast.error("Erro ao verificar contratos existentes: " + checkError.message);
-          return false;
-        }
-        
-        if (contratosAtivos && contratosAtivos.length > 0) {
-          toast.error("Este cliente já possui um contrato ativo. Cancele o contrato existente antes de criar um novo.");
-          return false;
-        }
-      }
-      
-      // Adicionando log detalhado dos dados que serão inseridos
-      console.log("Inserindo contrato com os seguintes dados:", {
-        numero: formNumeroContrato,
-        cliente_sistema_id: formClienteId,
-        cliente_id: formClienteId,
-        plano_id: formPlanoId,
-        data_inicio: formDataInicio.toISOString(),
-        data_fim: formDataFim.toISOString(),
-        data_primeiro_vencimento: formDataPrimeiroVencimento.toISOString(),
-        valor_mensal: formValorMensal,
-        status: formStatus,
-        taxa_implantacao: formTaxaImplantacao,
-        observacoes: formObservacoes,
-        ciclo_faturamento: 'mensal'
-      });
-      
-      // Tentativa de inserção do contrato
       const { data, error } = await supabase
         .from('contratos')
-        .insert({
-          numero: formNumeroContrato,
-          cliente_sistema_id: formClienteId,
-          cliente_id: formClienteId,
-          plano_id: formPlanoId,
-          data_inicio: formDataInicio.toISOString(),
-          data_fim: formDataFim.toISOString(),
-          data_primeiro_vencimento: formDataPrimeiroVencimento.toISOString(),
-          valor_mensal: formValorMensal,
-          status: formStatus,
-          taxa_implantacao: formTaxaImplantacao,
-          observacoes: formObservacoes,
-          ciclo_faturamento: 'mensal'
-        })
-        .select();
+        .insert([
+          {
+            cliente_sistema_id: clienteId,
+            plano_id: planoId,
+            numero: numeroContrato,
+            data_inicio: dataInicio.toISOString(),
+            data_fim: dataFim.toISOString(),
+            data_primeiro_vencimento: dataPrimeiroVencimento.toISOString(),
+            valor_mensal: valorMensal,
+            status: status,
+            taxa_implantacao: taxaImplantacao,
+            observacoes: observacoes,
+          },
+        ]);
 
       if (error) {
         console.error("Erro ao adicionar contrato:", error);
-        const errorMessage = handleSupabaseError(error);
-        toast.error("Erro ao adicionar contrato: " + errorMessage);
-        
-        // Se for erro de violação de RLS, mostrar informações adicionais
-        if (error.message.includes('violates row-level security policy')) {
-          console.error("Erro de permissão detectado. Verificando perfil...");
-          const { data: perfil } = await supabase
-            .from('perfis')
-            .select('tipo')
-            .eq('id', sessionData?.session?.user?.id)
-            .maybeSingle();
-          
-          console.log("Perfil do usuário:", perfil);
-          if (!perfil || perfil.tipo !== 'admin') {
-            toast.error("Você precisa ter perfil de administrador para esta operação");
-          }
-        }
-        
+        toast.error(`Erro ao adicionar contrato: ${error.message}`);
         return false;
       }
 
-      console.log("Contrato adicionado com sucesso:", data[0]);
-
-      // Atualiza o ID do contrato no cliente
-      const { error: updateError } = await supabase
-        .from('clientes_sistema')
-        .update({ contrato_id: data[0].id })
-        .eq('id', formClienteId);
-        
-      if (updateError) {
-        console.error("Erro ao atualizar cliente com contrato ID:", updateError);
-      }
-
-      await atualizarSituacaoCliente(formClienteId, formStatus);
-      
-      let faturasGeradas = false;
-      if (formStatus === 'ativo') {
-        faturasGeradas = await gerarFaturasAutomaticas({
-          contratoId: data[0].id,
-          clienteId: formClienteId,
-          valorMensal: formValorMensal,
-          taxaImplantacao: formTaxaImplantacao,
-          dataInicio: formDataInicio,
-          dataPrimeiroVencimento: formDataPrimeiroVencimento,
-          numeroContrato: formNumeroContrato
-        });
-        
-        if (faturasGeradas) {
-          toast.success("Contrato e faturas geradas com sucesso!");
-        } else {
-          toast.warning("Contrato salvo, mas houve um problema ao gerar as faturas");
-        }
-      } else {
-        toast.success("Contrato adicionado com sucesso!");
-      }
-
-      await refreshContratos();
-      await loadData();
+      loadData();
       return true;
     } catch (error: any) {
       console.error("Erro ao adicionar contrato:", error);
-      toast.error("Erro ao adicionar contrato: " + (error.message || "Erro desconhecido"));
+      toast.error(`Erro ao adicionar contrato: ${error.message}`);
       return false;
     } finally {
       setIsLoading(false);
@@ -390,204 +164,76 @@ export const useContratos = () => {
 
   const updateContrato = async (
     id: string,
-    formClienteId: string,
-    formPlanoId: string,
-    formNumeroContrato: string,
-    formDataInicio: Date,
-    formDataFim: Date,
-    formDataPrimeiroVencimento: Date,
-    formValorMensal: number,
-    formStatus: string,
-    formTaxaImplantacao: number,
-    formObservacoes: string
-  ) => {
+    clienteId: string,
+    planoId: string,
+    numeroContrato: string,
+    dataInicio: Date,
+    dataFim: Date,
+    dataPrimeiroVencimento: Date,
+    valorMensal: number,
+    status: StatusContrato,
+    taxaImplantacao: number,
+    observacoes: string
+  ): Promise<boolean> => {
+    setIsLoading(true);
     try {
-      if (!formClienteId || !formPlanoId || !formNumeroContrato) {
-        toast.error("Cliente, Plano e Número do Contrato são obrigatórios");
-        return false;
-      }
-      
-      setIsLoading(true);
-      console.log("Atualizando contrato ID:", id);
-      
-      // Verificar autenticação antes da operação
-      const isAuthenticated = await ensureAuthenticated();
-      if (!isAuthenticated) {
-        console.error("Usuário não autenticado para operação updateContrato");
-        toast.error("Você precisa estar autenticado para atualizar contratos");
-        return false;
-      }
-      
-      // Log da sessão atual para debug
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log("Sessão atual durante updateContrato:", sessionData?.session?.user?.id);
-      
-      if (formStatus === 'ativo') {
-        const { data: contratoAtual, error: getError } = await supabase
-          .from('contratos')
-          .select('status')
-          .eq('id', id)
-          .single();
-        
-        if (getError) {
-          console.error("Erro ao obter contrato:", getError);
-          toast.error("Erro ao obter contrato: " + getError.message);
-          return false;
-        }
-        
-        if (contratoAtual?.status !== 'ativo') {
-          const { data: contratosAtivos, error: checkError } = await supabase
-            .from('contratos')
-            .select('id')
-            .eq('cliente_sistema_id', formClienteId)
-            .eq('status', 'ativo')
-            .neq('id', id);
-          
-          if (checkError) {
-            console.error("Erro ao verificar contratos existentes:", checkError);
-            toast.error("Erro ao verificar contratos existentes");
-            return false;
-          }
-          
-          if (contratosAtivos && contratosAtivos.length > 0) {
-            toast.error("Este cliente já possui um contrato ativo. Cancele o contrato existente antes de ativar este.");
-            return false;
-          }
-        }
-      }
-      
-      // Log detalhado dos dados que serão atualizados
-      console.log("Atualizando contrato com os seguintes dados:", {
-        numero: formNumeroContrato,
-        cliente_sistema_id: formClienteId,
-        cliente_id: formClienteId,
-        plano_id: formPlanoId,
-        data_inicio: formDataInicio.toISOString(),
-        data_fim: formDataFim.toISOString(),
-        data_primeiro_vencimento: formDataPrimeiroVencimento.toISOString(),
-        valor_mensal: formValorMensal,
-        status: formStatus,
-        taxa_implantacao: formTaxaImplantacao,
-        observacoes: formObservacoes,
-        ciclo_faturamento: 'mensal'
-      });
-      
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('contratos')
         .update({
-          numero: formNumeroContrato,
-          cliente_sistema_id: formClienteId,
-          cliente_id: formClienteId,
-          plano_id: formPlanoId,
-          data_inicio: formDataInicio.toISOString(),
-          data_fim: formDataFim.toISOString(),
-          data_primeiro_vencimento: formDataPrimeiroVencimento.toISOString(),
-          valor_mensal: formValorMensal,
-          status: formStatus,
-          taxa_implantacao: formTaxaImplantacao,
-          observacoes: formObservacoes,
-          ciclo_faturamento: 'mensal'
+          cliente_sistema_id: clienteId,
+          plano_id: planoId,
+          numero: numeroContrato,
+          data_inicio: dataInicio.toISOString(),
+          data_fim: dataFim.toISOString(),
+          data_primeiro_vencimento: dataPrimeiroVencimento.toISOString(),
+          valor_mensal: valorMensal,
+          status: status,
+          taxa_implantacao: taxaImplantacao,
+          observacoes: observacoes,
         })
         .eq('id', id);
 
       if (error) {
         console.error("Erro ao atualizar contrato:", error);
-        const errorMessage = handleSupabaseError(error);
-        toast.error("Erro ao atualizar contrato: " + errorMessage);
-        
-        // Se for erro de violação de RLS, mostrar informações adicionais
-        if (error.message.includes('violates row-level security policy')) {
-          console.error("Erro de permissão detectado. Verificando perfil...");
-          const { data: perfil } = await supabase
-            .from('perfis')
-            .select('tipo')
-            .eq('id', sessionData?.session?.user?.id)
-            .maybeSingle();
-          
-          console.log("Perfil do usuário:", perfil);
-          if (!perfil || perfil.tipo !== 'admin') {
-            toast.error("Você precisa ter perfil de administrador para esta operação");
-          }
-        }
-        
+        toast.error(`Erro ao atualizar contrato: ${error.message}`);
         return false;
       }
-      
-      console.log(`Contrato ${id} atualizado com status: ${formStatus}`);
-      
-      await atualizarSituacaoCliente(formClienteId, formStatus);
 
-      await refreshContratos();
-      await loadData();
-      toast.success("Contrato atualizado com sucesso!");
+      loadData();
       return true;
     } catch (error: any) {
       console.error("Erro ao atualizar contrato:", error);
-      toast.error("Erro ao atualizar contrato: " + (error.message || "Erro desconhecido"));
+      toast.error(`Erro ao atualizar contrato: ${error.message}`);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const deleteContrato = async (id: string, clienteSistemaId: string) => {
+  const deleteContrato = async (contratoId: string, clienteId: string): Promise<boolean> => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
-      // Verificar autenticação antes da operação
-      const isAuthenticated = await ensureAuthenticated();
-      if (!isAuthenticated) {
-        console.error("Usuário não autenticado para operação deleteContrato");
-        toast.error("Você precisa estar autenticado para excluir contratos");
-        return false;
-      }
-      
-      // Log da sessão atual para debug
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log("Sessão atual durante deleteContrato:", sessionData?.session?.user?.id);
-      
-      // ... keep existing code (update client, contract status, etc.)
-
       const { error } = await supabase
         .from('contratos')
         .delete()
-        .eq('id', id);
+        .eq('id', contratoId);
 
       if (error) {
         console.error("Erro ao excluir contrato:", error);
-        const errorMessage = handleSupabaseError(error);
-        toast.error("Erro ao excluir contrato: " + errorMessage);
+        toast.error(`Erro ao excluir contrato: ${error.message}`);
         return false;
       }
 
-      await refreshContratos();
-      await loadData();
-      toast.success("Contrato excluído com sucesso!");
+      loadData();
       return true;
     } catch (error: any) {
       console.error("Erro ao excluir contrato:", error);
-      toast.error("Erro ao excluir contrato: " + error.message);
+      toast.error(`Erro ao excluir contrato: ${error.message}`);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    // Verificar se há sessão ativa e somente então carregar os dados
-    const initializeWithAuth = async () => {
-      const isAuth = await ensureAuthenticated();
-      if (isAuth) {
-        console.log("Usuario autenticado, iniciando carregamento de dados");
-        loadData();
-      } else {
-        console.error("Não foi possível carregar dados devido a problemas de autenticação");
-        toast.error("Você precisa estar autenticado para acessar os contratos");
-      }
-    };
-    
-    initializeWithAuth();
-  }, []);
 
   return {
     contratos,
@@ -596,9 +242,8 @@ export const useContratos = () => {
     isLoading,
     currentContrato,
     setCurrentContrato,
-    refreshContratos,
     addContrato,
     updateContrato,
-    deleteContrato
+    deleteContrato,
   };
 };

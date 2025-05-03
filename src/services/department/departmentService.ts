@@ -1,7 +1,17 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Department } from '@/types/cadastro';
 import { toast } from 'sonner';
+
+// Keep a cache of departments by company to improve performance
+const departmentsCache: Record<string, { data: Department[]; timestamp: number }> = {};
+
+// Function to clear cache for a specific company
+const clearCacheForCompany = (companyId: string) => {
+  if (departmentsCache[companyId]) {
+    console.log(`departmentService: Clearing cache for company ${companyId}`);
+    delete departmentsCache[companyId];
+  }
+};
 
 export const getDepartmentsByCompany = async (companyId: string): Promise<Department[]> => {
   console.log("getDepartmentsByCompany: Buscando setores para a empresa:", companyId);
@@ -11,11 +21,19 @@ export const getDepartmentsByCompany = async (companyId: string): Promise<Depart
     return [];
   }
   
+  // Check if we have a fresh cache (less than 10 seconds old)
+  const now = Date.now();
+  const cachedData = departmentsCache[companyId];
+  if (cachedData && (now - cachedData.timestamp < 10000)) {
+    console.log(`getDepartmentsByCompany: Usando cache para empresa ${companyId}, ${cachedData.data.length} setores`);
+    return cachedData.data;
+  }
+  
   try {
-    // Adicionar um pequeno delay para garantir que os dados estejam atualizados
-    // em caso de uma operação recente de insert/update
+    // Small delay to ensure any recent DB operations have completed
     await new Promise(resolve => setTimeout(resolve, 300));
     
+    console.log(`getDepartmentsByCompany: Fazendo consulta ao Supabase para empresa ${companyId}`);
     const { data, error } = await supabase
       .from('setores')
       .select('*')
@@ -28,17 +46,20 @@ export const getDepartmentsByCompany = async (companyId: string): Promise<Depart
     
     console.log(`getDepartmentsByCompany: ${data?.length || 0} setores encontrados para empresa ${companyId}:`, data);
     
-    // Forçar devolução de array vazio em vez de null se não houver dados
-    if (!data || data.length === 0) {
-      console.log("getDepartmentsByCompany: Nenhum setor encontrado, retornando array vazio");
-      return [];
-    }
+    // Ensure we always return an array
+    const departments = data || [];
     
-    const mappedDepartments = data.map(dept => ({
+    const mappedDepartments = departments.map(dept => ({
       id: dept.id,
       name: dept.nome,
       companyId: dept.empresa_id
     }));
+    
+    // Update cache
+    departmentsCache[companyId] = {
+      data: mappedDepartments,
+      timestamp: now
+    };
     
     console.log("getDepartmentsByCompany: Setores após mapeamento:", mappedDepartments);
     
@@ -117,33 +138,26 @@ export const addDepartmentToCompany = async (departmentData: Partial<Department>
     
     console.log("addDepartmentToCompany: Setor adicionado com sucesso:", data);
     
+    // Clear cache for this company to ensure fresh data on next fetch
+    clearCacheForCompany(departmentData.companyId);
+    
     // Notify user of success
     toast.success("Setor cadastrado com sucesso!");
     
-    // Force a refresh of departments after adding
-    // We'll add a small delay to ensure the database has processed the insert
-    setTimeout(async () => {
-      try {
-        // This forces a refresh of cache data if any
-        console.log("addDepartmentToCompany: Forçando refresh dos setores após inserção");
-        await getDepartmentsByCompany(departmentData.companyId!);
-      } catch (err) {
-        console.error("Error during forced refresh:", err);
-      }
-    }, 500);
-    
-    return {
+    const newDepartment = {
       id: data.id,
       name: data.nome,
       companyId: data.empresa_id
     };
+    
+    return newDepartment;
   } catch (error) {
     console.error("addDepartmentToCompany: Exceção ao adicionar setor:", error);
     throw error;
   }
 };
 
-export const deleteDepartment = async (departmentId: string): Promise<void> => {
+export const deleteDepartment = async (departmentId: string, companyId?: string): Promise<void> => {
   if (!departmentId) {
     console.error("deleteDepartment: departmentId é obrigatório");
     throw new Error("ID do setor é obrigatório");
@@ -152,6 +166,12 @@ export const deleteDepartment = async (departmentId: string): Promise<void> => {
   console.log("deleteDepartment: Removendo setor com ID:", departmentId);
   
   try {
+    // If we don't have the companyId, fetch it first to know which cache to clear
+    if (!companyId) {
+      const department = await getDepartmentById(departmentId);
+      companyId = department?.companyId;
+    }
+    
     const { error } = await supabase
       .from('setores')
       .delete()
@@ -163,6 +183,14 @@ export const deleteDepartment = async (departmentId: string): Promise<void> => {
     }
     
     console.log("deleteDepartment: Setor removido com sucesso");
+    
+    // Clear cache for this company
+    if (companyId) {
+      clearCacheForCompany(companyId);
+    }
+    
+    // Notify success
+    toast.success("Setor removido com sucesso");
   } catch (error) {
     console.error("deleteDepartment: Exceção ao remover setor:", error);
     throw error;

@@ -47,7 +47,7 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
                 : "Selecione uma empresa"
             } />
           </SelectTrigger>
-          <SelectContent className="bg-white">
+          <SelectContent className="z-50 bg-white">
             <ScrollArea className="h-[200px]">
               {safeCompanies.length > 0 ? (
                 safeCompanies.map((company) => (

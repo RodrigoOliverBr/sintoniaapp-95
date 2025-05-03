@@ -5,10 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FilterSection from "@/components/relatorios/FilterSection";
 import DiagnosticoIndividual from "@/components/relatorios/DiagnosticoIndividual";
 import MapaRiscoPsicossocial from "@/components/relatorios/MapaRiscoPsicossocial";
-import RankingAreasCriticas from "@/components/relatorios/RankingAreasCriticas";
 import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import { useQuery } from "@tanstack/react-query";
-import { getRankingAreasCriticas } from "@/services/relatorios/relatoriosService";
 import { getCompanies } from "@/services/company/companyService";
 import { getEmployeesByCompany } from "@/services/employee/employeeService";
 import { Question, FormResult } from "@/types/form";
@@ -87,7 +85,7 @@ const RelatoriosPage: React.FC = () => {
   const selectedCompany = companies.find(c => c.id === selectedCompanyId);
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
 
-  // Sample form result for diagnostic
+  // Sample form result for diagnostic, fixing the answers to include questionId
   const sampleFormResult: FormResult = {
     id: "sample-result",
     employeeId: selectedEmployeeId || "1",
@@ -97,9 +95,9 @@ const RelatoriosPage: React.FC = () => {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     answers: {
-      q1: { answer: true },
-      q2: { answer: false },
-      q3: { answer: true }
+      q1: { answer: true, questionId: "q1" },
+      q2: { answer: false, questionId: "q2" },
+      q3: { answer: true, questionId: "q3" }
     },
     total_sim: 2,
     total_nao: 1,
@@ -122,11 +120,9 @@ const RelatoriosPage: React.FC = () => {
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 mb-8">
+          <TabsList className="grid grid-cols-2 mb-8">
             <TabsTrigger value="diagnostico">Diagnóstico Individual</TabsTrigger>
             <TabsTrigger value="mapa">Mapa de Risco</TabsTrigger>
-            <TabsTrigger value="areas">Ranking Áreas Críticas</TabsTrigger>
-            <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
           </TabsList>
 
           <TabsContent value="diagnostico" className="mt-0">
@@ -142,30 +138,6 @@ const RelatoriosPage: React.FC = () => {
               departmentId=""
               dateRange={{ from: new Date(), to: new Date() }}
             />
-          </TabsContent>
-
-          <TabsContent value="areas" className="mt-0">
-            <RankingAreasCriticas 
-              selectedCompanyId={selectedCompanyId}
-              companies={companies}
-            />
-          </TabsContent>
-
-          <TabsContent value="pgr" className="mt-0">
-            {selectedCompany && selectedEmployee ? (
-              <RelatorioPGR 
-                company={selectedCompany as Company}
-                employee={selectedEmployee as Employee}
-                questions={sampleQuestions}
-                answers={sampleAnswers}
-              />
-            ) : (
-              <div className="text-center p-8 bg-gray-50 rounded-md">
-                <p className="text-gray-500">
-                  Selecione uma empresa e um funcionário para visualizar o relatório PGR
-                </p>
-              </div>
-            )}
           </TabsContent>
         </Tabs>
       </div>

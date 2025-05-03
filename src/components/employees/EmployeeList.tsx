@@ -29,7 +29,8 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
   onDelete,
   getStatusComponent,
 }) => {
-  console.log("EmployeeList: Rendering with roleNames:", roleNames);
+  console.log("EmployeeList: Rendering with employees:", employees.length);
+  console.log("EmployeeList: Role names mapping:", roleNames);
   
   return (
     <Table>
@@ -53,10 +54,14 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
           </TableRow>
         ) : (
           employees.map((employee) => {
-            console.log(`Employee ${employee.id} role:`, employee.role, "Display name:", roleNames[employee.role || '']);
-            const roleName = employee.role && roleNames 
-              ? (roleNames[employee.role] || 'Não definido')
-              : 'Não definido';
+            // Safely get role name, with fallback to ID if not found in mapping
+            const roleId = employee.role || '';
+            let roleName = 'Não definido';
+            
+            if (roleId && roleNames) {
+              roleName = roleNames[roleId] || `Cargo ID: ${roleId.substring(0, 8)}...`;
+              console.log(`Employee ${employee.name} role: ${roleId} → Display name: ${roleName}`);
+            }
               
             return (
               <TableRow key={employee.id}>

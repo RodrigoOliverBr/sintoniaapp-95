@@ -29,9 +29,16 @@ const DepartmentSelect: React.FC<DepartmentSelectProps> = ({
   
   // Update local departments when prop changes
   useEffect(() => {
-    console.log("DepartmentSelect: Updated departments from props:", departments);
+    console.log("DepartmentSelect: Departments updated from props:", departments);
     setLocalDepartments(departments);
   }, [departments]);
+  
+  // Force load departments when component mounts if companyId is available
+  useEffect(() => {
+    if (companyId && (!departments || departments.length === 0)) {
+      handleRefreshClick();
+    }
+  }, [companyId]);
   
   const handleRefreshClick = async () => {
     if (!companyId || isLoading) return;

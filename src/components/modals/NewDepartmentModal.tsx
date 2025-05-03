@@ -47,41 +47,40 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
       console.log("NewDepartmentModal: Enviando dados do setor:", { name, companyId });
       
       // Using the correct parameter structure from our service
-      await addDepartmentToCompany({
+      const newDepartment = await addDepartmentToCompany({
         name: name.trim(),
         companyId: companyId
       });
+      
+      console.log("NewDepartmentModal: Setor adicionado com sucesso:", newDepartment);
       
       // Limpar o formulário e fechar o modal
       setName("");
       onOpenChange(false);
       
-      // Garantindo que a função de callback seja chamada após sucesso com múltiplas tentativas
+      // Call the callback directly with the new department data
       if (onDepartmentAdded) {
-        console.log("NewDepartmentModal: Chamando callback onDepartmentAdded após setor ser adicionado");
-        
-        // Execute callback immediately
+        console.log("NewDepartmentModal: Chamando callback onDepartmentAdded com novo setor");
         onDepartmentAdded();
-        
-        // And with progressive delays to ensure data is fully propagated
-        setTimeout(() => {
-          console.log("NewDepartmentModal: Chamando callback novamente após delay (500ms)");
-          onDepartmentAdded();
-          
-          // Try one more time after 1.5 seconds just to be sure
-          setTimeout(() => {
-            console.log("NewDepartmentModal: Chamando callback final após delay (1.5s)");
-            onDepartmentAdded();
-          }, 1000);
-        }, 500);
       }
       
-      // Forced refresh to ensure UI is updated with the latest data
-      try {
-        await getDepartmentsByCompany(companyId);
-      } catch (refreshErr) {
-        console.error("Erro ao atualizar lista de setores:", refreshErr);
-      }
+      // Refresh the departments list with a small delay to ensure DB propagation
+      setTimeout(async () => {
+        try {
+          console.log("NewDepartmentModal: Atualizando lista de setores após inserção");
+          await getDepartmentsByCompany(companyId);
+          
+          // Call the callback again after refresh
+          if (onDepartmentAdded) {
+            onDepartmentAdded();
+          }
+        } catch (refreshErr) {
+          console.error("Erro ao atualizar lista de setores:", refreshErr);
+        }
+      }, 500);
+      
+      toast.success("Setor cadastrado com sucesso!");
+      
     } catch (error) {
       console.error("Erro ao adicionar setor:", error);
       const errorMessage = error instanceof Error 
