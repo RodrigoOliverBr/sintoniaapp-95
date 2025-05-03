@@ -1,63 +1,73 @@
+
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@supabase/auth-helpers-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
 import { handleSupabaseError } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import SimpleLayout from '@/components/SimpleLayout';
 
 const UserAccountPage: React.FC = () => {
-  const user = useUser();
-  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<{ nome?: string; email?: string; telefone?: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast: legacyToast } = useToast();
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      setIsLoading(true);
-      try {
-        if (user) {
-          const { data, error } = await supabase
-            .from('perfis')
-            .select('nome, email, telefone')
-            .eq('id', user.id)
-            .single();
+    const fetchUserSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (!error && data.session) {
+        setUser(data.session.user);
+        fetchUserProfile(data.session.user.id);
+      } else {
+        // Redirect to login or handle not authenticated
+        window.location.href = '/login';
+      }
+    };
+    
+    fetchUserSession();
+  }, []);
 
-          if (error) {
-            console.error("Erro ao buscar perfil do usuário:", error);
-            legacyToast({
-              variant: "destructive",
-              title: "Erro!",
-              description: handleSupabaseError(error),
-            })
-          } else {
-            setUserProfile(data);
-          }
-        } else {
-          router.push('/login');
-        }
-      } catch (error) {
+  const fetchUserProfile = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('perfis')
+        .select('nome, email')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
         console.error("Erro ao buscar perfil do usuário:", error);
         legacyToast({
           variant: "destructive",
           title: "Erro!",
-          description: "Não foi possível carregar o perfil do usuário.",
-        })
-      } finally {
-        setIsLoading(false);
+          description: handleSupabaseError(error),
+        });
+      } else {
+        // Add telefone property with default value
+        setUserProfile({
+          ...data,
+          telefone: data.telefone || ''
+        });
       }
-    };
+    } catch (error) {
+      console.error("Erro ao buscar perfil do usuário:", error);
+      legacyToast({
+        variant: "destructive",
+        title: "Erro!",
+        description: "Não foi possível carregar o perfil do usuário.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchUserProfile();
-  }, [user, router, legacyToast]);
-
-  const handleUpdateProfile = async (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSaving(true);
 
@@ -66,9 +76,10 @@ const UserAccountPage: React.FC = () => {
         throw new Error("Usuário não autenticado.");
       }
 
-      const nome = (e.target.elements.namedItem('nome') as HTMLInputElement).value;
-      const email = (e.target.elements.namedItem('email') as HTMLInputElement).value;
-      const telefone = (e.target.elements.namedItem('telefone') as HTMLInputElement).value;
+      const formData = new FormData(e.currentTarget);
+      const nome = formData.get('nome') as string;
+      const email = formData.get('email') as string;
+      const telefone = formData.get('telefone') as string;
 
       const { error } = await supabase
         .from('perfis')
@@ -96,17 +107,17 @@ const UserAccountPage: React.FC = () => {
   };
 
   if (isLoading) {
-    return <Layout title="Perfil">Carregando...</Layout>;
+    return <SimpleLayout title="Perfil">Carregando...</SimpleLayout>;
   }
 
   if (!userProfile) {
-    return <Layout title="Perfil">Não foi possível carregar o perfil.</Layout>;
+    return <SimpleLayout title="Perfil">Não foi possível carregar o perfil.</SimpleLayout>;
   }
 
   const telefoneDisplay = userProfile?.telefone || '-';
 
   return (
-    <Layout title="Perfil">
+    <SimpleLayout title="Perfil">
       <Card>
         <CardHeader>
           <CardTitle>Detalhes da Conta</CardTitle>
@@ -152,7 +163,7 @@ const UserAccountPage: React.FC = () => {
           </form>
         </CardContent>
       </Card>
-    </Layout>
+    </SimpleLayout>
   );
 };
 

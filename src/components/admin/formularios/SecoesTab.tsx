@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
+import { Secao } from "@/types/formulario";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,16 +24,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Secao } from "@/pages/admin/FormulariosPage";
 
 export interface SecoesTabProps {
   formularioId: string;
-  secoes: Secao[];
-  setSecoes: React.Dispatch<React.SetStateAction<Secao[]>>;
-  activeTab: string;
+  secoes?: Secao[];
+  setSecoes?: React.Dispatch<React.SetStateAction<Secao[]>>;
+  activeTab?: string;
 }
 
-const SecoesTab: React.FC<SecoesTabProps> = ({ formularioId, secoes, setSecoes, activeTab }) => {
+const SecoesTab: React.FC<SecoesTabProps> = ({ 
+  formularioId, 
+  secoes = [], 
+  setSecoes, 
+  activeTab 
+}) => {
   const [editingSecaoId, setEditingSecaoId] = useState<string | null>(null);
   const [isAddingSecao, setIsAddingSecao] = useState(false);
   const [newSecaoTitulo, setNewSecaoTitulo] = useState("");

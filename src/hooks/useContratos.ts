@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Contrato, ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,11 +66,28 @@ export const useContratos = (): UseContratosResult => {
         console.log("useContratos: Nenhum cliente encontrado na consulta");
       } else {
         console.log(`useContratos: ${clientesData.length} clientes carregados com sucesso:`, 
-          clientesData.map(c => ({ id: c.id, nome: c.razao_social || c.nome }))
+          clientesData.map(c => ({ id: c.id, nome: c.razao_social }))
         );
       }
       
-      setClientes(clientesData || []);
+      // Convert database schema to ClienteSistema type
+      const clientesFormatted: ClienteSistema[] = clientesData?.map(c => ({
+        id: c.id,
+        nome: c.razao_social || "",
+        razaoSocial: c.razao_social || "",
+        cnpj: c.cnpj || "",
+        telefone: c.telefone || "",
+        email: c.email || "",
+        responsavel: c.responsavel || "",
+        situacao: c.situacao || "",
+        tipo: "cliente",
+        numeroEmpregados: 0,
+        dataInclusao: c.created_at,
+        ativo: true,
+        planoId: c.plano_id || ""
+      })) || [];
+      
+      setClientes(clientesFormatted);
       
       console.log("useContratos: Carregando planos ativos...");
       const { data: planosData, error: planosError } = await supabase
@@ -84,7 +102,24 @@ export const useContratos = (): UseContratosResult => {
       }
       
       console.log(`useContratos: ${planosData?.length || 0} planos ativos carregados`);
-      setPlanos(planosData || []);
+      
+      // Convert database schema to Plano type
+      const planosFormatted: Plano[] = planosData?.map(p => ({
+        id: p.id,
+        nome: p.nome || "",
+        valor: p.valor_mensal || 0,
+        valorMensal: p.valor_mensal || 0,
+        valorImplantacao: p.valor_implantacao || 0,
+        descricao: p.descricao || "",
+        ativo: p.ativo || false,
+        numeroUsuarios: p.limite_usuarios || 0,
+        limiteEmpresas: p.limite_empresas || 0,
+        limiteEmpregados: p.limite_empregados || 0,
+        empresasIlimitadas: p.empresas_ilimitadas || false,
+        empregadosIlimitados: p.empregados_ilimitados || false
+      })) || [];
+      
+      setPlanos(planosFormatted);
       
       console.log("useContratos: Carregando contratos...");
       const { data: contratosData, error: contratosError } = await supabase
@@ -99,7 +134,24 @@ export const useContratos = (): UseContratosResult => {
       }
       
       console.log(`useContratos: ${contratosData?.length || 0} contratos carregados`);
-      setContratos(contratosData || []);
+      
+      // Convert database schema to Contrato type
+      const contratosFormatted: Contrato[] = contratosData?.map(c => ({
+        id: c.id,
+        clienteSistemaId: c.cliente_sistema_id || "",
+        clienteId: c.cliente_id || c.cliente_sistema_id || "",
+        planoId: c.plano_id || "",
+        dataInicio: new Date(c.data_inicio),
+        dataFim: new Date(c.data_fim),
+        dataPrimeiroVencimento: new Date(c.data_primeiro_vencimento),
+        valorMensal: c.valor_mensal || 0,
+        numero: c.numero || "",
+        status: c.status || "ATIVO",
+        taxaImplantacao: c.taxa_implantacao || 0,
+        observacoes: c.observacoes || ""
+      })) || [];
+      
+      setContratos(contratosFormatted);
       
       console.log("useContratos: Carregamento de dados concluído com sucesso");
     } catch (error) {
@@ -130,20 +182,19 @@ export const useContratos = (): UseContratosResult => {
     try {
       const { data, error } = await supabase
         .from('contratos')
-        .insert([
-          {
-            cliente_sistema_id: clienteId,
-            plano_id: planoId,
-            numero: numeroContrato,
-            data_inicio: dataInicio.toISOString(),
-            data_fim: dataFim.toISOString(),
-            data_primeiro_vencimento: dataPrimeiroVencimento.toISOString(),
-            valor_mensal: valorMensal,
-            status: status,
-            taxa_implantacao: taxaImplantacao,
-            observacoes: observacoes,
-          },
-        ]);
+        .insert({
+          cliente_sistema_id: clienteId,
+          cliente_id: clienteId, // Ensure cliente_id is set to match the required field
+          plano_id: planoId,
+          numero: numeroContrato,
+          data_inicio: dataInicio.toISOString(),
+          data_fim: dataFim.toISOString(),
+          data_primeiro_vencimento: dataPrimeiroVencimento.toISOString(),
+          valor_mensal: valorMensal,
+          status: status,
+          taxa_implantacao: taxaImplantacao,
+          observacoes: observacoes,
+        });
 
       if (error) {
         console.error("Erro ao adicionar contrato:", error);

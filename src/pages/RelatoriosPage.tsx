@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -90,8 +89,6 @@ const RelatoriosPage: React.FC = () => {
     id: "sample-result",
     employeeId: selectedEmployeeId || "1",
     empresa_id: selectedCompanyId || "1",
-    employee_id: selectedEmployeeId || "1", 
-    company_id: selectedCompanyId || "1",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     answers: {
@@ -101,8 +98,6 @@ const RelatoriosPage: React.FC = () => {
     },
     total_sim: 2,
     total_nao: 1,
-    risco_id: "1",
-    observations: "",
     is_complete: true,
     last_updated: new Date().toISOString(),
     formulario_id: "f1"

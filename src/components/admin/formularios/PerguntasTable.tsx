@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Secao } from "@/pages/admin/FormulariosPage";
+import { Secao } from "@/types/formulario";
 
 interface PerguntaItem {
   id: string;

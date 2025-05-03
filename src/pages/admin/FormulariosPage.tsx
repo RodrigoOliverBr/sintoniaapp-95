@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +11,7 @@ const FormulariosPage: React.FC = () => {
 
   return (
     <Layout title="Formulários">
-      <Tabs defaultActiveKey="formularios" className="w-full">
+      <Tabs defaultValue="formularios" className="w-full">
         <TabsList>
           <TabsTrigger key="formularios" value="formularios">
             Formulários
