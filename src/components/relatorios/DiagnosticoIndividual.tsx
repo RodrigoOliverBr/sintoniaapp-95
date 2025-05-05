@@ -1,355 +1,352 @@
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormResult, Question } from "@/types/form";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
-import { Employee } from "@/types/cadastro";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Question, FormResult } from "@/types/form";
+import { SeverityBadge } from "@/components/SeverityBadge";
 import AnalystObservations from "@/components/admin/reports/AnalystObservations";
-import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Employee } from "@/types/cadastro";
 
 interface DiagnosticoIndividualProps {
-  result?: FormResult;
-  questions?: Question[];
+  result: FormResult;
+  questions: Question[];
   companyId?: string;
 }
 
-const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ 
+const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
   result,
   questions,
-  companyId 
+  companyId
 }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
-  const [employeeFormResults, setEmployeeFormResults] = useState<FormResult[]>([]);
-  const [selectedFormResult, setSelectedFormResult] = useState<FormResult | null>(null);
-  const [employeeQuestions, setEmployeeQuestions] = useState<Question[]>([]);
-  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
-  const [isLoadingResults, setIsLoadingResults] = useState(false);
-  
-  // Load employees when companyId changes
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(result.employeeId || "");
+  const [loadedQuestions, setLoadedQuestions] = useState<Question[]>(questions);
+  const [loadedResult, setLoadedResult] = useState<FormResult | null>(result);
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
     if (companyId) {
-      loadEmployees();
+      loadEmployees(companyId);
     }
   }, [companyId]);
-  
-  // Load form results when employee is selected
+
   useEffect(() => {
     if (selectedEmployeeId) {
-      loadEmployeeFormResults();
-    } else {
-      setEmployeeFormResults([]);
-      setSelectedFormResult(null);
+      loadEvaluationData(selectedEmployeeId);
     }
   }, [selectedEmployeeId]);
-  
-  // Load questions when form result is selected
-  useEffect(() => {
-    if (selectedFormResult?.formulario_id) {
-      loadFormQuestions(selectedFormResult.formulario_id);
-    } else {
-      setEmployeeQuestions([]);
-    }
-  }, [selectedFormResult]);
-  
-  // Load employees for the selected company
-  const loadEmployees = async () => {
-    if (!companyId) return;
-    
-    setIsLoadingEmployees(true);
+
+  const loadEmployees = async (companyId: string) => {
+    setIsLoading(true);
     try {
-      console.log("Carregando funcionários para empresa:", companyId);
+      console.log("Loading employees for company:", companyId);
       
       const { data, error } = await supabase
         .from('funcionarios')
-        .select('*, cargos(nome)')
+        .select('id, nome, cpf, empresa_id, cargo_id, cargo:cargos(nome)')
         .eq('empresa_id', companyId);
         
       if (error) {
-        console.error("Erro ao carregar funcionários:", error);
+        console.error("Error loading employees:", error);
         toast.error("Erro ao carregar funcionários");
         return;
       }
       
-      console.log("Funcionários carregados:", data?.length);
-      
-      if (data) {
-        const formattedEmployees: Employee[] = data.map(emp => ({
-          id: emp.id,
-          nome: emp.nome,
-          cpf: emp.cpf || "",
-          empresa_id: emp.empresa_id,
-          cargo: emp.cargos?.nome || "Sem cargo",
-          cargo_id: emp.cargo_id || "",
-          email: "",
-          telefone: ""
-        }));
-        
-        setEmployees(formattedEmployees);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar funcionários:", error);
-      toast.error("Erro ao carregar funcionários");
-    } finally {
-      setIsLoadingEmployees(false);
-    }
-  };
-  
-  // Load form results for the selected employee
-  const loadEmployeeFormResults = async () => {
-    if (!selectedEmployeeId) return;
-    
-    setIsLoadingResults(true);
-    try {
-      console.log("Carregando resultados para funcionário:", selectedEmployeeId);
-      
-      const { data, error } = await supabase
-        .from('avaliacoes')
-        .select(`
-          *,
-          formularios(titulo)
-        `)
-        .eq('funcionario_id', selectedEmployeeId)
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        console.error("Erro ao carregar avaliações:", error);
-        toast.error("Erro ao carregar avaliações");
-        return;
-      }
-      
-      console.log("Avaliações carregadas:", data);
+      console.log("Employees loaded:", data);
       
       if (data && data.length > 0) {
-        // Load answers for each evaluation
-        const resultsWithAnswers = await Promise.all(
-          data.map(async (avaliacao) => {
-            try {
-              const { data: respostas, error: respostasError } = await supabase
-                .from('respostas')
-                .select('*')
-                .eq('avaliacao_id', avaliacao.id);
-                
-              if (respostasError) throw respostasError;
-              
-              // Format answers object
-              const answersObj: Record<string, { answer: boolean, questionId: string }> = {};
-              respostas?.forEach(resp => {
-                answersObj[resp.pergunta_id] = {
-                  answer: resp.resposta,
-                  questionId: resp.pergunta_id
-                };
-              });
-              
-              return {
-                id: avaliacao.id,
-                employeeId: avaliacao.funcionario_id,
-                empresa_id: avaliacao.empresa_id,
-                formulario_id: avaliacao.formulario_id,
-                formulario_titulo: avaliacao.formularios?.titulo || "Formulário",
-                created_at: avaliacao.created_at,
-                updated_at: avaliacao.updated_at,
-                notas_analista: avaliacao.notas_analista,
-                is_complete: avaliacao.is_complete,
-                total_sim: avaliacao.total_sim || 0,
-                total_nao: avaliacao.total_nao || 0,
-                last_updated: avaliacao.last_updated || avaliacao.updated_at,
-                answers: answersObj
-              } as FormResult;
-            } catch (error) {
-              console.error("Erro ao carregar respostas:", error);
-              return null;
-            }
-          })
-        );
+        // Transform the data to match the Employee type
+        const transformedEmployees = data.map(item => ({
+          id: item.id,
+          name: item.nome,
+          company_id: item.empresa_id,
+          cpf: item.cpf,
+          role: item.cargo ? item.cargo.nome : 'Sem cargo',
+          email: '',
+          departments: []
+        }));
         
-        const validResults = resultsWithAnswers.filter(Boolean) as FormResult[];
-        setEmployeeFormResults(validResults);
+        setEmployees(transformedEmployees);
         
-        // Automatically select the most recent form result
-        if (validResults.length > 0) {
-          setSelectedFormResult(validResults[0]);
+        // If there's no selected employee yet, select the first one
+        if (!selectedEmployeeId && transformedEmployees.length > 0) {
+          setSelectedEmployeeId(transformedEmployees[0].id);
         }
-      } else {
-        setEmployeeFormResults([]);
-        setSelectedFormResult(null);
       }
     } catch (error) {
-      console.error("Erro ao carregar avaliações:", error);
-      toast.error("Erro ao carregar avaliações");
+      console.error("Error in loadEmployees:", error);
+      toast.error("Erro ao carregar funcionários");
     } finally {
-      setIsLoadingResults(false);
+      setIsLoading(false);
     }
   };
-  
-  // Load questions for the selected form
-  const loadFormQuestions = async (formId: string) => {
+
+  const loadEvaluationData = async (employeeId: string) => {
+    setIsLoading(true);
     try {
-      console.log("Carregando perguntas para formulário:", formId);
+      console.log("Loading evaluation data for employee:", employeeId);
       
-      const { data, error } = await supabase
-        .from('perguntas')
+      // Get the most recent completed evaluation for this employee
+      const { data: evaluationData, error: evaluationError } = await supabase
+        .from('avaliacoes')
         .select('*')
-        .eq('formulario_id', formId);
+        .eq('funcionario_id', employeeId)
+        .eq('is_complete', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
         
-      if (error) {
-        console.error("Erro ao carregar perguntas:", error);
+      if (evaluationError) {
+        console.error("Error loading evaluation:", evaluationError);
+        // If there's no evaluation, don't show an error toast
+        if (evaluationError.code !== 'PGRST116') {
+          toast.error("Erro ao carregar avaliação");
+        }
+        setLoadedResult(null);
         return;
       }
       
-      console.log("Perguntas carregadas:", data?.length);
-      
-      if (data) {
-        setEmployeeQuestions(data);
+      if (!evaluationData) {
+        console.log("No evaluation found for employee:", employeeId);
+        setLoadedResult(null);
+        return;
       }
+      
+      console.log("Evaluation loaded:", evaluationData);
+      
+      // Get the form questions for this evaluation
+      const { data: questionsData, error: questionsError } = await supabase
+        .from('perguntas')
+        .select('*')
+        .eq('formulario_id', evaluationData.formulario_id);
+        
+      if (questionsError) {
+        console.error("Error loading questions:", questionsError);
+        toast.error("Erro ao carregar perguntas");
+        return;
+      }
+      
+      // Get the answers for this evaluation
+      const { data: answersData, error: answersError } = await supabase
+        .from('respostas')
+        .select('*')
+        .eq('avaliacao_id', evaluationData.id);
+        
+      if (answersError) {
+        console.error("Error loading answers:", answersError);
+        toast.error("Erro ao carregar respostas");
+        return;
+      }
+      
+      // Transform the data to match our expected types
+      const formattedQuestions = questionsData.map(q => ({
+        id: q.id,
+        texto: q.texto,
+        secao_id: q.secao_id,
+        formulario_id: q.formulario_id,
+        risco_id: q.risco_id,
+        ordem_pergunta: q.ordem_pergunta,
+        observacao_obrigatoria: q.observacao_obrigatoria,
+        opcoes: q.opcoes as unknown as { label: string; value: string }[]
+      }));
+      
+      // Build the answers object
+      const answers: Record<string, any> = {};
+      answersData.forEach(answer => {
+        answers[answer.pergunta_id] = {
+          questionId: answer.pergunta_id,
+          answer: answer.resposta,
+          observation: answer.observacao,
+          selectedOptions: answer.opcoes_selecionadas
+        };
+      });
+      
+      // Build the FormResult object
+      const formResult: FormResult = {
+        id: evaluationData.id,
+        employeeId: evaluationData.funcionario_id,
+        empresa_id: evaluationData.empresa_id,
+        formulario_id: evaluationData.formulario_id,
+        answers,
+        total_sim: evaluationData.total_sim,
+        total_nao: evaluationData.total_nao,
+        notas_analista: evaluationData.notas_analista,
+        is_complete: evaluationData.is_complete,
+        created_at: evaluationData.created_at,
+        updated_at: evaluationData.updated_at,
+        last_updated: evaluationData.last_updated
+      };
+      
+      setLoadedQuestions(formattedQuestions);
+      setLoadedResult(formResult);
+      
+      console.log("Loaded questions:", formattedQuestions);
+      console.log("Loaded form result:", formResult);
+      
     } catch (error) {
-      console.error("Erro ao carregar perguntas:", error);
+      console.error("Error in loadEvaluationData:", error);
+      toast.error("Erro ao carregar dados da avaliação");
+      setLoadedResult(null);
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  const handleEmployeeChange = (employeeId: string) => {
+
+  const handleEmployeeSelect = (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
   };
-  
-  const handleFormResultChange = (formResultId: string) => {
-    const selectedResult = employeeFormResults.find(r => r.id === formResultId);
-    setSelectedFormResult(selectedResult || null);
-  };
-  
-  // Use the provided result and questions if available
-  const displayResult = selectedFormResult || result;
-  const displayQuestions = employeeQuestions.length > 0 ? employeeQuestions : questions || [];
-  
-  if (!companyId && !result) {
+
+  // If we have no result or questions, show a placeholder
+  if (!loadedResult) {
     return (
-      <div className="flex items-center justify-center py-10 text-muted-foreground">
-        Selecione uma empresa para visualizar o diagnóstico individual.
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Diagnóstico Individual</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-2 text-muted-foreground">Carregando dados...</p>
+              </div>
+            </div>
+          ) : employees.length > 0 ? (
+            <div>
+              <h3 className="text-lg font-medium mb-4">Selecione um funcionário</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {employees.map(employee => (
+                  <div 
+                    key={employee.id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-muted ${
+                      selectedEmployeeId === employee.id ? 'bg-muted border-primary' : ''
+                    }`}
+                    onClick={() => handleEmployeeSelect(employee.id)}
+                  >
+                    <div className="font-medium">{employee.name}</div>
+                    <div className="text-sm text-muted-foreground">{employee.role}</div>
+                  </div>
+                ))}
+              </div>
+              {selectedEmployeeId && (
+                <div className="mt-8 p-6 border rounded-lg bg-muted/40">
+                  <p className="text-center text-muted-foreground">
+                    Nenhuma avaliação encontrada para este funcionário.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-10 text-muted-foreground">
+              Selecione uma empresa e um funcionário para visualizar o diagnóstico individual.
+            </div>
+          )}
+        </CardContent>
+      </Card>
     );
   }
+
+  // Group questions by severity
+  const severityGroups: Record<string, Question[]> = {};
+  loadedQuestions.forEach(question => {
+    // In a real implementation, we would fetch severity information from the database
+    // Here we're just using a simple algorithm based on the question ID
+    const severityId = parseInt(question.id.replace(/[^0-9]/g, '')) % 3;
+    const severityLabel = ['low', 'medium', 'high'][severityId];
+    
+    if (!severityGroups[severityLabel]) {
+      severityGroups[severityLabel] = [];
+    }
+    severityGroups[severityLabel].push(question);
+  });
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Diagnóstico Individual</CardTitle>
-        <CardDescription>
-          Visualize as respostas individuais e o diagnóstico do funcionário.
-        </CardDescription>
-        
-        {companyId && (
-          <div className="space-y-4 mt-4">
-            <div>
-              <label className="text-sm font-medium">Funcionário</label>
-              <Select 
-                value={selectedEmployeeId} 
-                onValueChange={handleEmployeeChange}
-                disabled={isLoadingEmployees}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione um funcionário" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoadingEmployees ? (
-                    <div className="p-2">Carregando...</div>
-                  ) : employees.length === 0 ? (
-                    <div className="p-2">Nenhum funcionário encontrado</div>
-                  ) : (
-                    employees.map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.nome} - {emp.cargo}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-muted-foreground">Carregando dados...</p>
             </div>
-            
-            {selectedEmployeeId && (
-              <div>
-                <label className="text-sm font-medium">Avaliação</label>
-                <Select 
-                  value={selectedFormResult?.id || ""} 
-                  onValueChange={handleFormResultChange}
-                  disabled={isLoadingResults}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione uma avaliação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isLoadingResults ? (
-                      <div className="p-2">Carregando...</div>
-                    ) : employeeFormResults.length === 0 ? (
-                      <div className="p-2">Nenhuma avaliação encontrada</div>
-                    ) : (
-                      employeeFormResults.map(result => (
-                        <SelectItem key={result.id} value={result.id}>
-                          {result.formulario_titulo} - {new Date(result.created_at).toLocaleDateString()}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+          </div>
+        ) : (
+          <>
+            {employees.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-lg font-medium mb-4">Selecione um funcionário</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {employees.map(employee => (
+                    <div 
+                      key={employee.id}
+                      className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-muted ${
+                        selectedEmployeeId === employee.id ? 'bg-muted border-primary' : ''
+                      }`}
+                      onClick={() => handleEmployeeSelect(employee.id)}
+                    >
+                      <div className="font-medium">{employee.name}</div>
+                      <div className="text-sm text-muted-foreground">{employee.role}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-          </div>
-        )}
-      </CardHeader>
-      
-      <CardContent>
-        {isLoadingResults ? (
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-6 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-        ) : displayResult ? (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <div className="bg-muted p-4 rounded-lg text-center">
-                <p className="text-sm text-muted-foreground">Total Sim</p>
-                <p className="text-3xl font-bold text-primary">{displayResult.total_sim}</p>
-              </div>
-              <div className="bg-muted p-4 rounded-lg text-center">
-                <p className="text-sm text-muted-foreground">Total Não</p>
-                <p className="text-3xl font-bold text-red-500">{displayResult.total_nao}</p>
-              </div>
+          
+            <div className="mb-6">
+              <h3 className="text-lg font-medium">Informações da Avaliação</h3>
+              <p>Data: {new Date(loadedResult.created_at).toLocaleDateString('pt-BR')}</p>
+              <p>Total de Questões: {loadedQuestions.length}</p>
+              <p>Respostas "Sim": {loadedResult.total_sim}</p>
+              <p>Respostas "Não": {loadedResult.total_nao}</p>
             </div>
-            
-            <ScrollArea className="h-[300px] rounded-md border">
-              <div className="p-4 space-y-4">
-                {displayQuestions.map((question) => {
-                  const answer = displayResult.answers[question.id]?.answer;
-                  return (
-                    <div key={question.id} className="pb-4 border-b">
-                      <p className="font-medium mb-2">{question.texto}</p>
-                      <p className={answer ? "text-primary font-medium" : "text-red-500 font-medium"}>
-                        Resposta: {answer ? "Sim" : "Não"}
-                      </p>
-                    </div>
-                  );
-                })}
+
+            {Object.entries(severityGroups).map(([severity, questions]) => (
+              <div key={severity} className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="text-lg font-medium">Riscos de Severidade {severity === 'low' ? 'Baixa' : severity === 'medium' ? 'Média' : 'Alta'}</h3>
+                  <SeverityBadge severity={severity as 'low' | 'medium' | 'high'} />
+                </div>
+                
+                <div className="space-y-4">
+                  {questions.map(question => {
+                    const answer = loadedResult.answers[question.id];
+                    const isYes = answer?.answer === true;
+                    return (
+                      <div 
+                        key={question.id} 
+                        className={`p-4 border rounded-lg ${isYes ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <p className="font-medium">{question.texto}</p>
+                          <span className={`px-2 py-1 text-xs rounded-full ${isYes ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                            {isYes ? 'Sim' : 'Não'}
+                          </span>
+                        </div>
+                        
+                        {answer?.observation && (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600 font-medium">Observação:</p>
+                            <p className="text-sm text-gray-600">{answer.observation}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </ScrollArea>
-            
-            <div className="mt-6">
-              {selectedFormResult && (
-                <AnalystObservations 
-                  avaliacaoId={selectedFormResult.id}
-                  initialValue={selectedFormResult.notas_analista}
-                />
-              )}
+            ))}
+
+            <div className="mt-8">
+              <AnalystObservations 
+                avaliacaoId={loadedResult.id} 
+                initialValue={loadedResult.notas_analista || ""}
+              />
             </div>
           </>
-        ) : (
-          <div className="flex items-center justify-center py-10 text-muted-foreground">
-            {selectedEmployeeId ? 
-              "Selecione uma avaliação para visualizar o diagnóstico." :
-              "Selecione um funcionário para visualizar o diagnóstico."}
-          </div>
         )}
       </CardContent>
     </Card>

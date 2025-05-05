@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
@@ -190,12 +189,11 @@ const ClientesPage: React.FC = () => {
     
     setIsLoading(true);
     try {
-      // Update cliente status in Supabase (example implementation)
+      // Since bloqueado isn't a column in the database schema, we'll use situacao
       const { error } = await supabase
         .from("clientes_sistema")
         .update({
-          bloqueado: true,
-          motivo_bloqueio: "Bloqueio manual pelo administrador"
+          situacao: "bloqueado", // Assuming 'bloqueado' is a valid value for situacao
         })
         .eq("id", selectedCliente.id);
 

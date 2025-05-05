@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { updateAnalystNotes } from "@/services/form/formService";
 
 interface AnalystObservationsProps {
   avaliacaoId: string;
@@ -67,20 +68,7 @@ const AnalystObservations: React.FC<AnalystObservationsProps> = ({
       console.log("Salvando observações para avaliação:", avaliacaoId);
       console.log("Texto a ser salvo:", observations);
       
-      const { data, error } = await supabase
-        .from('avaliacoes')
-        .update({ 
-          notas_analista: observations,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', avaliacaoId);
-        
-      if (error) {
-        console.error("Erro ao salvar observações:", error);
-        toast.error("Falha ao salvar observações");
-        return;
-      }
-      
+      await updateAnalystNotes(avaliacaoId, observations);
       toast.success("Observações salvas com sucesso");
       console.log("Observações salvas com sucesso");
     } catch (error) {

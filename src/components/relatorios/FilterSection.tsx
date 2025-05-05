@@ -1,44 +1,42 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
-import { Company } from "@/types/cadastro";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Company, Employee } from "@/types/cadastro";
 
-interface FilterSectionProps {
+export interface FilterSectionProps {
   companies: Company[];
   selectedCompanyId: string;
+  selectedEmployeeId: string;
   onCompanyChange: (companyId: string) => void;
-  onGenerateReport: () => void;
+  onEmployeeChange: (employeeId: string) => void;
+  onPeriodChange: (period: string) => void;
   isGenerating: boolean;
 }
 
 const FilterSection: React.FC<FilterSectionProps> = ({
   companies,
   selectedCompanyId,
+  selectedEmployeeId,
   onCompanyChange,
-  onGenerateReport,
-  isGenerating,
+  onEmployeeChange,
+  onPeriodChange,
+  isGenerating
 }) => {
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <CardContent className="pt-6">
+        <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Empresa</label>
-            <Select
-              value={selectedCompanyId}
+            <Label htmlFor="company">Empresa</Label>
+            <Select 
+              value={selectedCompanyId} 
               onValueChange={onCompanyChange}
+              disabled={isGenerating}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a empresa" />
+              <SelectTrigger id="company">
+                <SelectValue placeholder="Selecione uma empresa" />
               </SelectTrigger>
               <SelectContent>
                 {companies.map((company) => (
@@ -49,22 +47,25 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex items-end">
-            <Button 
-              className="w-full" 
-              onClick={onGenerateReport} 
-              disabled={isGenerating || !selectedCompanyId}
+          
+          <div className="space-y-2">
+            <Label htmlFor="period">Período</Label>
+            <Select 
+              defaultValue="all" 
+              onValueChange={onPeriodChange}
+              disabled={isGenerating}
             >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                "Gerar Relatório"
-              )}
-            </Button>
+              <SelectTrigger id="period">
+                <SelectValue placeholder="Selecione um período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os períodos</SelectItem>
+                <SelectItem value="last-month">Último mês</SelectItem>
+                <SelectItem value="last-quarter">Último trimestre</SelectItem>
+                <SelectItem value="last-year">Último ano</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardContent>

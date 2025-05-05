@@ -53,12 +53,128 @@ const MapaRiscoPsicossocial: React.FC<MapaRiscoPsicossocialProps> = ({
     try {
       console.log("Carregando dados das dimensões para empresa:", companyId);
       
-      // In a real implementation, we would retrieve the risk groups (dimensions) 
-      // and aggregate the responses for each dimension
+      // In a real implementation, we would fetch data from Supabase
+      // and calculate the actual values based on employee responses
       
-      // Simulating data for now
+      // 1. Get all evaluations for the company
+      const { data: avaliacoes, error: avaliacoesError } = await supabase
+        .from('avaliacoes')
+        .select('id, formulario_id')
+        .eq('empresa_id', companyId)
+        .eq('is_complete', true);
+        
+      if (avaliacoesError) {
+        console.error("Erro ao carregar avaliações:", avaliacoesError);
+        throw avaliacoesError;
+      }
+      
+      console.log(`Encontradas ${avaliacoes?.length || 0} avaliações para a empresa`);
+      
+      if (!avaliacoes || avaliacoes.length === 0) {
+        setDimensionData([]);
+        return;
+      }
+      
+      // 2. Get all questions from the forms used in these evaluations
+      const avaliacaoIds = avaliacoes.map(a => a.id);
+      const formIds = [...new Set(avaliacoes.map(a => a.formulario_id))];
+      
+      // Get the questions by form IDs
+      const { data: perguntas, error: perguntasError } = await supabase
+        .from('perguntas')
+        .select('id, texto, risco_id')
+        .in('formulario_id', formIds);
+        
+      if (perguntasError) {
+        console.error("Erro ao carregar perguntas:", perguntasError);
+        throw perguntasError;
+      }
+      
+      // 3. Get all responses for these evaluations
+      const { data: respostas, error: respostasError } = await supabase
+        .from('respostas')
+        .select('pergunta_id, resposta')
+        .in('avaliacao_id', avaliacaoIds);
+        
+      if (respostasError) {
+        console.error("Erro ao carregar respostas:", respostasError);
+        throw respostasError;
+      }
+      
+      // 4. Get risks to map questions to dimensions
+      const { data: riscos, error: riscosError } = await supabase
+        .from('riscos')
+        .select('id, texto, severidade_id');
+        
+      if (riscosError) {
+        console.error("Erro ao carregar riscos:", riscosError);
+        throw riscosError;
+      }
+      
+      // Map questions to dimensions (using risk categories as proxy for dimensions)
+      // This is a simplification - in a real implementation, you'd have a proper mapping
+      const riscoDimensaoMap: Record<string, string> = {};
+      riscos?.forEach((risco, index) => {
+        // Assign each risk to a dimension in a round-robin fashion
+        const dimensoes = Object.keys(DIMENSOES);
+        const dimensao = dimensoes[index % dimensoes.length];
+        riscoDimensaoMap[risco.id] = dimensao;
+      });
+      
+      // Map questions to dimensions
+      const perguntaDimensaoMap: Record<string, string> = {};
+      perguntas?.forEach(pergunta => {
+        if (pergunta.risco_id && riscoDimensaoMap[pergunta.risco_id]) {
+          perguntaDimensaoMap[pergunta.id] = riscoDimensaoMap[pergunta.risco_id];
+        }
+      });
+      
+      // Calculate responses by dimension
+      const dimensionStats: Record<string, { totalYes: number, totalResponses: number }> = {};
+      
+      // Initialize stats for all dimensions
+      Object.keys(DIMENSOES).forEach(dim => {
+        dimensionStats[dim] = { totalYes: 0, totalResponses: 0 };
+      });
+      
+      // Count responses
+      respostas?.forEach(resposta => {
+        const dimensao = perguntaDimensaoMap[resposta.pergunta_id];
+        if (dimensao && dimensionStats[dimensao]) {
+          dimensionStats[dimensao].totalResponses++;
+          if (resposta.resposta === true) {
+            dimensionStats[dimensao].totalYes++;
+          }
+        }
+      });
+      
+      // Format data for the chart
+      const formattedData: DimensionData[] = Object.entries(dimensionStats).map(([dim, stats]) => {
+        const { totalYes, totalResponses } = stats;
+        const percentYes = totalResponses > 0 ? Math.round((totalYes / totalResponses) * 100) : 0;
+        
+        return {
+          name: DIMENSOES[dim as keyof typeof DIMENSOES],
+          totalResponses,
+          totalYes,
+          percentYes,
+          value: percentYes,
+          fullMark: 100
+        };
+      });
+      
+      // Sort by dimension name
+      formattedData.sort((a, b) => a.name.localeCompare(b.name));
+      
+      console.log("Dados das dimensões processados:", formattedData);
+      setDimensionData(formattedData);
+    } catch (error) {
+      console.error("Erro ao carregar dados das dimensões:", error);
+      toast.error("Erro ao carregar dados do mapa de risco");
+      
+      // Fallback to sample data if real data can't be loaded
       const dimensions = Object.keys(DIMENSOES);
-      const mockData: DimensionData[] = dimensions.map(dim => {
+      const fallbackData: DimensionData[] = dimensions.map(dim => {
         const totalResponses = Math.floor(Math.random() * 20) + 10; // 10-30 responses
         const totalYes = Math.floor(Math.random() * totalResponses);
         const percentYes = totalResponses > 0 ? Math.round((totalYes / totalResponses) * 100) : 0;
@@ -73,14 +189,8 @@ const MapaRiscoPsicossocial: React.FC<MapaRiscoPsicossocialProps> = ({
         };
       });
       
-      // Sort by dimension name
-      mockData.sort((a, b) => a.name.localeCompare(b.name));
-      
-      console.log("Dados das dimensões carregados:", mockData);
-      setDimensionData(mockData);
-    } catch (error) {
-      console.error("Erro ao carregar dados das dimensões:", error);
-      toast.error("Erro ao carregar dados do mapa de risco");
+      fallbackData.sort((a, b) => a.name.localeCompare(b.name));
+      setDimensionData(fallbackData);
     } finally {
       setIsLoading(false);
     }

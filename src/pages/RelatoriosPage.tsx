@@ -13,6 +13,7 @@ import { Question, FormResult } from "@/types/form";
 import { Company, Employee } from "@/types/cadastro";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
@@ -112,7 +113,7 @@ const RelatoriosPage: React.FC = () => {
     }
     
     setIsGenerating(true);
-    // Simulate report generation
+    // Simulate report generation (in a real app, this would fetch data from the API)
     setTimeout(() => {
       setIsGenerating(false);
       setReportGenerated(true);
@@ -123,7 +124,7 @@ const RelatoriosPage: React.FC = () => {
   const selectedCompany = companies.find(c => c.id === selectedCompanyId) || null;
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) || null;
 
-  // Sample form result for diagnostic, fixing the answers to include questionId
+  // Sample form result for diagnostic
   const sampleFormResult: FormResult = {
     id: "sample-result",
     employeeId: selectedEmployeeId || "1",
@@ -131,9 +132,18 @@ const RelatoriosPage: React.FC = () => {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     answers: {
-      q1: { answer: true, questionId: "q1" },
-      q2: { answer: false, questionId: "q2" },
-      q3: { answer: true, questionId: "q3" }
+      q1: { 
+        questionId: "q1",
+        answer: true 
+      },
+      q2: { 
+        questionId: "q2", 
+        answer: false 
+      },
+      q3: { 
+        questionId: "q3", 
+        answer: true 
+      }
     },
     total_sim: 2,
     total_nao: 1,
@@ -147,7 +157,6 @@ const RelatoriosPage: React.FC = () => {
       <div className="space-y-4 px-4 py-6">
         <FilterSection
           companies={companies}
-          employees={employees}
           selectedCompanyId={selectedCompanyId}
           selectedEmployeeId={selectedEmployeeId}
           onCompanyChange={handleCompanyChange}
@@ -177,6 +186,7 @@ const RelatoriosPage: React.FC = () => {
               <DiagnosticoIndividual
                 result={sampleFormResult}
                 questions={sampleQuestions}
+                companyId={selectedCompanyId}
               />
             </TabsContent>
 
