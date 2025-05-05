@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addDepartmentToCompany, getDepartmentsByCompany } from "@/services";
+import { addDepartment, getDepartmentsByCompany } from "@/services";
 import { useToast } from "@/hooks/use-toast";
 import { handleSupabaseError } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -46,11 +46,8 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
     try {
       console.log("NewDepartmentModal: Enviando dados do setor:", { name, companyId });
       
-      // Using the correct parameter structure from our service
-      const newDepartment = await addDepartmentToCompany({
-        name: name.trim(),
-        companyId: companyId
-      });
+      // Using the correct function from our service
+      const newDepartment = await addDepartment(companyId, name.trim());
       
       console.log("NewDepartmentModal: Setor adicionado com sucesso:", newDepartment);
       
