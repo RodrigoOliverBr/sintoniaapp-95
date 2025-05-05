@@ -1,16 +1,14 @@
+
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Dialog } from "@/components/ui/dialog";
-import ClientesTable from "@/components/admin/clientes/ClientesTable";
-import {
-  ClienteDialogDelete,
-  ClienteDialogEdit,
-  ClienteDialogNew
-} from "@/components/admin/clientes/ClienteDialogs";
-import { HeaderClientesActions } from "@/components/admin/clientes/ClienteActions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ClientesTable } from "@/components/admin/clientes/ClientesTable";
+import { ClienteDialogs } from "@/components/admin/clientes/ClienteDialogs";
+import { ClienteActions } from "@/components/admin/clientes/ClienteActions";
+import { ClienteForm } from "@/components/admin/ClienteForm";
 import { ClienteSistema } from "@/types/admin";
 
 const ClientesPage: React.FC = () => {
@@ -20,6 +18,7 @@ const ClientesPage: React.FC = () => {
   const [openNewModal, setOpenNewModal] = useState<boolean>(false);
   const [openEditModal, setOpenEditModal] = useState<boolean>(false);
   const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
+  const [openBlockModal, setOpenBlockModal] = useState<boolean>(false);
   const [selectedCliente, setSelectedCliente] = useState<ClienteSistema | null>(null);
 
   const loadClientes = async () => {
@@ -61,9 +60,7 @@ const ClientesPage: React.FC = () => {
           contrato => contrato.cliente_sistema_id === cliente.id && contrato.status === "ativo"
         );
         
-        const contratoId = contratosData?.find(
-          contrato => contrato.cliente_sistema_id === cliente.id
-        )?.id || "";
+        const contratoId = "";
         
         console.log(`Cliente ${cliente.razao_social}: ${hasActiveContract ? 'Com contrato ativo' : 'Sem contrato ativo'}`);
         
@@ -120,68 +117,52 @@ const ClientesPage: React.FC = () => {
     setSelectedCliente(cliente);
     setOpenDeleteModal(true);
   };
-
-  const handleCloseModals = () => {
-    setOpenNewModal(false);
-    setOpenEditModal(false);
-    setOpenDeleteModal(false);
-    setSelectedCliente(null);
+  
+  const handleOpenBlock = (cliente: ClienteSistema) => {
+    setSelectedCliente(cliente);
+    setOpenBlockModal(true);
   };
 
-  const handleSaveNew = async (newCliente: Omit<ClienteSistema, "id">) => {
+  const handleUpdateCliente = async (formData: any) => {
+    if (!selectedCliente) return;
+    
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Update the cliente in Supabase
+      const { error } = await supabase
         .from("clientes_sistema")
-        .insert([newCliente])
-        .select();
-
-      if (error) {
-        console.error("Erro ao criar cliente:", error);
-        toast.error("Erro ao criar cliente");
-      } else {
-        toast.success("Cliente criado com sucesso!");
-        loadClientes();
-      }
-    } catch (error) {
-      console.error("Erro ao criar cliente:", error);
-      toast.error("Erro ao criar cliente");
-    } finally {
-      setIsLoading(false);
-      handleCloseModals();
-    }
-  };
-
-  const handleSaveEdit = async (cliente: ClienteSistema) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("clientes_sistema")
-        .update(cliente)
-        .eq("id", cliente.id)
-        .select();
+        .update({
+          razao_social: formData.razao_social,
+          cnpj: formData.cnpj,
+          email: formData.email,
+          telefone: formData.telefone,
+          responsavel: formData.responsavel
+        })
+        .eq("id", selectedCliente.id);
 
       if (error) {
         console.error("Erro ao atualizar cliente:", error);
         toast.error("Erro ao atualizar cliente");
-      } else {
-        toast.success("Cliente atualizado com sucesso!");
-        loadClientes();
+        return;
       }
+      
+      toast.success("Cliente atualizado com sucesso!");
+      loadClientes();
     } catch (error) {
       console.error("Erro ao atualizar cliente:", error);
       toast.error("Erro ao atualizar cliente");
     } finally {
       setIsLoading(false);
-      handleCloseModals();
+      setOpenEditModal(false);
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteCliente = async () => {
     if (!selectedCliente) return;
-
+    
     setIsLoading(true);
     try {
+      // Delete the cliente from Supabase
       const { error } = await supabase
         .from("clientes_sistema")
         .delete()
@@ -190,16 +171,80 @@ const ClientesPage: React.FC = () => {
       if (error) {
         console.error("Erro ao excluir cliente:", error);
         toast.error("Erro ao excluir cliente");
-      } else {
-        toast.success("Cliente excluído com sucesso!");
-        loadClientes();
+        return;
       }
+      
+      toast.success("Cliente excluído com sucesso!");
+      loadClientes();
     } catch (error) {
       console.error("Erro ao excluir cliente:", error);
       toast.error("Erro ao excluir cliente");
     } finally {
       setIsLoading(false);
-      handleCloseModals();
+      setOpenDeleteModal(false);
+    }
+  };
+  
+  const handleBlockCliente = async () => {
+    if (!selectedCliente) return;
+    
+    setIsLoading(true);
+    try {
+      // Update cliente status in Supabase (example implementation)
+      const { error } = await supabase
+        .from("clientes_sistema")
+        .update({
+          bloqueado: true,
+          motivo_bloqueio: "Bloqueio manual pelo administrador"
+        })
+        .eq("id", selectedCliente.id);
+
+      if (error) {
+        console.error("Erro ao bloquear cliente:", error);
+        toast.error("Erro ao bloquear cliente");
+        return;
+      }
+      
+      toast.success("Cliente bloqueado com sucesso!");
+      loadClientes();
+    } catch (error) {
+      console.error("Erro ao bloquear cliente:", error);
+      toast.error("Erro ao bloquear cliente");
+    } finally {
+      setIsLoading(false);
+      setOpenBlockModal(false);
+    }
+  };
+  
+  const handleCreateNew = async (formData: any) => {
+    setIsLoading(true);
+    try {
+      // Insert new cliente in Supabase
+      const { data, error } = await supabase
+        .from("clientes_sistema")
+        .insert([{
+          razao_social: formData.razao_social,
+          cnpj: formData.cnpj,
+          email: formData.email,
+          telefone: formData.telefone,
+          responsavel: formData.responsavel
+        }])
+        .select();
+
+      if (error) {
+        console.error("Erro ao criar cliente:", error);
+        toast.error("Erro ao criar cliente");
+        return;
+      }
+      
+      toast.success("Cliente criado com sucesso!");
+      loadClientes();
+    } catch (error) {
+      console.error("Erro ao criar cliente:", error);
+      toast.error("Erro ao criar cliente");
+    } finally {
+      setIsLoading(false);
+      setOpenNewModal(false);
     }
   };
 
@@ -207,7 +252,7 @@ const ClientesPage: React.FC = () => {
     <AdminLayout title="Clientes">
       <Card>
         <CardHeader>
-          <HeaderClientesActions
+          <ClienteActions
             onSearch={handleSearch}
             searchTerm={searchTerm}
             onNew={handleOpenNew}
@@ -222,37 +267,40 @@ const ClientesPage: React.FC = () => {
             isLoading={isLoading}
             onEdit={handleOpenEdit}
             onDelete={handleOpenDelete}
+            onBlock={handleOpenBlock}
           />
         </CardContent>
       </Card>
 
+      {/* Use the unified ClienteDialogs component */}
+      <ClienteDialogs
+        openEditModal={openEditModal}
+        setOpenEditModal={setOpenEditModal}
+        openDeleteModal={openDeleteModal}
+        setOpenDeleteModal={setOpenDeleteModal}
+        openBlockModal={openBlockModal}
+        setOpenBlockModal={setOpenBlockModal}
+        currentCliente={selectedCliente}
+        isLoading={isLoading}
+        onUpdateCliente={handleUpdateCliente}
+        onDeleteCliente={handleDeleteCliente}
+        onBlockCliente={handleBlockCliente}
+      />
+      
+      {/* Handle New Client Dialog separately for now */}
       <Dialog open={openNewModal} onOpenChange={setOpenNewModal}>
-        <ClienteDialogNew
-          open={openNewModal}
-          onOpenChange={setOpenNewModal}
-          onSave={handleSaveNew}
-          isLoading={isLoading}
-        />
-      </Dialog>
-
-      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
-        <ClienteDialogEdit
-          open={openEditModal}
-          onOpenChange={setOpenEditModal}
-          onSave={handleSaveEdit}
-          isLoading={isLoading}
-          cliente={selectedCliente}
-        />
-      </Dialog>
-
-      <Dialog open={openDeleteModal} onOpenChange={setOpenDeleteModal}>
-        <ClienteDialogDelete
-          open={openDeleteModal}
-          onOpenChange={setOpenDeleteModal}
-          onDelete={handleDelete}
-          isLoading={isLoading}
-          cliente={selectedCliente}
-        />
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+            <DialogDescription>
+              Preencha os dados para cadastrar um novo cliente.
+            </DialogDescription>
+          </DialogHeader>
+          <ClienteForm 
+            onSubmit={handleCreateNew}
+            isLoading={isLoading}
+          />
+        </DialogContent>
       </Dialog>
     </AdminLayout>
   );

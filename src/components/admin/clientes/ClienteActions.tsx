@@ -1,65 +1,35 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { LogIn, Ban, Pencil, Trash2 } from "lucide-react";
-import { ClienteSistema } from "@/types/admin";
+import { Input } from "@/components/ui/input";
+import { Search, Plus } from "lucide-react";
 
 interface ClienteActionsProps {
-  cliente: ClienteSistema;
-  isAdmin: boolean;
-  onLogin: (cliente: ClienteSistema) => void;
-  onBlock: (cliente: ClienteSistema) => void;
-  onEdit: (cliente: ClienteSistema) => void;
-  onDelete: (cliente: ClienteSistema) => void;
+  searchTerm: string;
+  onSearch: (term: string) => void;
+  onNew: () => void;
 }
 
 export const ClienteActions: React.FC<ClienteActionsProps> = ({
-  cliente,
-  isAdmin,
-  onLogin,
-  onBlock,
-  onEdit,
-  onDelete
+  searchTerm,
+  onSearch,
+  onNew
 }) => {
   return (
-    <div className="flex justify-end gap-2">
-      {isAdmin && (
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="flex items-center gap-1"
-          onClick={() => onLogin(cliente)}
-        >
-          <LogIn size={14} />
-          Acessar
-        </Button>
-      )}
-      
-      <Button 
-        variant="outline" 
-        size="sm"
-        className="flex items-center gap-1 text-red-500 hover:text-red-700"
-        onClick={() => onBlock(cliente)}
-        disabled={cliente.situacao === 'bloqueado-manualmente'}
-      >
-        <Ban size={14} />
-        Bloquear
-      </Button>
-      
-      <Button 
-        variant="ghost" 
-        size="icon"
-        onClick={() => onEdit(cliente)}
-      >
-        <Pencil size={16} />
-      </Button>
-      
-      <Button 
-        variant="ghost" 
-        size="icon"
-        onClick={() => onDelete(cliente)}
-      >
-        <Trash2 size={16} />
+    <div className="flex flex-col sm:flex-row justify-between space-y-2 sm:space-y-0 sm:space-x-2">
+      <div className="relative flex-1 max-w-sm">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Buscar por nome ou CNPJ..."
+          className="pl-8"
+          value={searchTerm}
+          onChange={(e) => onSearch(e.target.value)}
+        />
+      </div>
+      <Button onClick={onNew}>
+        <Plus className="mr-2 h-4 w-4" />
+        Novo Cliente
       </Button>
     </div>
   );
