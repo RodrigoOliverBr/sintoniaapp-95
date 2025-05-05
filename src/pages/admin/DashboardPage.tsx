@@ -1,256 +1,193 @@
-
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Line, Users, Building, FileText } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
-import { getDashboardStats, getClientes, getContratos, getPlanos, renovarContrato } from "@/services/adminService";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { ChartContainer } from "@/components/ui/chart";
-import { BarChart } from "@/components/ui/BarChart";
-import { Building2, Briefcase, CreditCard, Users, Check, Clock, AlertTriangle, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { toast } from "sonner";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 
 const DashboardPage: React.FC = () => {
-  const stats = getDashboardStats();
-  const planos = getPlanos();
-  const clientes = getClientes();
-  const contratos = getContratos();
-  
-  // Função para renovar contrato
-  const handleRenovarContrato = (contratoId: string) => {
-    try {
-      const contrato = renovarContrato(contratoId);
-      if (contrato) {
-        toast.success("Contrato renovado com sucesso por mais 12 meses!");
-        // Recarregar página para atualizar as estatísticas
-        window.location.reload();
+  const [clientesAtivos, setClientesAtivos] = useState(0);
+  const [totalClientes, setTotalClientes] = useState(0);
+  const [empresas, setEmpresas] = useState(0);
+  const [funcionarios, setFuncionarios] = useState(0);
+  const [avaliacoes, setAvaliacoes] = useState(0);
+  const [ultimasAvaliacoes, setUltimasAvaliacoes] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch total clients
+        const { data: allClientes, error: errorAllClientes } = await supabase
+          .from("clientes_sistema")
+          .select("id, situacao");
+        
+        if (errorAllClientes) throw errorAllClientes;
+        
+        setTotalClientes(allClientes?.length || 0);
+        console.log("Total de clientes cadastrados:", allClientes?.length || 0);
+        
+        // Count active clients (with situacao = 'liberado')
+        const ativosCount = allClientes?.filter(cliente => cliente.situacao === 'liberado').length || 0;
+        setClientesAtivos(ativosCount);
+        console.log("Clientes ativos:", ativosCount);
+
+        // Fetch companies count
+        const { count: empresasCount, error: errorEmpresas } = await supabase
+          .from("empresas")
+          .select("id", { count: "exact", head: true });
+        
+        if (errorEmpresas) throw errorEmpresas;
+        setEmpresas(empresasCount || 0);
+
+        // Fetch employees count  
+        const { count: funcionariosCount, error: errorFuncionarios } = await supabase
+          .from("funcionarios")
+          .select("id", { count: "exact", head: true });
+        
+        if (errorFuncionarios) throw errorFuncionarios;
+        setFuncionarios(funcionariosCount || 0);
+
+        // Fetch assessments count
+        const { count: avaliacoesCount, error: errorAvaliacoes } = await supabase
+          .from("avaliacoes")
+          .select("id", { count: "exact", head: true });
+        
+        if (errorAvaliacoes) throw errorAvaliacoes;
+        setAvaliacoes(avaliacoesCount || 0);
+
+        // Fetch latest assessments
+        const { data: latestAvaliacoes, error: errorLatest } = await supabase
+          .from("avaliacoes")
+          .select(`
+            id, 
+            created_at,
+            empresas!inner(nome),
+            funcionarios!inner(nome),
+            formularios!inner(titulo)
+          `)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        
+        if (errorLatest) throw errorLatest;
+        setUltimasAvaliacoes(latestAvaliacoes || []);
+        
+      } catch (error) {
+        console.error("Erro ao carregar dados do dashboard:", error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      toast.error("Erro ao renovar contrato.");
-    }
-  };
-  
-  // Dados para o gráfico de contratos por plano
-  const contratosPorPlano = planos.map(plano => {
-    const count = contratos.filter(c => c.planoId === plano.id && c.status === 'ativo').length;
-    return {
-      name: plano.nome,
-      value: count
     };
-  });
-  
-  // Dados para o gráfico de faturamento mensal (últimos 6 meses)
-  const meses = [];
-  const hoje = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-    const mes = data.toLocaleString('default', { month: 'short' });
-    const ano = data.getFullYear();
-    meses.push(`${mes}/${ano}`);
-  }
-  
-  const faturamentoMensal = meses.map((mes, index) => {
-    return {
-      month: mes,
-      receita: [15000, 18000, 22000, 21000, 24000, 28000][index]
-    };
-  });
+
+    fetchDashboardData();
+  }, []);
 
   return (
     <AdminLayout title="Dashboard">
-      <div className="grid gap-6">
-        {/* Alertas de renovação de contratos */}
-        {stats.contratosParaRenovar > 0 && (
-          <div className="grid gap-4">
-            <h2 className="text-lg font-semibold">Contratos para Renovação</h2>
-            {stats.listaContratosParaRenovar.map((contrato) => (
-              <Alert key={contrato.id} variant="default" className="border-yellow-500 bg-yellow-50">
-                <Calendar className="h-4 w-4 text-yellow-500" />
-                <AlertTitle className="flex items-center justify-between">
-                  <span>Contrato {contrato.numero} - {contrato.clienteNome}</span>
-                </AlertTitle>
-                <AlertDescription className="flex items-center justify-between mt-2">
-                  <span>
-                    Este contrato atingirá o limite de faturas programadas em{' '}
-                    {format(new Date(contrato.dataRenovacao), "dd 'de' MMMM 'de' yyyy", {locale: ptBR})}.
-                  </span>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleRenovarContrato(contrato.id)}
-                    >
-                      Renovar por mais 12 meses
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => window.location.href = `/admin/contratos?edit=${contrato.id}`}
-                    >
-                      Editar Contrato
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            ))}
-          </div>
-        )}
-      
-        {/* Cards de estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clientes Ativos</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.clientesAtivos}</div>
-              <p className="text-xs text-muted-foreground">
-                Total de {stats.totalClientes} clientes cadastrados
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Contratos Ativos</CardTitle>
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.contratosAtivos}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.contratosEmAnalise} em análise, {stats.contratosCancelados} cancelados
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Faturamento</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.valorTotal)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.faturasPagas} faturas pagas, {stats.faturasPendentes} pendentes
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Usuários</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalClientes * 5}</div>
-              <p className="text-xs text-muted-foreground">
-                Estimativa de usuários ativos
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Clientes Ativos</CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{clientesAtivos}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de {totalClientes} clientes cadastrados
+            </p>
+          </CardContent>
+        </Card>
         
-        {/* Status de faturas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Faturas Pagas</CardTitle>
-              <Check className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.valorTotalPago)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.faturasPagas} faturas
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Faturas Pendentes</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.valorTotalPendente)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.faturasPendentes} faturas
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Faturas Atrasadas</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.valorTotalAtrasado)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.faturasAtrasadas} faturas
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contratos por Plano</CardTitle>
-              <CardDescription>
-                Distribuição de contratos ativos por plano
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BarChart 
-                data={contratosPorPlano}
-                index="name"
-                categories={["value"]}
-                colors={["#3b82f6"]}
-                valueFormatter={(value) => `${value} contratos`}
-                className="h-[300px]"
-              />
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Faturamento Mensal</CardTitle>
-              <CardDescription>
-                Faturamento dos últimos 6 meses
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ChartContainer 
-                className="h-full" 
-                config={{ 
-                  receita: { 
-                    color: "#22c55e" 
-                  } 
-                }}
-              >
-                <BarChart 
-                  data={faturamentoMensal}
-                  index="month"
-                  categories={["receita"]}
-                  colors={["#22c55e"]}
-                  valueFormatter={(value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
-                />
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Empresas</CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{empresas}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de empresas cadastradas
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Funcionários</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{funcionarios}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de funcionários cadastrados
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avaliações</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{avaliacoes}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de avaliações realizadas
+            </p>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Últimas Avaliações</CardTitle>
+          <CardDescription>
+            Visualização das 5 últimas avaliações realizadas no sistema.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p>Carregando...</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Data
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Empresa
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Funcionário
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Formulário
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {ultimasAvaliacoes.map((avaliacao) => (
+                    <tr key={avaliacao.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {new Date(avaliacao.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {avaliacao.empresas?.nome}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {avaliacao.funcionarios?.nome}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {avaliacao.formularios?.titulo}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </AdminLayout>
   );
 };

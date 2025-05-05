@@ -37,6 +37,7 @@ interface UseContratosResult {
     observacoes: string
   ) => Promise<boolean>;
   deleteContrato: (contratoId: string, clienteId: string) => Promise<boolean>;
+  loadData: () => Promise<void>;
 }
 
 export const useContratos = (): UseContratosResult => {
@@ -70,7 +71,7 @@ export const useContratos = (): UseContratosResult => {
         );
       }
       
-      // Convert database schema to ClienteSistema type
+      // Convert database schema to ClienteSistema type - Fix dataInclusao type
       const clientesFormatted: ClienteSistema[] = clientesData?.map(c => ({
         id: c.id,
         nome: c.razao_social || "",
@@ -85,7 +86,7 @@ export const useContratos = (): UseContratosResult => {
         situacao: c.situacao || "",
         tipo: "cliente",
         numeroEmpregados: 0,
-        dataInclusao: c.created_at,
+        dataInclusao: c.created_at ? new Date(c.created_at).getTime() : Date.now(), // Convert to number
         ativo: true,
         planoId: c.plano_id || "",
         contratoId: c.contrato_id || ""
@@ -107,7 +108,7 @@ export const useContratos = (): UseContratosResult => {
       
       console.log(`useContratos: ${planosData?.length || 0} planos ativos carregados`);
       
-      // Convert database schema to Plano type with all required properties
+      // Convert database schema to Plano type with all required properties - Fix property name
       const planosFormatted: Plano[] = planosData?.map(p => ({
         id: p.id,
         nome: p.nome || "",
@@ -116,7 +117,7 @@ export const useContratos = (): UseContratosResult => {
         valorImplantacao: p.valor_implantacao || 0,
         descricao: p.descricao || "",
         ativo: p.ativo || false,
-        numeroUsuarios: p.limite_usuarios || 0,
+        numeroUsuarios: p.limite_empregados || 0, // Changed from limite_usuarios to limite_empregados
         limiteEmpresas: p.limite_empresas || 0,
         limiteEmpregados: p.limite_empregados || 0,
         empresasIlimitadas: p.empresas_ilimitadas || false,
@@ -141,7 +142,7 @@ export const useContratos = (): UseContratosResult => {
       
       console.log(`useContratos: ${contratosData?.length || 0} contratos carregados`);
       
-      // Convert database schema to Contrato type ensuring number types
+      // Convert database schema to Contrato type - Fix status type
       const contratosFormatted: Contrato[] = contratosData?.map(c => ({
         id: c.id,
         clienteSistemaId: c.cliente_sistema_id || "",
@@ -152,7 +153,7 @@ export const useContratos = (): UseContratosResult => {
         dataPrimeiroVencimento: new Date(c.data_primeiro_vencimento).getTime(),
         valorMensal: c.valor_mensal || 0,
         numero: c.numero || "",
-        status: c.status || "ATIVO",
+        status: (c.status?.toLowerCase() || "ativo") as StatusContrato, // Cast to StatusContrato type
         taxaImplantacao: c.taxa_implantacao || 0,
         observacoes: c.observacoes || ""
       })) || [];
@@ -302,5 +303,6 @@ export const useContratos = (): UseContratosResult => {
     addContrato,
     updateContrato,
     deleteContrato,
+    loadData,
   };
 };

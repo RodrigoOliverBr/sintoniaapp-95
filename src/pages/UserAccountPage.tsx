@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import SimpleLayout from '@/components/SimpleLayout';
 interface UserProfile {
   nome?: string;
   email?: string;
-  telefone?: string;  // Add this field to match usage
+  telefone?: string;
 }
 
 const UserAccountPage: React.FC = () => {
@@ -42,7 +43,7 @@ const UserAccountPage: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('perfis')
-        .select('nome, email')
+        .select('nome, email, telefone')
         .eq('id', userId)
         .single();
 
@@ -54,11 +55,11 @@ const UserAccountPage: React.FC = () => {
           description: handleSupabaseError(error),
         });
       } else {
-        // Add telefone property with default value
         setUserProfile({
           ...data,
           telefone: data.telefone || ''
         });
+        console.log("Perfil carregado:", data);
       }
     } catch (error) {
       console.error("Erro ao buscar perfil do usuário:", error);
@@ -136,7 +137,7 @@ const UserAccountPage: React.FC = () => {
                 type="text"
                 id="name"
                 name="nome"
-                defaultValue={userProfile.nome || ""}
+                defaultValue={userProfile?.nome || ""}
                 required
                 className="bg-white"
               />
@@ -147,7 +148,7 @@ const UserAccountPage: React.FC = () => {
                 type="email"
                 id="email"
                 name="email"
-                defaultValue={userProfile.email || ""}
+                defaultValue={userProfile?.email || ""}
                 required
                 className="bg-white"
               />
@@ -158,7 +159,7 @@ const UserAccountPage: React.FC = () => {
                 type="tel"
                 id="telefone"
                 name="telefone"
-                defaultValue={telefoneDisplay}
+                defaultValue={userProfile?.telefone || ""}
                 className="bg-white"
               />
             </div>

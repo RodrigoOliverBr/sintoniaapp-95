@@ -7,6 +7,7 @@ import { FolderMinus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getDepartmentsByCompany } from "@/services";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DepartmentSelectProps {
   departments: Department[];
@@ -46,12 +47,27 @@ const DepartmentSelect: React.FC<DepartmentSelectProps> = ({
     try {
       console.log("DepartmentSelect: Refresh manual de departamentos para empresa:", companyId);
       
-      // Always fetch fresh departments on manual refresh
-      const refreshedDepartments = await getDepartmentsByCompany(companyId);
-      console.log("DepartmentSelect: Departamentos atualizados:", refreshedDepartments);
+      // Force a direct query to ensure we get fresh data
+      const { data: refreshedDepartments, error } = await supabase
+        .from('setores')
+        .select('*')
+        .eq('empresa_id', companyId);
+        
+      if (error) throw error;
+      
+      console.log("DepartmentSelect: Dados brutos do banco:", refreshedDepartments);
+      
+      // Map database records to Department type
+      const mappedDepartments: Department[] = refreshedDepartments.map(dept => ({
+        id: dept.id,
+        name: dept.nome,
+        companyId: dept.empresa_id
+      }));
+      
+      console.log("DepartmentSelect: Departamentos atualizados:", mappedDepartments);
       
       // Update local state
-      setLocalDepartments(refreshedDepartments);
+      setLocalDepartments(mappedDepartments);
       
       // Then notify parent to update its state
       if (onRefreshDepartments) {
