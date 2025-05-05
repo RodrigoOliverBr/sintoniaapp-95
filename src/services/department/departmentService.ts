@@ -1,9 +1,11 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Department } from '@/types/cadastro';
 import { toast } from 'sonner';
 
 // Keep a cache of departments by company to improve performance
 const departmentsCache: Record<string, { data: Department[]; timestamp: number }> = {};
+const CACHE_TTL = 5000; // 5 seconds
 
 // Function to clear cache for a specific company
 const clearCacheForCompany = (companyId: string) => {
@@ -11,6 +13,12 @@ const clearCacheForCompany = (companyId: string) => {
     console.log(`departmentService: Clearing cache for company ${companyId}`);
     delete departmentsCache[companyId];
   }
+};
+
+// Function to clear the entire cache
+const clearAllCache = () => {
+  console.log('departmentService: Clearing all cache');
+  Object.keys(departmentsCache).forEach(key => delete departmentsCache[key]);
 };
 
 export const getDepartmentsByCompany = async (companyId: string): Promise<Department[]> => {
@@ -21,10 +29,10 @@ export const getDepartmentsByCompany = async (companyId: string): Promise<Depart
     return [];
   }
   
-  // Check if we have a fresh cache (less than 10 seconds old)
+  // Check if we have a fresh cache (less than 5 seconds old)
   const now = Date.now();
   const cachedData = departmentsCache[companyId];
-  if (cachedData && (now - cachedData.timestamp < 10000)) {
+  if (cachedData && (now - cachedData.timestamp < CACHE_TTL)) {
     console.log(`getDepartmentsByCompany: Usando cache para empresa ${companyId}, ${cachedData.data.length} setores`);
     return cachedData.data;
   }
@@ -55,7 +63,7 @@ export const getDepartmentsByCompany = async (companyId: string): Promise<Depart
       companyId: dept.empresa_id
     }));
     
-    // Update cache
+    // Update cache with current timestamp
     departmentsCache[companyId] = {
       data: mappedDepartments,
       timestamp: now
@@ -187,6 +195,9 @@ export const deleteDepartment = async (departmentId: string, companyId?: string)
     // Clear cache for this company
     if (companyId) {
       clearCacheForCompany(companyId);
+    } else {
+      // If we couldn't determine the company, clear all cache to be safe
+      clearAllCache();
     }
     
     // Notify success

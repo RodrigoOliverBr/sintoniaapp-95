@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -11,12 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash, FolderPlus } from "lucide-react";
+import { Plus, Trash, FolderPlus, RefreshCw } from "lucide-react";
 import { Company, Department } from "@/types/cadastro";
 import { 
   deleteCompany, 
   getCompanies, 
-  deleteDepartment 
+  deleteDepartment,
+  getDepartmentsByCompany 
 } from "@/services";
 import NewCompanyModal from "@/components/modals/NewCompanyModal";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +58,25 @@ const CompaniesPage = () => {
     }
   };
 
+  // Force refresh for a specific company's departments
+  const refreshCompanyDepartments = async (companyId: string) => {
+    try {
+      console.log("Refreshing departments for company:", companyId);
+      const departments = await getDepartmentsByCompany(companyId);
+      
+      // Update the companies state with the new departments
+      setCompanies(prevCompanies => 
+        prevCompanies.map(company => 
+          company.id === companyId 
+            ? { ...company, departments: departments }
+            : company
+        )
+      );
+    } catch (error) {
+      console.error("Error refreshing departments:", error);
+    }
+  };
+
   useEffect(() => {
     loadCompanies();
   }, []);
@@ -85,9 +104,10 @@ const CompaniesPage = () => {
   const handleDeleteDepartment = async (companyId: string, departmentId: string) => {
     if (window.confirm("Tem certeza que deseja excluir este setor?")) {
       try {
-        // Passing just the department ID
-        await deleteDepartment(departmentId);
-        await loadCompanies();
+        // Pass both department ID and company ID
+        await deleteDepartment(departmentId, companyId);
+        // Force refresh the departments for this specific company
+        await refreshCompanyDepartments(companyId);
         toast({
           title: "Sucesso",
           description: "Setor excluído com sucesso!",
@@ -108,8 +128,15 @@ const CompaniesPage = () => {
     setIsNewDepartmentModalOpen(true);
   };
 
-  const handleDepartmentAdded = () => {
-    loadCompanies();
+  const handleDepartmentAdded = async () => {
+    // If a department was added and we know which company it belongs to
+    if (selectedCompanyId) {
+      // Force refresh the departments for this specific company
+      await refreshCompanyDepartments(selectedCompanyId);
+    } else {
+      // Fallback to reloading all companies
+      await loadCompanies();
+    }
   };
 
   return (
@@ -166,7 +193,17 @@ const CompaniesPage = () => {
                     </div>
                     <AccordionContent>
                       <div className="pl-4 pr-4 pb-4">
-                        <h3 className="text-sm font-medium mb-2">Setores</h3>
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="text-sm font-medium">Setores</h3>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => refreshCompanyDepartments(company.id)}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Atualizar Setores
+                          </Button>
+                        </div>
                         {company.departments && company.departments.length > 0 ? (
                           <Table>
                             <TableHeader>

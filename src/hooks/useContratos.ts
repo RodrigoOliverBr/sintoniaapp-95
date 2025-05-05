@@ -74,17 +74,21 @@ export const useContratos = (): UseContratosResult => {
       const clientesFormatted: ClienteSistema[] = clientesData?.map(c => ({
         id: c.id,
         nome: c.razao_social || "",
+        razao_social: c.razao_social || "",
         razaoSocial: c.razao_social || "",
         cnpj: c.cnpj || "",
+        cpfCnpj: c.cnpj || "", 
         telefone: c.telefone || "",
         email: c.email || "",
         responsavel: c.responsavel || "",
+        contato: c.responsavel || "",
         situacao: c.situacao || "",
         tipo: "cliente",
         numeroEmpregados: 0,
         dataInclusao: c.created_at,
         ativo: true,
-        planoId: c.plano_id || ""
+        planoId: c.plano_id || "",
+        contratoId: c.contrato_id || ""
       })) || [];
       
       setClientes(clientesFormatted);
@@ -103,7 +107,7 @@ export const useContratos = (): UseContratosResult => {
       
       console.log(`useContratos: ${planosData?.length || 0} planos ativos carregados`);
       
-      // Convert database schema to Plano type
+      // Convert database schema to Plano type with all required properties
       const planosFormatted: Plano[] = planosData?.map(p => ({
         id: p.id,
         nome: p.nome || "",
@@ -116,7 +120,9 @@ export const useContratos = (): UseContratosResult => {
         limiteEmpresas: p.limite_empresas || 0,
         limiteEmpregados: p.limite_empregados || 0,
         empresasIlimitadas: p.empresas_ilimitadas || false,
-        empregadosIlimitados: p.empregados_ilimitados || false
+        empregadosIlimitados: p.empregados_ilimitados || false,
+        dataValidade: p.data_validade ? new Date(p.data_validade).getTime() : null,
+        semVencimento: p.sem_vencimento || false
       })) || [];
       
       setPlanos(planosFormatted);
@@ -135,15 +141,15 @@ export const useContratos = (): UseContratosResult => {
       
       console.log(`useContratos: ${contratosData?.length || 0} contratos carregados`);
       
-      // Convert database schema to Contrato type
+      // Convert database schema to Contrato type ensuring number types
       const contratosFormatted: Contrato[] = contratosData?.map(c => ({
         id: c.id,
         clienteSistemaId: c.cliente_sistema_id || "",
         clienteId: c.cliente_id || c.cliente_sistema_id || "",
         planoId: c.plano_id || "",
-        dataInicio: new Date(c.data_inicio),
-        dataFim: new Date(c.data_fim),
-        dataPrimeiroVencimento: new Date(c.data_primeiro_vencimento),
+        dataInicio: new Date(c.data_inicio).getTime(),
+        dataFim: new Date(c.data_fim).getTime(),
+        dataPrimeiroVencimento: new Date(c.data_primeiro_vencimento).getTime(),
         valorMensal: c.valor_mensal || 0,
         numero: c.numero || "",
         status: c.status || "ATIVO",

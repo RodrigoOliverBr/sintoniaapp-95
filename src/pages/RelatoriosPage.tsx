@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -81,8 +82,8 @@ const RelatoriosPage: React.FC = () => {
     }, 1500);
   };
 
-  const selectedCompany = companies.find(c => c.id === selectedCompanyId);
-  const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
+  const selectedCompany = companies.find(c => c.id === selectedCompanyId) || null;
+  const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) || null;
 
   // Sample form result for diagnostic, fixing the answers to include questionId
   const sampleFormResult: FormResult = {
@@ -115,9 +116,10 @@ const RelatoriosPage: React.FC = () => {
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 mb-8">
+          <TabsList className="grid grid-cols-3 mb-8">
             <TabsTrigger value="diagnostico">Diagnóstico Individual</TabsTrigger>
             <TabsTrigger value="mapa">Mapa de Risco</TabsTrigger>
+            <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
           </TabsList>
 
           <TabsContent value="diagnostico" className="mt-0">
@@ -133,6 +135,21 @@ const RelatoriosPage: React.FC = () => {
               departmentId=""
               dateRange={{ from: new Date(), to: new Date() }}
             />
+          </TabsContent>
+
+          <TabsContent value="pgr" className="mt-0">
+            {selectedCompany && selectedEmployee ? (
+              <RelatorioPGR
+                company={selectedCompany}
+                employee={selectedEmployee}
+                questions={sampleQuestions}
+                answers={sampleAnswers}
+              />
+            ) : (
+              <div className="flex items-center justify-center py-10 text-muted-foreground">
+                Selecione uma empresa e um funcionário para gerar o relatório PGR.
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

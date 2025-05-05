@@ -24,21 +24,20 @@ const DepartmentSelect: React.FC<DepartmentSelectProps> = ({
   onRefreshDepartments,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [localDepartments, setLocalDepartments] = useState<Department[]>(departments);
-  const hasDepartments = localDepartments && localDepartments.length > 0;
+  const [localDepartments, setLocalDepartments] = useState<Department[]>([]);
   
-  // Update local departments when prop changes
+  // Update local departments when prop changes or component mounts
   useEffect(() => {
     console.log("DepartmentSelect: Departments updated from props:", departments);
-    setLocalDepartments(departments);
-  }, [departments]);
-  
-  // Force load departments when component mounts if companyId is available
-  useEffect(() => {
-    if (companyId && (!departments || departments.length === 0)) {
+    if (departments && departments.length > 0) {
+      setLocalDepartments(departments);
+    } else if (companyId) {
+      // If departments prop is empty but we have companyId, try to load
       handleRefreshClick();
     }
-  }, [companyId]);
+  }, [departments, companyId]);
+  
+  const hasDepartments = localDepartments && localDepartments.length > 0;
   
   const handleRefreshClick = async () => {
     if (!companyId || isLoading) return;
@@ -47,11 +46,11 @@ const DepartmentSelect: React.FC<DepartmentSelectProps> = ({
     try {
       console.log("DepartmentSelect: Refresh manual de departamentos para empresa:", companyId);
       
-      // Fetch departments directly here to update local state and parent 
+      // Always fetch fresh departments on manual refresh
       const refreshedDepartments = await getDepartmentsByCompany(companyId);
       console.log("DepartmentSelect: Departamentos atualizados:", refreshedDepartments);
       
-      // Update local state first
+      // Update local state
       setLocalDepartments(refreshedDepartments);
       
       // Then notify parent to update its state
