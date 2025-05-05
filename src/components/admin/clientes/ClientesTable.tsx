@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   ColumnDef,
@@ -73,7 +74,8 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
       header: "Situação",
       cell: ({ row }) => {
         const situacao = row.getValue("situacao");
-        let badgeVariant = "default";
+        let badgeVariant: "default" | "secondary" | "destructive" | "outline" | "success" = "default";
+        
         if (situacao === "ativo") {
           badgeVariant = "success";
         } else if (situacao === "inativo") {

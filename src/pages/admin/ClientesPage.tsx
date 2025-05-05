@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ClientesTable } from "@/components/admin/clientes/ClientesTable";
+import ClientesTable from "@/components/admin/clientes/ClientesTable";
 import { ClienteDialogs } from "@/components/admin/clientes/ClienteDialogs";
 import { ClienteActions } from "@/components/admin/clientes/ClienteActions";
 import { ClienteForm } from "@/components/admin/ClienteForm";
