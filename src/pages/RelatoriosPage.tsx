@@ -9,11 +9,12 @@ import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import { useQuery } from "@tanstack/react-query";
 import { getCompanies } from "@/services/company/companyService";
 import { getEmployeesByCompany } from "@/services/employee/employeeService";
-import { Question, FormResult } from "@/types/form";
+import { Question } from "@/types/form";
 import { Company, Employee } from "@/types/cadastro";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { AvaliacaoResposta } from "@/types/avaliacao";
 
 const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
@@ -22,6 +23,7 @@ const RelatoriosPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("diagnostico");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
+  const [respostas, setRespostas] = useState<AvaliacaoResposta[]>([]);
 
   // Sample questions and answers for demonstration
   const sampleQuestions: Question[] = [
@@ -90,15 +92,86 @@ const RelatoriosPage: React.FC = () => {
     enabled: !!selectedEmployeeId
   });
 
+  // Fetch responses for the selected employee
+  const { data: employeeResponses = [], isLoading: isLoadingResponses } = useQuery({
+    queryKey: ["employeeResponses", selectedEmployeeId],
+    queryFn: async () => {
+      if (!selectedEmployeeId || !reportGenerated) return [];
+      
+      try {
+        // First get the evaluation ID
+        const { data: avaliacao, error: avaliacaoError } = await supabase
+          .from('avaliacoes')
+          .select('id')
+          .eq('funcionario_id', selectedEmployeeId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (avaliacaoError) {
+          console.error("Error fetching evaluation:", avaliacaoError);
+          return [];
+        }
+        
+        if (!avaliacao) return [];
+        
+        // Then get the responses with the questions and risks
+        const { data, error } = await supabase
+          .from('respostas')
+          .select(`
+            id, 
+            avaliacao_id,
+            pergunta_id,
+            resposta,
+            observacao,
+            opcoes_selecionadas,
+            pergunta:perguntas (
+              id,
+              texto,
+              risco:riscos (
+                id,
+                texto,
+                severidade:severidade (
+                  id,
+                  nivel,
+                  descricao
+                )
+              )
+            )
+          `)
+          .eq('avaliacao_id', avaliacao.id);
+        
+        if (error) {
+          console.error("Error fetching responses:", error);
+          return [];
+        }
+        
+        return data || [];
+      } catch (error) {
+        console.error("Error in employeeResponses query:", error);
+        return [];
+      }
+    },
+    enabled: !!selectedEmployeeId && reportGenerated
+  });
+
+  useEffect(() => {
+    if (employeeResponses.length > 0) {
+      setRespostas(employeeResponses);
+    }
+  }, [employeeResponses]);
+
   const handleCompanyChange = (companyId: string) => {
     setSelectedCompanyId(companyId);
     setSelectedEmployeeId("");
     setReportGenerated(false);
+    setRespostas([]);
   };
 
   const handleEmployeeChange = (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
     setReportGenerated(false);
+    setRespostas([]);
   };
 
   const handlePeriodChange = (period: string) => {
@@ -123,34 +196,6 @@ const RelatoriosPage: React.FC = () => {
 
   const selectedCompany = companies.find(c => c.id === selectedCompanyId) || null;
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) || null;
-
-  // Sample form result for diagnostic
-  const sampleFormResult: FormResult = {
-    id: "sample-result",
-    employeeId: selectedEmployeeId || "1",
-    empresa_id: selectedCompanyId || "1",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    answers: {
-      q1: { 
-        questionId: "q1",
-        answer: true 
-      },
-      q2: { 
-        questionId: "q2", 
-        answer: false 
-      },
-      q3: { 
-        questionId: "q3", 
-        answer: true 
-      }
-    },
-    total_sim: 2,
-    total_nao: 1,
-    is_complete: true,
-    last_updated: new Date().toISOString(),
-    formulario_id: "f1"
-  };
 
   return (
     <Layout title="Relatórios">
@@ -183,11 +228,7 @@ const RelatoriosPage: React.FC = () => {
             </TabsList>
 
             <TabsContent value="diagnostico" className="mt-0">
-              <DiagnosticoIndividual
-                result={sampleFormResult}
-                questions={sampleQuestions}
-                companyId={selectedCompanyId}
-              />
+              <DiagnosticoIndividual respostas={respostas} />
             </TabsContent>
 
             <TabsContent value="mapa" className="mt-0">
