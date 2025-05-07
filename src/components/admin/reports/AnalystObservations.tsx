@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { updateAnalystNotes } from "@/services/form/formService";
 
 interface AnalystObservationsProps {
   avaliacaoId: string;
@@ -20,12 +19,20 @@ const AnalystObservations: React.FC<AnalystObservationsProps> = ({
   const [observations, setObservations] = useState(initialValue);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     if (avaliacaoId) {
       loadObservations();
     }
   }, [avaliacaoId]);
+  
+  useEffect(() => {
+    // Update observations when initialValue changes (e.g. when switching between evaluations)
+    if (initialValue !== observations && initialValue !== undefined) {
+      setObservations(initialValue);
+    }
+  }, [initialValue]);
   
   const loadObservations = async () => {
     if (!avaliacaoId) return;
@@ -68,7 +75,13 @@ const AnalystObservations: React.FC<AnalystObservationsProps> = ({
       console.log("Salvando observações para avaliação:", avaliacaoId);
       console.log("Texto a ser salvo:", observations);
       
-      await updateAnalystNotes(avaliacaoId, observations);
+      const { error } = await supabase
+        .from('avaliacoes')
+        .update({ notas_analista: observations })
+        .eq('id', avaliacaoId);
+      
+      if (error) throw error;
+      
       toast.success("Observações salvas com sucesso");
       console.log("Observações salvas com sucesso");
     } catch (error) {
@@ -81,7 +94,27 @@ const AnalystObservations: React.FC<AnalystObservationsProps> = ({
   
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setObservations(e.target.value);
+    
+    // Set up debounced save
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    
+    const timeout = setTimeout(() => {
+      handleSave();
+    }, 2000); // Save after 2 seconds of inactivity
+    
+    setSaveTimeout(timeout);
   };
+  
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+    };
+  }, [saveTimeout]);
   
   return (
     <div className="space-y-4">
@@ -118,6 +151,10 @@ const AnalystObservations: React.FC<AnalystObservationsProps> = ({
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       )}
+      
+      <div className="text-xs text-gray-500">
+        As observações são salvas automaticamente após você parar de digitar ou ao sair do campo.
+      </div>
     </div>
   );
 };

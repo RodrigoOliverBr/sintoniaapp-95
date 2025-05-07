@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FilterSection from "@/components/relatorios/FilterSection";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AvaliacaoResposta } from "@/types/avaliacao";
+import { getEmployeeResponses, getFullEvaluation } from "@/services/form/evaluations";
 
 const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
@@ -24,6 +25,8 @@ const RelatoriosPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
   const [respostas, setRespostas] = useState<AvaliacaoResposta[]>([]);
+  const [avaliacaoId, setAvaliacaoId] = useState<string | null>(null);
+  const [analystNotes, setAnalystNotes] = useState<string>("");
 
   // Sample questions and answers for demonstration
   const sampleQuestions: Question[] = [
@@ -82,6 +85,21 @@ const RelatoriosPage: React.FC = () => {
         
         if (error) throw error;
         console.log("Evaluations fetched:", data);
+        
+        // If evaluations exist, set avaliacaoId to the most recent one
+        if (data && data.length > 0) {
+          // Sort by created_at in descending order to get the most recent
+          const sortedEvals = [...data].sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          setAvaliacaoId(sortedEvals[0].id);
+          
+          // Load analyst notes
+          if (sortedEvals[0].notas_analista) {
+            setAnalystNotes(sortedEvals[0].notas_analista);
+          }
+        }
+        
         return data;
       } catch (error) {
         console.error("Error fetching evaluations:", error);
@@ -94,59 +112,13 @@ const RelatoriosPage: React.FC = () => {
 
   // Fetch responses for the selected employee
   const { data: employeeResponses = [], isLoading: isLoadingResponses } = useQuery({
-    queryKey: ["employeeResponses", selectedEmployeeId],
+    queryKey: ["employeeResponses", selectedEmployeeId, reportGenerated],
     queryFn: async () => {
       if (!selectedEmployeeId || !reportGenerated) return [];
       
       try {
-        // First get the evaluation ID
-        const { data: avaliacao, error: avaliacaoError } = await supabase
-          .from('avaliacoes')
-          .select('id')
-          .eq('funcionario_id', selectedEmployeeId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (avaliacaoError) {
-          console.error("Error fetching evaluation:", avaliacaoError);
-          return [];
-        }
-        
-        if (!avaliacao) return [];
-        
-        // Then get the responses with the questions and risks
-        const { data, error } = await supabase
-          .from('respostas')
-          .select(`
-            id, 
-            avaliacao_id,
-            pergunta_id,
-            resposta,
-            observacao,
-            opcoes_selecionadas,
-            pergunta:perguntas (
-              id,
-              texto,
-              risco:riscos (
-                id,
-                texto,
-                severidade:severidade (
-                  id,
-                  nivel,
-                  descricao
-                )
-              )
-            )
-          `)
-          .eq('avaliacao_id', avaliacao.id);
-        
-        if (error) {
-          console.error("Error fetching responses:", error);
-          return [];
-        }
-        
-        return data || [];
+        const responses = await getEmployeeResponses(selectedEmployeeId);
+        return responses;
       } catch (error) {
         console.error("Error in employeeResponses query:", error);
         return [];
@@ -156,8 +128,25 @@ const RelatoriosPage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (employeeResponses.length > 0) {
-      setRespostas(employeeResponses);
+    if (employeeResponses && employeeResponses.length > 0) {
+      // Make sure we convert to the correct type
+      const typedResponses: AvaliacaoResposta[] = employeeResponses.map(response => ({
+        id: response.id,
+        avaliacao_id: response.avaliacao_id,
+        pergunta_id: response.pergunta_id,
+        pergunta: response.pergunta,
+        resposta: response.resposta,
+        observacao: response.observacao,
+        opcoes_selecionadas: response.opcoes_selecionadas 
+          ? (Array.isArray(response.opcoes_selecionadas) 
+              ? response.opcoes_selecionadas 
+              : JSON.parse(response.opcoes_selecionadas))
+          : []
+      }));
+      
+      setRespostas(typedResponses);
+    } else {
+      setRespostas([]);
     }
   }, [employeeResponses]);
 
@@ -196,6 +185,55 @@ const RelatoriosPage: React.FC = () => {
 
   const selectedCompany = companies.find(c => c.id === selectedCompanyId) || null;
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) || null;
+
+  // Get the riscos and perguntas for PGR from the respostas
+  const pgrData = useMemo(() => {
+    const riscos = new Map();
+    
+    // Agrupe as perguntas por risco
+    if (Array.isArray(respostas)) {
+      respostas.forEach(resposta => {
+        if (resposta.resposta && resposta.pergunta?.risco) {
+          const risco = resposta.pergunta.risco;
+          if (!riscos.has(risco.id)) {
+            riscos.set(risco.id, {
+              id: risco.id,
+              texto: risco.texto,
+              severidade: risco.severidade,
+              perguntas: [],
+              funcoesExpostas: new Set(),
+              analiseRisco: {
+                probabilidade: "Média",
+                severidade: risco.severidade?.nivel || "Média",
+                status: risco.severidade?.nivel === "EXTREMAMENTE PREJUDICIAL" ? "Crítico" : "Em análise"
+              },
+              medidasControle: "Implementar medidas preventivas e monitorar periodicamente.",
+              prazoImplementacao: "90 dias",
+              responsaveis: "Equipe de Saúde Ocupacional",
+            });
+          }
+          
+          const riscoData = riscos.get(risco.id);
+          riscoData.perguntas.push({
+            id: resposta.pergunta_id,
+            texto: resposta.pergunta.texto,
+            resposta: resposta.resposta
+          });
+          
+          // Add employee role to funcoesExpostas if available
+          if (selectedEmployee?.role) {
+            riscoData.funcoesExpostas.add(selectedEmployee.role);
+          }
+        }
+      });
+    }
+    
+    // Convert map to array and Sets to Arrays for template rendering
+    return Array.from(riscos.values()).map(risco => ({
+      ...risco,
+      funcoesExpostas: Array.from(risco.funcoesExpostas)
+    }));
+  }, [respostas, selectedEmployee]);
 
   return (
     <Layout title="Relatórios">
@@ -246,6 +284,7 @@ const RelatoriosPage: React.FC = () => {
                   employee={selectedEmployee}
                   questions={sampleQuestions}
                   answers={sampleAnswers}
+                  pgRiscos={pgrData}
                 />
               ) : (
                 <div className="flex items-center justify-center py-10 text-muted-foreground">

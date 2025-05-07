@@ -19,7 +19,7 @@ export interface AvaliacaoResposta {
   resposta: boolean;
   resposta_texto?: string;
   observacao?: string;
-  opcoes_selecionadas?: string[];
+  opcoes_selecionadas?: string[] | null;
   created_at?: string;
   updated_at?: string;
 }

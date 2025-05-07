@@ -1,175 +1,212 @@
-
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { handleSupabaseError } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import SimpleLayout from '@/components/SimpleLayout';
-
-interface UserProfile {
-  nome?: string;
-  email?: string;
-  telefone?: string;
-}
+import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const UserAccountPage: React.FC = () => {
   const [user, setUser] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast: legacyToast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    nome: "",
+    email: "",
+    telefone: "",
+  });
+  
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUserSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (!error && data.session) {
-        setUser(data.session.user);
-        fetchUserProfile(data.session.user.id);
-      } else {
-        // Redirect to login or handle not authenticated
-        window.location.href = '/login';
+    const getProfile = async () => {
+      try {
+        setLoading(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          navigate('/login');
+          return;
+        }
+        
+        setUser(session.user);
+        
+        const { data, error } = await supabase
+          .from('perfis')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (error) {
+          console.error("Error fetching profile:", error);
+          return;
+        }
+        
+        setProfile(data);
+        
+        // Only update form data if profile exists
+        if (data) {
+          setFormData({
+            nome: data.nome || "",
+            email: data.email || "",
+            telefone: data.telefone || "",
+          });
+        }
+      } catch (error) {
+        console.error("Error in getProfile:", error);
+      } finally {
+        setLoading(false);
       }
     };
     
-    fetchUserSession();
-  }, []);
-
-  const fetchUserProfile = async (userId: string) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('perfis')
-        .select('nome, email, telefone')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error("Erro ao buscar perfil do usuário:", error);
-        legacyToast({
-          variant: "destructive",
-          title: "Erro!",
-          description: handleSupabaseError(error),
-        });
-      } else {
-        setUserProfile({
-          ...data,
-          telefone: data.telefone || ''
-        });
-        console.log("Perfil carregado:", data);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar perfil do usuário:", error);
-      legacyToast({
-        variant: "destructive",
-        title: "Erro!",
-        description: "Não foi possível carregar o perfil do usuário.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    getProfile();
+  }, [navigate]);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
-
-  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
-
+    
     try {
-      if (!user) {
-        throw new Error("Usuário não autenticado.");
-      }
-
-      const formData = new FormData(e.currentTarget);
-      const nome = formData.get('nome') as string;
-      const email = formData.get('email') as string;
-      const telefone = formData.get('telefone') as string;
-
-      const { error } = await supabase
+      setLoading(true);
+      
+      // Update profile in the database
+      const { error: profileError } = await supabase
         .from('perfis')
         .update({
-          nome,
-          email,
-          telefone,
-          updated_at: new Date().toISOString(),
+          nome: formData.nome,
+          email: formData.email,
+          telefone: formData.telefone,
         })
         .eq('id', user.id);
-
-      if (error) {
-        console.error("Erro ao atualizar perfil:", error);
-        toast.error(handleSupabaseError(error) || "Erro ao atualizar perfil.");
-      } else {
-        setUserProfile({ nome, email, telefone });
-        toast.success("Perfil atualizado com sucesso!");
+      
+      if (profileError) {
+        throw profileError;
       }
-    } catch (error) {
-      console.error("Erro ao atualizar perfil:", error);
-      toast.error((error as Error).message || "Erro ao atualizar perfil.");
+      
+      // Update email in auth if it has changed
+      if (formData.email !== user.email) {
+        const { error: authError } = await supabase.auth.updateUser({
+          email: formData.email,
+        });
+        
+        if (authError) {
+          throw authError;
+        }
+      }
+      
+      toast.success("Perfil atualizado com sucesso!");
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast.error(`Erro ao atualizar perfil: ${error.message}`);
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
   };
-
-  if (isLoading) {
-    return <SimpleLayout title="Perfil">Carregando...</SimpleLayout>;
+  
+  const handlePasswordReset = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        user.email,
+        { redirectTo: `${window.location.origin}/reset-password` }
+      );
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success("E-mail de redefinição de senha enviado!");
+    } catch (error: any) {
+      console.error("Error resetting password:", error);
+      toast.error(`Erro ao solicitar redefinição de senha: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  if (loading) {
+    return (
+      <Layout title="Minha Conta">
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      </Layout>
+    );
   }
-
-  if (!userProfile) {
-    return <SimpleLayout title="Perfil">Não foi possível carregar o perfil.</SimpleLayout>;
-  }
-
-  const telefoneDisplay = userProfile?.telefone || '-';
-
+  
   return (
-    <SimpleLayout title="Perfil">
-      <Card>
-        <CardHeader>
-          <CardTitle>Detalhes da Conta</CardTitle>
-          <CardDescription>Atualize as informações da sua conta aqui.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-6">
-          <form onSubmit={handleUpdateProfile} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                type="text"
-                id="name"
-                name="nome"
-                defaultValue={userProfile?.nome || ""}
-                required
-                className="bg-white"
-              />
+    <Layout title="Minha Conta">
+      <div className="container mx-auto py-10">
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações da Conta</CardTitle>
+            <CardDescription>
+              Atualize suas informações pessoais e configurações da conta.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="nome">Nome Completo</Label>
+                <Input
+                  type="text"
+                  id="nome"
+                  name="nome"
+                  value={formData.nome}
+                  onChange={handleChange}
+                  placeholder="Seu nome completo"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="seuemail@exemplo.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  type="tel"
+                  id="telefone"
+                  name="telefone"
+                  value={formData.telefone}
+                  onChange={handleChange}
+                  placeholder="(XX) XXXX-XXXX"
+                />
+              </div>
+              <Button type="submit">
+                Atualizar Perfil
+              </Button>
+            </form>
+            
+            <div className="mt-8 border-t pt-4">
+              <h3 className="text-lg font-semibold mb-4">Redefinir Senha</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Clique no botão abaixo para receber um e-mail com instruções
+                para redefinir sua senha.
+              </p>
+              <Button variant="outline" onClick={handlePasswordReset}>
+                Redefinir Senha
+              </Button>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                type="email"
-                id="email"
-                name="email"
-                defaultValue={userProfile?.email || ""}
-                required
-                className="bg-white"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="telefone">Telefone</Label>
-              <Input
-                type="tel"
-                id="telefone"
-                name="telefone"
-                defaultValue={userProfile?.telefone || ""}
-                className="bg-white"
-              />
-            </div>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Salvando..." : "Salvar Alterações"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </SimpleLayout>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
   );
 };
 
