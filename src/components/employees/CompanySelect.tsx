@@ -1,22 +1,15 @@
 
-import React, { useEffect } from "react";
-import { Company } from "@/types/cadastro";
+import React from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { UserPlus } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Company } from "@/types/cadastro";
 
 interface CompanySelectProps {
   companies: Company[];
   selectedCompanyId: string | null;
-  onCompanyChange: (value: string) => void;
-  onNewEmployee: () => void;
+  onCompanyChange: (companyId: string) => void;
+  onNewEmployee?: () => void;
 }
 
 const CompanySelect: React.FC<CompanySelectProps> = ({
@@ -25,54 +18,46 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
   onCompanyChange,
   onNewEmployee,
 }) => {
-  const safeCompanies = Array.isArray(companies) ? companies : [];
-  
-  // Log para depuração
-  useEffect(() => {
-    console.log("CompanySelect: Empresas carregadas:", safeCompanies.length, safeCompanies);
-    console.log("CompanySelect: Empresa selecionada:", selectedCompanyId);
-  }, [safeCompanies, selectedCompanyId]);
+  const handleValueChange = (value: string) => {
+    onCompanyChange(value);
+  };
+
+  const handleAddEmployeeClick = () => {
+    if (onNewEmployee) {
+      onNewEmployee();
+    }
+  };
 
   return (
-    <div className="flex items-center gap-2 w-full justify-between">
-      <div className="flex items-center gap-2 flex-1">
+    <div className="flex items-center space-x-2">
+      <div className="w-full min-w-[300px]">
         <Select
-          value={selectedCompanyId || undefined}
-          onValueChange={onCompanyChange}
+          value={selectedCompanyId || ""}
+          onValueChange={handleValueChange}
         >
-          <SelectTrigger className="w-full max-w-[300px] bg-white">
-            <SelectValue placeholder={
-              safeCompanies.length === 0 
-                ? "Carregando empresas..." 
-                : "Selecione uma empresa"
-            } />
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Selecione uma empresa" />
           </SelectTrigger>
-          <SelectContent className="z-50 bg-white">
-            <ScrollArea className="h-[200px]">
-              {safeCompanies.length > 0 ? (
-                safeCompanies.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.name}
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="empty" disabled>
-                  Nenhuma empresa disponível
-                </SelectItem>
-              )}
-            </ScrollArea>
+          <SelectContent>
+            {companies.map((company) => (
+              <SelectItem key={company.id} value={company.id}>
+                {company.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
       
-      <Button 
-        onClick={onNewEmployee} 
-        disabled={!selectedCompanyId}
-        className="whitespace-nowrap"
-      >
-        <UserPlus className="mr-2 h-4 w-4" />
-        Novo Funcionário
-      </Button>
+      {selectedCompanyId && onNewEmployee && (
+        <Button
+          onClick={handleAddEmployeeClick}
+          variant="outline"
+          size="icon"
+          className="flex-shrink-0"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 };

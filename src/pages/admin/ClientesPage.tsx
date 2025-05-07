@@ -9,7 +9,7 @@ import ClientesTable from "@/components/admin/clientes/ClientesTable";
 import { ClienteDialogs } from "@/components/admin/clientes/ClienteDialogs";
 import { ClienteActions } from "@/components/admin/clientes/ClienteActions";
 import { ClienteForm } from "@/components/admin/ClienteForm";
-import { ClienteSistema } from "@/types/admin";
+import { ClienteSistema, ClienteStatus } from "@/types/cliente";
 
 const ClientesPage: React.FC = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
@@ -75,14 +75,14 @@ const ClientesPage: React.FC = () => {
           telefone: cliente.telefone || "",
           responsavel: cliente.responsavel || "",
           contato: cliente.responsavel || "",
-          tipo: "cliente",
+          tipo: "juridica" as const,
           numeroEmpregados: 0,
           dataInclusao: cliente.created_at ? new Date(cliente.created_at).getTime() : Date.now(),
-          ativo: true,
-          situacao: hasActiveContract ? "ativo" : "sem-contrato",
+          situacao: (hasActiveContract ? "ativo" : "sem-contrato") as ClienteStatus,
           planoId: cliente.plano_id || "",
           contratoId: contratoId,
-          statusContrato: hasActiveContract ? "ativo" : "sem-contrato"
+          clienteId: "",
+          statusContrato: hasActiveContract ? "ativo" : "sem-contrato",
         } as ClienteSistema;
       }) || [];
       
@@ -218,7 +218,51 @@ const ClientesPage: React.FC = () => {
   const handleCreateNew = async (formData: any) => {
     setIsLoading(true);
     try {
-      // Insert new cliente in Supabase
+      console.log("Criando novo cliente com dados:", { 
+        ...formData, 
+        senha: formData.senha ? "[SENHA FORNECIDA]" : "[SEM SENHA]" 
+      });
+      
+      // 1. Primeiro criamos o cliente no Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.senha,
+        options: {
+          data: {
+            full_name: formData.razao_social,
+          }
+        }
+      });
+      
+      if (authError) {
+        console.error("Erro ao criar usuário:", authError);
+        throw new Error(`Erro ao criar usuário: ${authError.message}`);
+      }
+      
+      if (!authData.user) {
+        throw new Error("Falha ao criar o usuário. Nenhum usuário retornado.");
+      }
+      
+      console.log("Usuário criado com ID:", authData.user.id);
+      
+      // 2. Criamos o perfil do cliente
+      const { error: perfilError } = await supabase
+        .from("perfis")
+        .insert([{
+          id: authData.user.id,
+          email: formData.email,
+          nome: formData.razao_social,
+          tipo: "client"  // Tipo de perfil: client (não admin)
+        }]);
+        
+      if (perfilError) {
+        console.error("Erro ao criar perfil:", perfilError);
+        // Tente desfazer a criação do usuário se possível
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error(`Erro ao criar perfil: ${perfilError.message}`);
+      }
+
+      // 3. Por fim, inserimos os dados do cliente no sistema
       const { data, error } = await supabase
         .from("clientes_sistema")
         .insert([{
@@ -226,21 +270,23 @@ const ClientesPage: React.FC = () => {
           cnpj: formData.cnpj,
           email: formData.email,
           telefone: formData.telefone,
-          responsavel: formData.responsavel
+          responsavel: formData.responsavel,
+          situacao: "liberado"  // Inicialmente liberado
         }])
         .select();
 
       if (error) {
-        console.error("Erro ao criar cliente:", error);
-        toast.error("Erro ao criar cliente");
+        console.error("Erro ao criar dados do cliente:", error);
+        // Consideramos desfazer as operações anteriores
+        toast.error("Erro ao criar dados do cliente");
         return;
       }
       
       toast.success("Cliente criado com sucesso!");
       loadClientes();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao criar cliente:", error);
-      toast.error("Erro ao criar cliente");
+      toast.error(error.message || "Erro ao criar cliente");
     } finally {
       setIsLoading(false);
       setOpenNewModal(false);
@@ -260,8 +306,8 @@ const ClientesPage: React.FC = () => {
         <CardContent>
           <ClientesTable
             clientes={clientes.filter(cliente =>
-              cliente.razao_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              cliente.cnpj.toLowerCase().includes(searchTerm.toLowerCase())
+              cliente.razao_social?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              cliente.cnpj?.toLowerCase().includes(searchTerm.toLowerCase())
             )}
             isLoading={isLoading}
             onEdit={handleOpenEdit}

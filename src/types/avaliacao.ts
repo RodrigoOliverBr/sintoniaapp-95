@@ -37,4 +37,22 @@ export interface Avaliacao {
   updated_at: string;
   last_updated: string;
   respostas?: AvaliacaoResposta[];
+  employeeId?: string; // Alias for funcionario_id to match FormResult interface
+  answers?: Record<string, any>; // To match FormResult interface
+}
+
+// FormResult interface to ensure compatibility
+export interface FormResult {
+  id: string;
+  employeeId: string;
+  totalYes?: number;
+  totalNo?: number;
+  isComplete?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  last_updated?: string;
+  notas_analista?: string;
+  analyistNotes?: string;
+  answers?: Record<string, any>;
+  respostas?: AvaliacaoResposta[];
 }
