@@ -37,7 +37,7 @@ export interface ClientePerfil {
 
 export interface ClienteSistema {
   id: string;
-  razao_social?: string;
+  razao_social: string;
   razaoSocial?: string;
   nome: string;
   tipo: TipoPessoa;

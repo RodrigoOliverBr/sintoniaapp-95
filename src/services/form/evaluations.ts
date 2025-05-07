@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Avaliacao, FormResult } from "@/types/avaliacao";
+import { Avaliacao, FormResult, AvaliacaoResposta } from "@/types/avaliacao";
 
 // Helper function to convert database Avaliacao to frontend FormResult
 const mapAvaliacaoToFormResult = (avaliacao: Avaliacao): FormResult => {
@@ -53,7 +53,7 @@ export const fetchEvaluation = async (evaluationId: string): Promise<FormResult 
     }
     
     // Now fetch the responses
-    const { data: respostas, error: respostasError } = await supabase
+    const { data: respostasData, error: respostasError } = await supabase
       .from('respostas')
       .select(`
         id,
@@ -71,16 +71,69 @@ export const fetchEvaluation = async (evaluationId: string): Promise<FormResult 
       console.error("Error fetching responses:", respostasError);
     }
     
+    // We need the complete response objects with pergunta information
+    const respostas: AvaliacaoResposta[] = [];
+    
+    if (respostasData && respostasData.length > 0) {
+      // Fetch the questions details for these responses
+      const perguntaIds = respostasData.map(r => r.pergunta_id);
+      
+      const { data: perguntasData } = await supabase
+        .from('perguntas')
+        .select(`
+          id, 
+          texto,
+          risco:riscos (
+            id,
+            texto,
+            severidade:severidade (
+              id,
+              nivel,
+              descricao
+            )
+          )
+        `)
+        .in('id', perguntaIds);
+        
+      // Map the responses with their questions
+      if (perguntasData) {
+        respostasData.forEach(resposta => {
+          const pergunta = perguntasData.find(p => p.id === resposta.pergunta_id);
+          if (pergunta) {
+            respostas.push({
+              id: resposta.id,
+              avaliacao_id: resposta.avaliacao_id,
+              pergunta_id: resposta.pergunta_id,
+              pergunta: {
+                id: pergunta.id,
+                texto: pergunta.texto,
+                risco: pergunta.risco
+              },
+              resposta: resposta.resposta,
+              observacao: resposta.observacao,
+              opcoes_selecionadas: Array.isArray(resposta.opcoes_selecionadas) 
+                ? resposta.opcoes_selecionadas 
+                : typeof resposta.opcoes_selecionadas === 'string' 
+                  ? [resposta.opcoes_selecionadas]
+                  : [],
+              created_at: resposta.created_at,
+              updated_at: resposta.updated_at
+            });
+          }
+        });
+      }
+    }
+    
     // Create a FormResult object with the fetched data
     const formResult: FormResult = mapAvaliacaoToFormResult({
       ...avaliacao,
-      respostas: respostas || []
+      respostas
     });
     
     // Also convert responses to the answers format expected by frontend
     const answers: Record<string, any> = {};
     
-    respostas?.forEach(resposta => {
+    respostas.forEach(resposta => {
       answers[resposta.pergunta_id] = {
         answer: resposta.resposta,
         observation: resposta.observacao,
@@ -226,4 +279,19 @@ export const fetchLatestEmployeeEvaluation = async (employeeId: string): Promise
     console.error("Error in fetchLatestEmployeeEvaluation:", error);
     return null;
   }
+};
+
+// These functions should not be exported from this module since they're not implemented
+// But they're referenced elsewhere, so we'll create stub versions to fix the build
+export const getFormResultByEmployeeId = async (employeeId: string): Promise<FormResult | null> => {
+  return await fetchLatestEmployeeEvaluation(employeeId);
+};
+
+export const saveFormResult = async (result: FormResult): Promise<boolean> => {
+  console.warn("saveFormResult is not fully implemented yet");
+  return false;
+};
+
+export const getEmployeeFormHistory = async (employeeId: string): Promise<FormResult[]> => {
+  return await fetchEmployeeEvaluations(employeeId);
 };

@@ -167,7 +167,26 @@ const RelatoriosPage: React.FC = () => {
       console.log("Fetched responses:", data);
       
       if (data && data.length > 0) {
-        setRespostas(data);
+        // Transform the data to match our AvaliacaoResposta type
+        const formattedRespostas: AvaliacaoResposta[] = data.map(item => ({
+          id: item.id,
+          avaliacao_id: item.avaliacao_id,
+          pergunta_id: item.pergunta_id,
+          pergunta: {
+            id: item.pergunta.id,
+            texto: item.pergunta.texto,
+            risco: item.pergunta.risco
+          },
+          resposta: item.resposta,
+          observacao: item.observacao,
+          opcoes_selecionadas: Array.isArray(item.opcoes_selecionadas) 
+            ? item.opcoes_selecionadas 
+            : typeof item.opcoes_selecionadas === 'string'
+              ? [item.opcoes_selecionadas]
+              : [],
+        }));
+        
+        setRespostas(formattedRespostas);
         toast.success("Relatório gerado com sucesso!");
       } else {
         console.log("No responses found for evaluation:", avaliacao.id);
@@ -216,6 +235,9 @@ const RelatoriosPage: React.FC = () => {
     fetchEmployeeResponses();
   };
 
+  // Disable the Generate Report button if company or employee not selected
+  const isGenerateButtonDisabled = !selectedCompanyId || !selectedEmployeeId || isGenerating;
+
   const selectedCompany = companies.find(c => c.id === selectedCompanyId) || null;
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) || null;
 
@@ -235,7 +257,7 @@ const RelatoriosPage: React.FC = () => {
         <div className="flex justify-end mb-4">
           <Button 
             onClick={handleGenerateReport} 
-            disabled={!selectedCompanyId || !selectedEmployeeId || isGenerating}
+            disabled={isGenerateButtonDisabled}
           >
             {isGenerating ? "Gerando..." : "Gerar Relatório"}
           </Button>

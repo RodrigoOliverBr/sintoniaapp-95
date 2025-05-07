@@ -38,7 +38,7 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Selecione uma empresa" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="min-w-[300px]">
             {companies.map((company) => (
               <SelectItem key={company.id} value={company.id}>
                 {company.name}

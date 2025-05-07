@@ -1,14 +1,9 @@
 
+// Import the client types to ensure they stay in sync
+import { ClienteStatus as ClienteStatusType, TipoPessoa } from "./cliente";
+
 // Define the client status type
-export type ClienteStatus = 
-  | 'liberado' 
-  | 'bloqueado' 
-  | 'pendente' 
-  | 'ativo' 
-  | 'em-analise' 
-  | 'sem-contrato' 
-  | 'bloqueado-manualmente'
-  | 'inativo';
+export type ClienteStatus = ClienteStatusType;
 
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
 export type BatchSelection = Record<string, boolean>;
@@ -18,7 +13,7 @@ export interface ClienteSistema {
   id: string;
   razao_social: string;
   nome: string;
-  tipo: string;
+  tipo: TipoPessoa;
   numeroEmpregados: number;
   dataInclusao: number;
   situacao: ClienteStatus;
@@ -96,7 +91,6 @@ export interface Fatura {
 }
 
 // Add these type definitions for the ClientesPage.tsx
-export type TipoPessoa = 'fisica' | 'juridica';
 export type StatusContrato = 
   | 'ativo' 
   | 'inativo' 

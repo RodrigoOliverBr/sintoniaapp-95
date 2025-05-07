@@ -11,6 +11,11 @@ import { ClienteActions } from "@/components/admin/clientes/ClienteActions";
 import { ClienteForm } from "@/components/admin/ClienteForm";
 import { ClienteSistema, ClienteStatus } from "@/types/cliente";
 
+// Create a type for the client form data that includes password
+interface ClienteFormData extends Partial<ClienteSistema> {
+  senha?: string;
+}
+
 const ClientesPage: React.FC = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -75,7 +80,7 @@ const ClientesPage: React.FC = () => {
           telefone: cliente.telefone || "",
           responsavel: cliente.responsavel || "",
           contato: cliente.responsavel || "",
-          tipo: "juridica" as const,
+          tipo: "juridica",
           numeroEmpregados: 0,
           dataInclusao: cliente.created_at ? new Date(cliente.created_at).getTime() : Date.now(),
           situacao: (hasActiveContract ? "ativo" : "sem-contrato") as ClienteStatus,
@@ -215,7 +220,7 @@ const ClientesPage: React.FC = () => {
     }
   };
   
-  const handleCreateNew = async (formData: any) => {
+  const handleCreateNew = async (formData: ClienteFormData) => {
     setIsLoading(true);
     try {
       console.log("Criando novo cliente com dados:", { 
@@ -223,9 +228,15 @@ const ClientesPage: React.FC = () => {
         senha: formData.senha ? "[SENHA FORNECIDA]" : "[SEM SENHA]" 
       });
       
+      if (!formData.senha) {
+        toast.error("É necessário fornecer uma senha para o cliente.");
+        setIsLoading(false);
+        return;
+      }
+      
       // 1. Primeiro criamos o cliente no Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
+        email: formData.email || '',
         password: formData.senha,
         options: {
           data: {
