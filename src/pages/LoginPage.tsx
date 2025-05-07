@@ -14,6 +14,24 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
+  // Cleanup auth state - helper function
+  const cleanupAuthState = () => {
+    // Remove standard auth tokens
+    localStorage.removeItem('supabase.auth.token');
+    
+    // Remove all Supabase auth keys from localStorage
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Remove sintonia specific items
+    localStorage.removeItem("sintonia:userType");
+    localStorage.removeItem("sintonia:currentCliente");
+    localStorage.removeItem("sintonia:currentUser");
+  };
+  
   // Verificar se já existe uma sessão ativa
   useEffect(() => {
     const checkExistingSession = async () => {
@@ -59,6 +77,17 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
     
     try {
+      // Clear any existing auth state first
+      cleanupAuthState();
+      
+      // Attempt global sign out first
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if sign out fails
+        console.log("Sign out before login failed:", err);
+      }
+      
       console.log("Tentando login com:", email);
       
       // Fazer login com as credenciais fornecidas
@@ -111,6 +140,12 @@ const LoginPage: React.FC = () => {
       
       // Definir tipo de usuário no local storage
       localStorage.setItem("sintonia:userType", userType);
+      localStorage.setItem("sintonia:currentUser", JSON.stringify({
+        id: authData.user.id,
+        email: authData.user.email,
+        tipo: userType,
+        nome: perfilData.nome
+      }));
       
       if (userType === 'client') {
         // Se for cliente, verificar status
@@ -149,81 +184,71 @@ const LoginPage: React.FC = () => {
       
       toast.success(`Login realizado com sucesso como ${userType === 'admin' ? 'Administrador' : 'Cliente'}`);
       
-      // Redirecionar com pequeno delay para garantir que o toast seja exibido
+      // Force full page reload instead of React navigation to ensure clean state
       setTimeout(() => {
         if (userType === 'admin') {
-          navigate("/admin/dashboard");
+          window.location.href = "/admin/dashboard";
         } else {
-          navigate("/");
+          window.location.href = "/";
         }
-        setIsLoading(false);
       }, 1000);
       
     } catch (error: any) {
       console.error("Erro no processo de login:", error);
-      toast.error(error.message || "Credenciais inválidas. Verifique seu e-mail e senha.");
+      toast.error(error.message || "Credenciais inválidas");
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <img 
-              src="/lovable-uploads/5fbfce9a-dae3-444b-99c8-9b92040ef7e2.png" 
-              alt="Logo" 
-              className="h-16" 
-            />
-          </div>
-          <p className="text-gray-500 mt-2">Faça login para acessar o sistema</p>
-        </div>
-
-        <Card>
-          <form onSubmit={handleLogin}>
-            <CardHeader>
-              <CardTitle>Login</CardTitle>
-              <CardDescription>
-                Acesse o sistema com suas credenciais
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input 
-                  id="email" 
-                  type="email"
-                  placeholder="Digite seu e-mail" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">SintoniaApp</CardTitle>
+          <CardDescription className="text-center">
+            Entre com seu email e senha para acessar o sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="usuario@exemplo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
                 <Label htmlFor="password">Senha</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="Digite sua senha" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <a href="#" className="text-sm text-primary hover:underline">
+                  Esqueceu a senha?
+                </a>
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Carregando..." : "Entrar"}
-              </Button>
-            </CardFooter>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Entrando..." : "Entrar"}
+            </Button>
           </form>
-        </Card>
-        
-        <div className="text-center">
-          <p className="text-sm text-gray-500">© 2025 eSocial Brasil. Todos os direitos reservados.</p>
-        </div>
-      </div>
+        </CardContent>
+        <CardFooter className="text-sm text-muted-foreground text-center">
+          <p>
+            Sistema de Gestão de Saúde Mental Ocupacional
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   );
 };

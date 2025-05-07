@@ -29,16 +29,16 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
   };
 
   return (
-    <div className="flex items-center space-x-2">
-      <div className="w-full min-w-[300px]">
+    <div className="flex items-center gap-4">
+      <div className="w-full">
         <Select
           value={selectedCompanyId || ""}
           onValueChange={handleValueChange}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full min-w-[300px]">
             <SelectValue placeholder="Selecione uma empresa" />
           </SelectTrigger>
-          <SelectContent className="min-w-[300px]">
+          <SelectContent className="min-w-[300px] z-50">
             {companies.map((company) => (
               <SelectItem key={company.id} value={company.id}>
                 {company.name}

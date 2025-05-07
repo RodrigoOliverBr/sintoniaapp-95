@@ -1,7 +1,7 @@
 
 // Type definition for Client related interfaces
 
-export type TipoPessoa = "fisica" | "juridica";
+export type TipoPessoa = "fisica" | "juridica" | "cliente";
 
 export type StatusContrato = 
   | "ativo" 
@@ -41,10 +41,10 @@ export interface ClienteSistema {
   razaoSocial?: string;
   nome: string;
   tipo: TipoPessoa;
-  numeroEmpregados: number;
-  dataInclusao: number; // timestamp
+  numeroEmpregados?: number;
+  dataInclusao?: number | string; // timestamp
   situacao: ClienteStatus;
-  cnpj?: string;
+  cnpj: string;  // Made required to match admin.ts
   cpfCnpj: string;
   email: string;
   telefone: string;

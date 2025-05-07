@@ -41,13 +41,18 @@ export interface Avaliacao {
   answers?: Record<string, any>; // To match FormResult interface
 }
 
-// FormResult interface to ensure compatibility
+// FormResult interface to ensure compatibility with form.ts
 export interface FormResult {
   id: string;
   employeeId: string;
+  empresa_id: string;
+  formulario_id: string;
   totalYes?: number;
   totalNo?: number;
+  total_sim: number;
+  total_nao: number;
   isComplete?: boolean;
+  is_complete: boolean;
   created_at?: string;
   updated_at?: string;
   last_updated?: string;
@@ -55,4 +60,5 @@ export interface FormResult {
   analyistNotes?: string;
   answers?: Record<string, any>;
   respostas?: AvaliacaoResposta[];
+  yesPerSeverity?: Record<string, number>;
 }

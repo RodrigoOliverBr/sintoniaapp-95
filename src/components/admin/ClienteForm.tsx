@@ -22,12 +22,12 @@ const formSchema = z.object({
   email: z.string().email("Email inválido"),
   telefone: z.string().optional(),
   responsavel: z.string().optional(),
-  senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres").optional(),
+  senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-interface ClienteFormProps {
+export interface ClienteFormProps {
   onSubmit: (values: FormValues) => void;
   initialValues?: Partial<FormValues>;
   isLoading?: boolean;
@@ -122,22 +122,20 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
           )}
         />
         
-        {/* Password field - only shown on create, not on update */}
-        {!isUpdate && (
-          <FormField
-            control={form.control}
-            name="senha"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Senha</FormLabel>
-                <FormControl>
-                  <Input type="password" placeholder="••••••" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        {/* Password field - always shown, not optional for new clients */}
+        <FormField
+          control={form.control}
+          name="senha"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{isUpdate ? "Nova senha" : "Senha"}</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="••••••" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end pt-4">
           <Button type="submit" disabled={isLoading}>

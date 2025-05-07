@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -112,7 +111,7 @@ const RelatoriosPage: React.FC = () => {
         .eq('funcionario_id', selectedEmployeeId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       
       if (avaliacaoError) {
         console.error("Error fetching evaluation:", avaliacaoError);
@@ -168,23 +167,33 @@ const RelatoriosPage: React.FC = () => {
       
       if (data && data.length > 0) {
         // Transform the data to match our AvaliacaoResposta type
-        const formattedRespostas: AvaliacaoResposta[] = data.map(item => ({
-          id: item.id,
-          avaliacao_id: item.avaliacao_id,
-          pergunta_id: item.pergunta_id,
-          pergunta: {
-            id: item.pergunta.id,
-            texto: item.pergunta.texto,
-            risco: item.pergunta.risco
-          },
-          resposta: item.resposta,
-          observacao: item.observacao,
-          opcoes_selecionadas: Array.isArray(item.opcoes_selecionadas) 
-            ? item.opcoes_selecionadas 
-            : typeof item.opcoes_selecionadas === 'string'
-              ? [item.opcoes_selecionadas]
-              : [],
-        }));
+        const formattedRespostas: AvaliacaoResposta[] = data.map(item => {
+          // Safely convert opcoes_selecionadas to string array
+          let opcoesSelecionadas: string[] = [];
+          if (item.opcoes_selecionadas) {
+            if (Array.isArray(item.opcoes_selecionadas)) {
+              opcoesSelecionadas = item.opcoes_selecionadas.map(opt => String(opt));
+            } else if (typeof item.opcoes_selecionadas === 'string') {
+              opcoesSelecionadas = [item.opcoes_selecionadas];
+            } else if (typeof item.opcoes_selecionadas === 'object') {
+              opcoesSelecionadas = Object.values(item.opcoes_selecionadas).map(opt => String(opt));
+            }
+          }
+
+          return {
+            id: item.id,
+            avaliacao_id: item.avaliacao_id,
+            pergunta_id: item.pergunta_id,
+            pergunta: {
+              id: item.pergunta.id,
+              texto: item.pergunta.texto,
+              risco: item.pergunta.risco
+            },
+            resposta: item.resposta,
+            observacao: item.observacao,
+            opcoes_selecionadas: opcoesSelecionadas,
+          };
+        });
         
         setRespostas(formattedRespostas);
         toast.success("Relatório gerado com sucesso!");
@@ -238,14 +247,14 @@ const RelatoriosPage: React.FC = () => {
   // Disable the Generate Report button if company or employee not selected
   const isGenerateButtonDisabled = !selectedCompanyId || !selectedEmployeeId || isGenerating;
 
-  const selectedCompany = companies.find(c => c.id === selectedCompanyId) || null;
-  const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) || null;
+  const selectedCompany = companies?.find(c => c.id === selectedCompanyId) || null;
+  const selectedEmployee = employees?.find(e => e.id === selectedEmployeeId) || null;
 
   return (
     <Layout title="Relatórios">
       <div className="space-y-4 px-4 py-6">
         <FilterSection
-          companies={companies}
+          companies={companies || []}
           selectedCompanyId={selectedCompanyId}
           selectedEmployeeId={selectedEmployeeId}
           onCompanyChange={handleCompanyChange}
@@ -288,8 +297,8 @@ const RelatoriosPage: React.FC = () => {
                 <RelatorioPGR
                   company={selectedCompany}
                   employee={selectedEmployee}
-                  questions={sampleQuestions}
-                  answers={sampleAnswers}
+                  questions={[]}
+                  answers={{}}
                   respostas={respostas}
                 />
               ) : (

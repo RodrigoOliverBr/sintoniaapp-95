@@ -14,19 +14,26 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas
   const hasRespostas = Array.isArray(respostas) && respostas.length > 0;
   
   // Agrupar respostas por risco - validando que respostas é um array primeiro
-  const respostasPorRisco = hasRespostas ? respostas.reduce((acc, resposta) => {
-    if (!resposta.pergunta?.risco) return acc;
+  const respostasPorRisco = React.useMemo(() => {
+    if (!hasRespostas) return {};
+    
+    return respostas.reduce((acc, resposta) => {
+      if (!resposta?.pergunta?.risco) return acc;
 
-    const riscoId = resposta.pergunta.risco.id;
-    if (!acc[riscoId]) {
-      acc[riscoId] = {
-        risco: resposta.pergunta.risco,
-        respostas: []
-      };
-    }
-    acc[riscoId].respostas.push(resposta);
-    return acc;
-  }, {} as { [key: string]: { risco: any, respostas: AvaliacaoResposta[] } }) : {};
+      const riscoId = resposta.pergunta.risco.id;
+      if (!acc[riscoId]) {
+        acc[riscoId] = {
+          risco: resposta.pergunta.risco,
+          respostas: []
+        };
+      }
+      acc[riscoId].respostas.push(resposta);
+      return acc;
+    }, {} as { [key: string]: { risco: any, respostas: AvaliacaoResposta[] } });
+  }, [respostas, hasRespostas]);
+
+  // Verificar se há respostas agrupadas
+  const hasAgrupamentos = Object.keys(respostasPorRisco).length > 0;
 
   return (
     <Card className="w-full">
@@ -34,7 +41,7 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas
         <CardTitle>Diagnóstico Individual por Risco</CardTitle>
       </CardHeader>
       <CardContent className="pl-2 pb-4">
-        {hasRespostas ? (
+        {hasRespostas && hasAgrupamentos ? (
           <ScrollArea className="h-[500px] w-full pr-2">
             <div className="space-y-4">
               {Object.entries(respostasPorRisco).map(([riscoId, { risco, respostas }]) => (
