@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   ColumnDef,
@@ -21,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClienteSistema } from "@/types/cliente";
+import { ClienteSistema } from "@/types/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
@@ -72,17 +73,19 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
       accessorKey: "situacao",
       header: "Situação",
       cell: ({ row }) => {
-        const situacao = row.getValue("situacao") as string;
-        let badgeVariant = "default";
+        const situacao = row.getValue("situacao");
+        let badgeVariant: "default" | "secondary" | "destructive" | "outline" | "success" = "default";
         
-        if (situacao === "ativo" || situacao === "liberado") {
+        if (situacao === "ativo") {
           badgeVariant = "success";
-        } else if (situacao === "inativo" || situacao === "bloqueado") {
+        } else if (situacao === "inativo") {
           badgeVariant = "destructive";
         } else if (situacao === "sem-contrato") {
           badgeVariant = "secondary";
+        } else if (situacao === "bloqueado") {
+          badgeVariant = "destructive";
         }
-        
+
         return <Badge variant={badgeVariant}>{situacao}</Badge>;
       },
     },

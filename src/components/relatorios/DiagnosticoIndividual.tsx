@@ -10,12 +10,8 @@ interface DiagnosticoIndividualProps {
 }
 
 const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas }) => {
-  // Verificar se respostas é um array válido
-  const validRespostas = Array.isArray(respostas) ? respostas : [];
-  const hasRespostas = validRespostas.length > 0;
-  
-  // Agrupar respostas por risco - verificando se é um array válido primeiro
-  const respostasPorRisco = hasRespostas ? validRespostas.reduce((acc, resposta) => {
+  // Agrupar respostas por risco - verifying respostas is an array first
+  const respostasPorRisco = Array.isArray(respostas) ? respostas.reduce((acc, resposta) => {
     if (!resposta.pergunta?.risco) return acc;
 
     const riscoId = resposta.pergunta.risco.id;
@@ -28,6 +24,8 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas
     acc[riscoId].respostas.push(resposta);
     return acc;
   }, {} as { [key: string]: { risco: any, respostas: AvaliacaoResposta[] } }) : {};
+
+  const hasRespostas = Array.isArray(respostas) && respostas.length > 0;
 
   return (
     <Card className="w-full">
@@ -49,7 +47,7 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas
                       <li key={resposta.id}>
                         <p className="font-medium">{resposta.pergunta.texto}</p>
                         <p className="text-sm text-gray-500">
-                          Resposta: {resposta.resposta_texto || (resposta.resposta ? "Sim" : "Não")}
+                          Resposta: {resposta.resposta_texto || "Não respondido"}
                         </p>
                         {resposta.observacao && (
                           <p className="text-sm italic mt-1">
