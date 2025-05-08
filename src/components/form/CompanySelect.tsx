@@ -1,24 +1,24 @@
 
 import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form } from "@/types/cadastro";
+import { Company } from "@/types/cadastro";
 
-interface FormSelectorProps {
-  forms: Form[];
+interface CompanySelectProps {
+  companies: Company[];
   value?: string;
   onChange: (value: string) => void;
   disabled?: boolean;
 }
 
-const FormSelector: React.FC<FormSelectorProps> = ({
-  forms,
+const CompanySelect: React.FC<CompanySelectProps> = ({
+  companies,
   value,
   onChange,
   disabled = false
 }) => {
-  const activeForms = React.useMemo(() => {
-    return [...forms].filter(form => form.ativo);
-  }, [forms]);
+  const sortedCompanies = React.useMemo(() => {
+    return [...companies].sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [companies]);
 
   return (
     <Select
@@ -27,17 +27,17 @@ const FormSelector: React.FC<FormSelectorProps> = ({
       disabled={disabled}
     >
       <SelectTrigger className="w-full">
-        <SelectValue placeholder="Selecione um formulário" />
+        <SelectValue placeholder="Selecione uma empresa" />
       </SelectTrigger>
       <SelectContent>
-        {activeForms.map((form) => (
-          <SelectItem key={form.id} value={form.id}>
-            {form.titulo}
+        {sortedCompanies.map((company) => (
+          <SelectItem key={company.id} value={company.id}>
+            {company.nome}
           </SelectItem>
         ))}
-        {activeForms.length === 0 && (
+        {sortedCompanies.length === 0 && (
           <SelectItem value="none" disabled>
-            Nenhum formulário disponível
+            Nenhuma empresa encontrada
           </SelectItem>
         )}
       </SelectContent>
@@ -45,4 +45,4 @@ const FormSelector: React.FC<FormSelectorProps> = ({
   );
 };
 
-export default FormSelector;
+export default CompanySelect;

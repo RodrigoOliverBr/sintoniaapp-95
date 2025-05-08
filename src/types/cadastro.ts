@@ -60,7 +60,7 @@ export interface Employee {
   cpf?: string;
   empresa_id: string;
   cargo_id?: string;
-  name?: string;
+  email?: string;
   role?: string;
   company_id?: string;
   created_at: string;
@@ -77,4 +77,15 @@ export interface JobRole {
   id: string;
   name: string;
   empresa_id: string;
+}
+
+// Form type to be used in form selection components
+export interface Form {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  version?: string;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
 }
