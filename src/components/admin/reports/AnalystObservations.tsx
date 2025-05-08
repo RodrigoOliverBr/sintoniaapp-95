@@ -20,7 +20,6 @@ const AnalystObservations: React.FC<AnalystObservationsProps> = ({
   const [observations, setObservations] = useState(initialValue);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     if (avaliacaoId) {
@@ -69,17 +68,7 @@ const AnalystObservations: React.FC<AnalystObservationsProps> = ({
       console.log("Salvando observações para avaliação:", avaliacaoId);
       console.log("Texto a ser salvo:", observations);
       
-      const { error } = await supabase
-        .from('avaliacoes')
-        .update({ notas_analista: observations })
-        .eq('id', avaliacaoId);
-        
-      if (error) {
-        console.error("Erro ao salvar observações:", error);
-        toast.error("Erro ao salvar observações");
-        return;
-      }
-      
+      await updateAnalystNotes(avaliacaoId, observations);
       toast.success("Observações salvas com sucesso");
       console.log("Observações salvas com sucesso");
     } catch (error) {
@@ -90,29 +79,8 @@ const AnalystObservations: React.FC<AnalystObservationsProps> = ({
     }
   };
   
-  const debouncedSave = () => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-    }
-    
-    const timeout = setTimeout(() => {
-      handleSave();
-    }, 1000);
-    
-    setSaveTimeout(timeout);
-  };
-  
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setObservations(e.target.value);
-    debouncedSave();
-  };
-  
-  const handleBlur = () => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-      setSaveTimeout(null);
-    }
-    handleSave();
   };
   
   return (
@@ -140,7 +108,7 @@ const AnalystObservations: React.FC<AnalystObservationsProps> = ({
         placeholder="Digite aqui suas observações e recomendações..."
         value={observations}
         onChange={handleChange}
-        onBlur={handleBlur}
+        onBlur={handleSave}
         className="min-h-[150px] bg-white"
         disabled={isLoading}
       />

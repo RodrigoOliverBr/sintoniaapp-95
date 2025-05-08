@@ -1,185 +1,214 @@
 
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { LogOut, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { LogOut, Settings, User } from "lucide-react";
+import { ClienteSistema, ClienteStatus } from "@/types/admin";
+import { getClienteIdAtivo } from "@/utils/clientContext";
 import { supabase } from "@/integrations/supabase/client";
-import { TipoPessoa } from "@/types/cliente";
-import { toast } from "sonner";
+import { ThemeProvider } from "next-themes";
 
 interface HeaderProps {
-  userType?: string;
-  userName?: string;
+  title?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ userType, userName }) => {
-  const navigate = useNavigate();
-  const [name, setName] = useState<string>("Usuário");
-  const [tipo, setTipo] = useState<string>("cliente");
+// Define the type for client data from supabase
+interface ClienteSupabase {
+  id: string;
+  razao_social: string;
+  contrato_id?: string;
+  situacao: string;
+  responsavel?: string;
+  telefone?: string;
+  email?: string;
+  cnpj: string;
+  plano_id?: string;
+  created_at: string;
+  updated_at: string;
+  tipo?: string;
+}
 
+const Header: React.FC<HeaderProps> = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [currentClient, setCurrentClient] = useState<ClienteSistema | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  // Force remove dark class to ensure light mode
   useEffect(() => {
-    // Try to get user data from localStorage or props
-    const getUserData = async () => {
-      // First try from props
-      if (userName) {
-        setName(userName);
-      }
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+    document.documentElement.style.backgroundColor = "white";
+    document.body.style.backgroundColor = "white";
+    document.documentElement.style.color = "black";
+    document.body.style.color = "black";
+  }, []);
+  
+  useEffect(() => {
+    const loadCurrentClient = async () => {
+      const clienteId = await getClienteIdAtivo();
       
-      if (userType) {
-        setTipo(userType);
-      }
-      
-      // Then try from localStorage
-      const storedUser = localStorage.getItem("sintonia:currentUser");
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          if (userData.nome) {
-            setName(userData.nome);
+      if (!clienteId) {
+        const currentClientData = localStorage.getItem("sintonia:currentCliente");
+        if (currentClientData) {
+          try {
+            setCurrentClient(JSON.parse(currentClientData));
+          } catch (error) {
+            console.error("Error parsing client data:", error);
           }
-          if (userData.tipo) {
-            setTipo(userData.tipo);
-          }
-        } catch (e) {
-          console.error("Error parsing user data from localStorage", e);
         }
+        return;
       }
       
-      // If still not set, try to fetch from API
-      if (name === "Usuário" || !tipo) {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            const { data: perfil } = await supabase
-              .from("perfis")
-              .select("nome, tipo")
-              .eq("id", session.user.id)
-              .maybeSingle();
-            
-            if (perfil) {
-              setName(perfil.nome || "Usuário");
-              setTipo(perfil.tipo as TipoPessoa || "cliente");
-              
-              // Update localStorage
-              localStorage.setItem("sintonia:userType", perfil.tipo);
-              localStorage.setItem("sintonia:currentUser", JSON.stringify({
-                id: session.user.id,
-                email: session.user.email,
-                tipo: perfil.tipo,
-                nome: perfil.nome
-              }));
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching user data", error);
+      try {
+        const { data, error } = await supabase
+          .from("clientes_sistema")
+          .select("*")
+          .eq("id", clienteId)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          const clienteData = data as ClienteSupabase;
+          const transformedData: ClienteSistema = {
+            id: clienteData.id,
+            razao_social: clienteData.razao_social,
+            nome: clienteData.razao_social,
+            tipo: clienteData.tipo || "juridica",
+            numeroEmpregados: 0,
+            dataInclusao: new Date(clienteData.created_at).getTime(),
+            situacao: (clienteData.situacao || "liberado") as ClienteStatus,
+            cnpj: clienteData.cnpj,
+            cpfCnpj: clienteData.cnpj,
+            email: clienteData.email || "",
+            telefone: clienteData.telefone || "",
+            responsavel: clienteData.responsavel || "",
+            contato: clienteData.responsavel || "",
+            planoId: clienteData.plano_id || "",
+            contratoId: clienteData.contrato_id || "",
+            clienteId: clienteData.id,
+          };
+          
+          setCurrentClient(transformedData);
+          
+          localStorage.setItem("sintonia:currentCliente", JSON.stringify(transformedData));
         }
+      } catch (err) {
+        console.error("Error loading client data:", err);
       }
     };
     
-    getUserData();
-  }, [userName, userType, name]);
-
-  const cleanupAuthState = () => {
-    // Remove standard auth tokens
-    localStorage.removeItem('supabase.auth.token');
-    
-    // Remove all Supabase auth keys from localStorage
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    // Remove sintonia specific items
-    localStorage.removeItem("sintonia:userType");
-    localStorage.removeItem("sintonia:currentCliente");
-    localStorage.removeItem("sintonia:currentUser");
-  };
-
-  const handleSignOut = async () => {
+    loadCurrentClient();
+  }, [location.pathname]);
+  
+  const handleLogout = async () => {
     try {
-      // Clean up auth state first
-      cleanupAuthState();
+      setIsLoggingOut(true);
+      console.log("Header: Iniciando processo de logout completo...");
       
-      // Then attempt to sign out with Supabase
-      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      // Clear all storage completely
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      console.log("Header: Armazenamento local e de sessão limpos completamente");
+      
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
       if (error) {
-        throw error;
+        console.error("Header: Erro ao fazer logout do Supabase:", error);
+        return;
       }
       
-      toast.success("Desconectado com sucesso");
+      console.log("Header: Logout do Supabase bem-sucedido");
       
-      // Force page reload to ensure clean state
-      window.location.href = "/auth";
+      // Force a hard redirect to login page after a slight delay
+      // to ensure signOut completes properly
+      setTimeout(() => {
+        console.log("Header: Redirecionando para /login via window.location.replace");
+        window.location.replace("/login");
+      }, 100);
     } catch (error) {
-      console.error("Error signing out", error);
-      toast.error("Erro ao desconectar");
-      
-      // Force redirect to login anyway for safety
-      window.location.href = "/auth";
+      console.error("Header: Erro durante o logout:", error);
+      setIsLoggingOut(false);
     }
   };
 
-  return (
-    <header className="sticky top-0 z-10 h-14 bg-white border-b shadow-sm">
-      <div className="h-full flex items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-bold text-gray-900">SintoniaApp</span>
-        </div>
+  const getClientName = () => {
+    if (!currentClient) return 'eSocial Brasil';
+    return currentClient.razao_social || currentClient.razaoSocial || currentClient.nome || 'eSocial Brasil';
+  }
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="relative h-8 w-8 rounded-full"
-              aria-label="Abrir menu do usuário"
-            >
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-primary text-white">
-                  {name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" forceMount>
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{name}</p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {tipo === "admin" ? "Administrador" : "Cliente"}
-                </p>
+  return (
+    <ThemeProvider defaultTheme="light" forcedTheme="light">
+      <header className="bg-white shadow print:hidden relative">
+        <div className="mx-auto md:ml-64 px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center">
+              <img
+                src="/lovable-uploads/5fbfce9a-dae3-444b-99c8-9b92040ef7e2.png"
+                alt="Sintonia Logo"
+                className="h-8 mr-2 md:hidden"
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex items-center text-sm text-gray-600 mr-4">
+                <span className="font-medium">{currentClient?.razao_social || currentClient?.razaoSocial || currentClient?.nome || 'eSocial Brasil'}</span>
+                <span className="mx-2">•</span>
+                <span>{currentClient?.responsavel || 'Admin'}</span>
               </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/account")}>
-              <User className="mr-2 h-4 w-4" />
-              <span>Minha conta</span>
-            </DropdownMenuItem>
-            {tipo === "admin" && (
-              <DropdownMenuItem onClick={() => navigate("/admin/settings")}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Configurações</span>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sair</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </header>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={() => navigate("/minha-conta")}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Configurações</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex items-center gap-1"
+              >
+                <LogOut size={16} />
+                <span className="hidden sm:inline">{isLoggingOut ? "Saindo..." : "Sair"}</span>
+              </Button>
+              
+              <div className="p-2">
+                <img 
+                  src="/lovable-uploads/55c55435-602d-4685-ade6-6d83d636842d.png" 
+                  alt="eSocial Brasil Logo" 
+                  className="h-12" 
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+    </ThemeProvider>
   );
 };
 
