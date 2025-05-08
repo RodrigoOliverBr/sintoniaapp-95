@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ interface UserProfile {
   id?: string;
   nome?: string;
   email?: string;
-  telefone?: string;
+  telefone?: string; // Added telefone to the interface
 }
 
 const UserAccountPage: React.FC = () => {
@@ -64,8 +63,7 @@ const UserAccountPage: React.FC = () => {
           id: profileData.id || "",
           nome: profileData.nome || "",
           email: profileData.email || "",
-          telefone: profileData.telefone || "", // Adicionamos telefone ao perfil
-          tipo: profileData.tipo || "cliente"
+          telefone: profileData.telefone || ""
         });
       }
     } catch (error) {
@@ -92,7 +90,9 @@ const UserAccountPage: React.FC = () => {
       } else {
         // Use spread conditionally apenas se data não for null
         setUserProfile(data ? {
-          ...data,
+          id: data.id,
+          nome: data.nome,
+          email: data.email,
           telefone: data.telefone || ''
         } : null);
         console.log("Perfil carregado:", data);

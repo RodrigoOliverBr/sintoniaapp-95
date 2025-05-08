@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +14,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AvaliacaoResposta } from '@/types/avaliacao';
+import { ResultsStatisticsChart } from "@/components/results/ResultsStatisticsChart";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
@@ -99,6 +101,7 @@ const RelatoriosPage: React.FC = () => {
   const fetchEmployeeResponses = async () => {
     if (!selectedEmployeeId || !reportGenerated) {
       setRespostas([]);
+      setResult(null);
       return;
     }
     
@@ -139,10 +142,10 @@ const RelatoriosPage: React.FC = () => {
         employeeId: avaliacao.funcionario_id,
         empresa_id: avaliacao.empresa_id,
         formulario_id: avaliacao.formulario_id,
-        total_sim: avaliacao.total_sim,
-        total_nao: avaliacao.total_nao,
-        totalYes: avaliacao.total_sim,
-        totalNo: avaliacao.total_nao,
+        total_sim: avaliacao.total_sim || 0,
+        total_nao: avaliacao.total_nao || 0,
+        totalYes: avaliacao.total_sim || 0,
+        totalNo: avaliacao.total_nao || 0,
         is_complete: avaliacao.is_complete,
         notas_analista: avaliacao.notas_analista,
         created_at: avaliacao.created_at,
@@ -194,6 +197,22 @@ const RelatoriosPage: React.FC = () => {
         })) as AvaliacaoResposta[];
         
         setRespostas(typedRespostas);
+        
+        // Count true and false responses for charts
+        const trueResponses = typedRespostas.filter(r => r.resposta === true).length;
+        const falseResponses = typedRespostas.filter(r => r.resposta === false).length;
+        
+        console.log(`Contagem de respostas - Sim: ${trueResponses}, Não: ${falseResponses}`);
+        
+        // Update the result with the actual counts from the data
+        setResult(prev => prev ? {
+          ...prev,
+          total_sim: trueResponses,
+          total_nao: falseResponses,
+          totalYes: trueResponses,
+          totalNo: falseResponses
+        } : null);
+        
         toast.success("Relatório gerado com sucesso!");
       } else {
         console.log("No responses found for evaluation:", avaliacao.id);
@@ -207,6 +226,113 @@ const RelatoriosPage: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // Helper function to get question data from the responses
+  const extractQuestionsFromResponses = (): Question[] => {
+    if (!respostas || respostas.length === 0) return [];
+    
+    return respostas
+      .filter(r => r.pergunta)
+      .map(r => ({
+        id: r.pergunta_id,
+        texto: r.pergunta?.texto || '',
+        risco_id: r.pergunta?.risco?.id || '',
+        secao_id: '',  // We don't have this info in the responses
+        formulario_id: '',  // We don't have this info in the responses
+        risco: r.pergunta?.risco
+      }));
+  };
+
+  // Used to display statistics
+  const renderStatisticsSection = () => {
+    if (!reportGenerated) return null;
+    
+    const totalYes = result?.total_sim || result?.totalYes || 0;
+    const totalNo = result?.total_nao || result?.totalNo || 0;
+    
+    console.log("Rendering statistics with:", { totalYes, totalNo });
+    
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Estatísticas de Respostas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Distribuição de Respostas</h3>
+              <ResultsStatisticsChart totalYes={totalYes} totalNo={totalNo} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Display selection based on current state
+  const renderContent = () => {
+    if (isGenerating) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-2" />
+          <p className="text-muted-foreground">Gerando relatório, aguarde...</p>
+        </div>
+      );
+    }
+    
+    if (!reportGenerated) {
+      return (
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          Selecione uma empresa e um funcionário, e clique em "Gerar Relatório" para visualizar os resultados.
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {renderStatisticsSection()}
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-3 mb-8">
+            <TabsTrigger value="diagnostico">Diagnóstico Individual</TabsTrigger>
+            <TabsTrigger value="mapa">Mapa de Risco</TabsTrigger>
+            <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="diagnostico" className="mt-0">
+            <DiagnosticoIndividual 
+              result={result} 
+              respostas={respostas}
+              questions={extractQuestionsFromResponses()}
+            />
+          </TabsContent>
+
+          <TabsContent value="mapa" className="mt-0">
+            <MapaRiscoPsicossocial 
+              companyId={selectedCompanyId}
+              departmentId=""
+              dateRange={{ from: new Date(), to: new Date() }}
+            />
+          </TabsContent>
+
+          <TabsContent value="pgr" className="mt-0">
+            {selectedCompany && selectedEmployee ? (
+              <RelatorioPGR
+                company={selectedCompany}
+                employee={selectedEmployee}
+                questions={extractQuestionsFromResponses()}
+                respostas={respostas}
+              />
+            ) : (
+              <div className="flex items-center justify-center py-10 text-muted-foreground">
+                Selecione uma empresa e um funcionário para gerar o relatório PGR.
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </>
+    );
   };
 
   const handleCompanyChange = (companyId: string) => {
@@ -250,6 +376,7 @@ const RelatoriosPage: React.FC = () => {
       <div className="space-y-4 px-4 py-6">
         <FilterSection
           companies={companies}
+          employees={employees}
           selectedCompanyId={selectedCompanyId}
           selectedEmployeeId={selectedEmployeeId}
           onCompanyChange={handleCompanyChange}
@@ -267,52 +394,7 @@ const RelatoriosPage: React.FC = () => {
           </Button>
         </div>
 
-        {reportGenerated && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 mb-8">
-              <TabsTrigger value="diagnostico">Diagnóstico Individual</TabsTrigger>
-              <TabsTrigger value="mapa">Mapa de Risco</TabsTrigger>
-              <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="diagnostico" className="mt-0">
-              <DiagnosticoIndividual 
-                result={result} 
-                respostas={respostas} 
-              />
-            </TabsContent>
-
-            <TabsContent value="mapa" className="mt-0">
-              <MapaRiscoPsicossocial 
-                companyId={selectedCompanyId}
-                departmentId=""
-                dateRange={{ from: new Date(), to: new Date() }}
-              />
-            </TabsContent>
-
-            <TabsContent value="pgr" className="mt-0">
-              {selectedCompany && selectedEmployee ? (
-                <RelatorioPGR
-                  company={selectedCompany}
-                  employee={selectedEmployee}
-                  questions={sampleQuestions}
-                  answers={sampleAnswers}
-                  respostas={respostas}
-                />
-              ) : (
-                <div className="flex items-center justify-center py-10 text-muted-foreground">
-                  Selecione uma empresa e um funcionário para gerar o relatório PGR.
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        )}
-        
-        {!reportGenerated && (
-          <div className="flex items-center justify-center py-20 text-muted-foreground">
-            Selecione uma empresa e um funcionário, e clique em "Gerar Relatório" para visualizar os resultados.
-          </div>
-        )}
+        {renderContent()}
       </div>
     </Layout>
   );

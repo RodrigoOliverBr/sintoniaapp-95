@@ -3,8 +3,8 @@ import React from "react";
 import { BarChart } from "@/components/ui/BarChart";
 
 interface ResultsStatisticsChartProps {
-  totalYes: number;
-  totalNo: number;
+  totalYes: number | null | undefined;
+  totalNo: number | null | undefined;
 }
 
 export const ResultsStatisticsChart: React.FC<ResultsStatisticsChartProps> = ({
@@ -28,9 +28,14 @@ export const ResultsStatisticsChart: React.FC<ResultsStatisticsChartProps> = ({
         data={chartData}
         index="name"
         categories={["total"]}
-        colors={["#1EAEDB"]}
+        colors={["#1EAEDB", "#E5E7EB"]}
         valueFormatter={(value) => `${value} resposta(s)`}
       />
+      {yes === 0 && no === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+          <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+        </div>
+      )}
     </div>
   );
 };
