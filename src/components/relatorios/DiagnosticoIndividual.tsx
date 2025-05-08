@@ -99,6 +99,9 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
     
     // Verificar respostas positivas
     questions.forEach(question => {
+      // Use TS type assertion to handle missing severidade_id
+      const questionWithRisco = question as Question & { risco?: { severidade_id?: string } };
+      
       // Se esta pergunta tem uma resposta "Sim"
       const hasYesResponse = question.id in yesResponses || 
                             (result?.answers?.[question.id]?.answer === true);
@@ -114,7 +117,8 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
           risksMap[riscoId] = {
             risco: question.risco || { 
               id: riscoId,
-              texto: "Risco não categorizado" 
+              texto: "Risco não categorizado",
+              severidade_id: "" // Add missing property
             },
             questions: []
           };

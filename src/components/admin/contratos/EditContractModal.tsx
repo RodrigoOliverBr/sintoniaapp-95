@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useState } from "react";
 import {
   Modal,
   ModalContent,
@@ -10,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { ClienteSistema } from "@/types/cadastro";
 import { toast } from "sonner";
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface EditContractModalProps {
   open: boolean;
@@ -22,7 +25,10 @@ const EditContractModal: React.FC<EditContractModalProps> = ({
   onClose,
   cliente
 }) => {
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [nome, setNome] = useState(cliente.nome || cliente.razao_social || '');
+  const [email, setEmail] = useState(cliente.email || '');
+  const [cpfCnpj, setCpfCnpj] = useState(cliente.cpfCnpj || cliente.cnpj || '');
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -31,9 +37,9 @@ const EditContractModal: React.FC<EditContractModalProps> = ({
       const { error } = await supabase
         .from('clientes_sistema')
         .update({
-          nome: cliente.nome,
-          email: cliente.email,
-          cpfCnpj: cliente.cpfCnpj,
+          razao_social: nome,
+          email: email,
+          cnpj: cpfCnpj,
           // Add other fields as needed
         })
         .eq('id', cliente.id);
@@ -59,12 +65,37 @@ const EditContractModal: React.FC<EditContractModalProps> = ({
       <ModalContent>
         <ModalHeader>Edit Contract</ModalHeader>
         <ModalBody>
-          <div className="py-4">
-            <p>Editing contract for: {cliente.nome}</p>
-            {/* 
-              You would normally include the ContractForm component here
-              with prefilled values from the cliente object
-            */}
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nome / Razão Social</Label>
+              <Input
+                id="name"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Nome ou Razão Social"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email || ''}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
+              <Input
+                id="cpfCnpj"
+                value={cpfCnpj || ''}
+                onChange={(e) => setCpfCnpj(e.target.value)}
+                placeholder="CPF/CNPJ"
+              />
+            </div>
           </div>
         </ModalBody>
         <ModalFooter>

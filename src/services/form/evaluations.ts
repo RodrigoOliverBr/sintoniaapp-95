@@ -1,445 +1,370 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { Avaliacao, AvaliacaoResposta, FormResult } from "@/types/avaliacao";
-import { toast as sonnerToast } from "sonner";
+import { FormResult } from '@/types/form';
+import { supabase } from '@/integrations/supabase/client';
+import { Avaliacao, AvaliacaoResposta } from '@/types/avaliacao';
+import { toast } from 'sonner';
 
-/**
- * Deleta uma avaliação pelo seu ID
- */
-export async function deleteFormEvaluation(evaluationId: string): Promise<void> {
-  if (!evaluationId) {
-    throw new Error("ID de avaliação inválido");
-  }
-
-  console.log(`Deletando avaliação com ID: ${evaluationId}`);
-
-  // A função trigger delete_avaliacao_related_data cuidará de deletar todos os dados relacionados
-  const { error } = await supabase
-    .from("avaliacoes")
-    .delete()
-    .eq("id", evaluationId);
-
-  if (error) {
-    console.error("Erro ao excluir avaliação:", error);
-    throw error;
-  }
-  
-  console.log(`Avaliação ${evaluationId} excluída com sucesso`);
-}
-
-/**
- * Atualiza as notas do analista para uma avaliação
- */
-export async function updateAnalystNotes(
-  evaluationId: string,
-  notes: string
-): Promise<void> {
-  if (!evaluationId) {
-    throw new Error("ID de avaliação inválido");
-  }
-
-  console.log(`Atualizando notas para avaliação ${evaluationId}`);
-
-  const { error } = await supabase
-    .from("avaliacoes")
-    .update({ notas_analista: notes, last_updated: new Date().toISOString() })
-    .eq("id", evaluationId);
-
-  if (error) {
-    console.error("Erro ao atualizar notas do analista:", error);
-    throw error;
-  }
-  
-  console.log(`Notas atualizadas com sucesso para avaliação ${evaluationId}`);
-}
-
-/**
- * Busca o resultado do formulário para um funcionário específico
- */
-export async function getFormResultByEmployeeId(
-  employeeId: string,
-  formId?: string
-): Promise<FormResult | null> {
+// Delete evaluation and all associated data
+export const deleteFormEvaluation = async (evaluationId: string): Promise<void> => {
   try {
-    console.log(`Buscando avaliação para funcionário ${employeeId}${formId ? ` e formulário ${formId}` : ''}`);
+    console.log('Deleting evaluation:', evaluationId);
     
-    let query = supabase
-      .from("avaliacoes")
-      .select(`
-        id,
-        funcionario_id,
-        empresa_id,
-        formulario_id,
-        total_sim,
-        total_nao,
-        is_complete,
-        notas_analista,
-        created_at,
-        updated_at,
-        last_updated
-      `)
-      .eq("funcionario_id", employeeId)
-      .order("created_at", { ascending: false })
-      .limit(1);
+    // Delete respostas first
+    const { error: deleteRespostasError } = await supabase
+      .from('respostas')
+      .delete()
+      .eq('avaliacao_id', evaluationId);
     
-    // Se um ID de formulário for fornecido, filtrar por ele
-    if (formId) {
-      query = query.eq("formulario_id", formId);
+    if (deleteRespostasError) {
+      console.error('Error deleting respostas:', deleteRespostasError);
+      throw new Error('Erro ao excluir respostas');
     }
-
-    const { data: avaliacao, error } = await query.single();
-
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116 é o código retornado quando nenhum resultado é encontrado
-      console.error("Erro ao buscar avaliação:", error);
-      throw error;
+    
+    // Then delete the evaluation
+    const { error: deleteAvaliacaoError } = await supabase
+      .from('avaliacoes')
+      .delete()
+      .eq('id', evaluationId);
+    
+    if (deleteAvaliacaoError) {
+      console.error('Error deleting evaluation:', deleteAvaliacaoError);
+      throw new Error('Erro ao excluir avaliação');
     }
-
-    if (!avaliacao) {
-      console.log(`Nenhuma avaliação encontrada para funcionário ${employeeId}`);
-      return null;
-    }
-
-    console.log(`Avaliação encontrada: ${avaliacao.id}, com total_sim: ${avaliacao.total_sim}, total_nao: ${avaliacao.total_nao}`);
-
-    // Buscar respostas associadas a esta avaliação
-    const { data: respostas, error: respostasError } = await supabase
-      .from("respostas")
-      .select(`
-        id,
-        avaliacao_id,
-        pergunta_id,
-        resposta,
-        observacao,
-        opcoes_selecionadas,
-        created_at,
-        updated_at
-      `)
-      .eq("avaliacao_id", avaliacao.id);
-
-    if (respostasError) {
-      console.error("Erro ao buscar respostas da avaliação:", respostasError);
-    }
-
-    console.log(`Encontradas ${respostas?.length || 0} respostas para a avaliação ${avaliacao.id}`);
-
-    // Mapear avaliacoes para FormResult
-    return {
-      id: avaliacao.id,
-      employeeId: avaliacao.funcionario_id,
-      empresa_id: avaliacao.empresa_id,
-      formulario_id: avaliacao.formulario_id || "",
-      total_sim: avaliacao.total_sim,
-      total_nao: avaliacao.total_nao,
-      notas_analista: avaliacao.notas_analista || "",
-      is_complete: avaliacao.is_complete || false,
-      created_at: avaliacao.created_at,
-      updated_at: avaliacao.updated_at,
-      last_updated: avaliacao.last_updated,
-      
-      // Propriedades para compatibilidade com interface FormResult
-      totalYes: avaliacao.total_sim,
-      totalNo: avaliacao.total_nao,
-      analyistNotes: avaliacao.notas_analista || "",
-      respostas: respostas as AvaliacaoResposta[] || [],
-      
-      // Placeholder para contagens de severidade, a ser preenchido posteriormente
-      yesPerSeverity: {}
-    };
+    
+    console.log('Evaluation deleted successfully');
   } catch (error) {
-    console.error("Erro ao buscar resultado do formulário:", error);
-    return null;
-  }
-}
-
-/**
- * Salva o resultado do formulário
- */
-export async function saveFormResult(formResult: FormResult): Promise<void> {
-  try {
-    if (!formResult.employeeId || !formResult.empresa_id) {
-      throw new Error("ID do funcionário e ID da empresa são obrigatórios");
-    }
-
-    console.log("Iniciando salvamento de avaliação com os dados:", {
-      id: formResult.id || "novo",
-      funcionario_id: formResult.employeeId,
-      empresa_id: formResult.empresa_id,
-      formulario_id: formResult.formulario_id,
-      total_sim: formResult.total_sim || formResult.totalYes || 0,
-      total_nao: formResult.total_nao || formResult.totalNo || 0,
-      is_complete: formResult.is_complete || false
-    });
-
-    // Se temos um ID de avaliação, atualizar o registro existente
-    const isUpdate = !!formResult.id;
-    
-    // Preparar dados para inserção ou atualização
-    const avaliacaoData = {
-      id: formResult.id || undefined, // Remover se for undefined para gerar novo ID
-      funcionario_id: formResult.employeeId,
-      empresa_id: formResult.empresa_id,
-      formulario_id: formResult.formulario_id || null,
-      total_sim: formResult.total_sim || formResult.totalYes || 0,
-      total_nao: formResult.total_nao || formResult.totalNo || 0,
-      notas_analista: formResult.notas_analista || formResult.analyistNotes || null,
-      is_complete: formResult.is_complete || false,
-      last_updated: new Date().toISOString(),
-    };
-
-    let avaliacaoId = formResult.id;
-
-    // Inserir ou atualizar avaliação
-    if (isUpdate) {
-      console.log(`Atualizando avaliação existente: ${formResult.id}`);
-      const { error } = await supabase
-        .from("avaliacoes")
-        .update(avaliacaoData)
-        .eq("id", formResult.id);
-
-      if (error) {
-        console.error("Erro ao atualizar avaliação:", error);
-        console.error("Dados da tentativa de atualização:", avaliacaoData);
-        throw error;
-      }
-      console.log(`Avaliação ${formResult.id} atualizada com sucesso`);
-    } else {
-      // Se não for atualização, inserir novo registro
-      console.log("Criando nova avaliação...");
-      const { data, error } = await supabase
-        .from("avaliacoes")
-        .insert(avaliacaoData)
-        .select("id")
-        .single();
-
-      if (error) {
-        console.error("Erro ao inserir avaliação:", error);
-        console.error("Dados da tentativa de inserção:", avaliacaoData);
-        throw error;
-      }
-
-      avaliacaoId = data.id;
-      console.log(`Nova avaliação criada com ID: ${avaliacaoId}`);
-    }
-
-    // Se temos respostas para salvar
-    if (formResult.answers && Object.keys(formResult.answers).length > 0) {
-      console.log(`Salvando ${Object.keys(formResult.answers).length} respostas para avaliação ${avaliacaoId}`);
-      
-      // Se estamos atualizando, primeiro deletar respostas existentes
-      if (isUpdate) {
-        console.log(`Deletando respostas existentes da avaliação ${avaliacaoId}`);
-        const { error } = await supabase
-          .from("respostas")
-          .delete()
-          .eq("avaliacao_id", avaliacaoId);
-
-        if (error) {
-          console.error("Erro ao deletar respostas existentes:", error);
-          throw error;
-        }
-        console.log("Respostas existentes deletadas com sucesso");
-      }
-
-      // Preparar dados de respostas para inserção
-      const respostasData = Object.entries(formResult.answers).map(
-        ([perguntaId, dados]) => ({
-          pergunta_id: perguntaId,
-          avaliacao_id: avaliacaoId,
-          resposta: dados.answer,
-          observacao: dados.observation || null,
-          opcoes_selecionadas: dados.selectedOptions || null,
-        })
-      );
-
-      // Inserir novas respostas
-      console.log(`Inserindo ${respostasData.length} respostas`);
-      const { error } = await supabase
-        .from("respostas")
-        .insert(respostasData);
-
-      if (error) {
-        console.error("Erro ao inserir respostas:", error);
-        console.error("Amostra dos dados de respostas:", respostasData.slice(0, 2));
-        throw error;
-      }
-      console.log("Todas as respostas foram salvas com sucesso");
-    } else {
-      console.log("Nenhuma resposta para salvar");
-    }
-    
-    console.log("Processo de salvamento concluído com sucesso");
-  } catch (error) {
-    console.error("Erro ao salvar resultado do formulário:", error);
+    console.error('Error in deleteFormEvaluation:', error);
     throw error;
   }
-}
+};
 
-/**
- * Busca o histórico de avaliações de um funcionário
- */
-export async function getEmployeeFormHistory(
-  employeeId: string
-): Promise<FormResult[]> {
+// Update only analyst notes for an evaluation
+export const updateAnalystNotes = async (evaluationId: string, notes: string): Promise<void> => {
   try {
-    console.log(`Buscando histórico de avaliações para funcionário ${employeeId}`);
+    const { error } = await supabase
+      .from('avaliacoes')
+      .update({ notas_analista: notes, last_updated: new Date().toISOString() })
+      .eq('id', evaluationId);
     
-    const { data: avaliacoes, error } = await supabase
-      .from("avaliacoes")
-      .select(`
-        id,
-        funcionario_id,
-        empresa_id,
-        formulario_id,
-        total_sim,
-        total_nao,
-        is_complete,
-        notas_analista,
-        created_at,
-        updated_at,
-        last_updated
-      `)
-      .eq("funcionario_id", employeeId)
-      .order("created_at", { ascending: false });
-
     if (error) {
-      console.error("Erro ao buscar histórico de avaliações:", error);
-      throw error;
+      console.error('Error updating analyst notes:', error);
+      throw new Error('Erro ao atualizar observações do analista');
     }
-
-    console.log(`Encontradas ${avaliacoes.length} avaliações para o funcionário ${employeeId}`);
-
-    // Mapear as avaliações para o formato FormResult
-    return avaliacoes.map((avaliacao) => ({
-      id: avaliacao.id,
-      employeeId: avaliacao.funcionario_id,
-      empresa_id: avaliacao.empresa_id,
-      formulario_id: avaliacao.formulario_id || "",
-      total_sim: avaliacao.total_sim,
-      total_nao: avaliacao.total_nao,
-      notas_analista: avaliacao.notas_analista || "",
-      is_complete: avaliacao.is_complete || false,
-      created_at: avaliacao.created_at,
-      updated_at: avaliacao.updated_at,
-      last_updated: avaliacao.last_updated,
-      
-      // Propriedades para compatibilidade
-      totalYes: avaliacao.total_sim,
-      totalNo: avaliacao.total_nao,
-      analyistNotes: avaliacao.notas_analista || "",
-    }));
   } catch (error) {
-    console.error("Erro ao buscar histórico de avaliações:", error);
-    return [];
+    console.error('Error in updateAnalystNotes:', error);
+    throw error;
   }
-}
+};
 
-/**
- * Busca uma avaliação específica pelo ID
- */
-export async function fetchEvaluation(evaluationId: string): Promise<FormResult | null> {
+// Get form result by employee ID and form ID
+export const getFormResultByEmployeeId = async (employeeId: string, formId: string): Promise<FormResult | null> => {
   try {
-    console.log(`Buscando avaliação específica com ID: ${evaluationId}`);
-    
-    const { data: avaliacao, error } = await supabase
-      .from("avaliacoes")
-      .select(`
-        id,
-        funcionario_id,
-        empresa_id,
-        formulario_id,
-        total_sim,
-        total_nao,
-        is_complete,
-        notas_analista,
-        created_at,
-        updated_at,
-        last_updated
-      `)
-      .eq("id", evaluationId)
+    // First get the evaluation
+    const { data: avaliacaoData, error: avaliacaoError } = await supabase
+      .from('avaliacoes')
+      .select('*')
+      .eq('funcionario_id', employeeId)
+      .eq('formulario_id', formId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
-
-    if (error) {
-      console.error("Erro ao buscar avaliação:", error);
-      throw error;
+    
+    if (avaliacaoError) {
+      if (avaliacaoError.code === 'PGRST116') {
+        // No data found is not an error in this case
+        console.log('No evaluation found for employee', employeeId, 'and form', formId);
+        return null;
+      }
+      console.error('Error fetching evaluation:', avaliacaoError);
+      throw avaliacaoError;
     }
-
-    console.log(`Avaliação encontrada: ${avaliacao.id}, com total_sim: ${avaliacao.total_sim}, total_nao: ${avaliacao.total_nao}`);
-
-    // Buscar respostas associadas a esta avaliação
-    const { data: respostas, error: respostasError } = await supabase
-      .from("respostas")
+    
+    if (!avaliacaoData) return null;
+    
+    // Then get all responses for this evaluation
+    const { data: respostasData, error: respostasError } = await supabase
+      .from('respostas')
       .select(`
         id,
-        avaliacao_id,
         pergunta_id,
         resposta,
         observacao,
-        opcoes_selecionadas,
-        created_at,
-        updated_at
+        opcoes_selecionadas
       `)
-      .eq("avaliacao_id", evaluationId);
-
+      .eq('avaliacao_id', avaliacaoData.id);
+    
     if (respostasError) {
-      console.error("Erro ao buscar respostas da avaliação:", respostasError);
+      console.error('Error fetching responses:', respostasError);
+      throw respostasError;
     }
-
-    console.log(`Encontradas ${respostas?.length || 0} respostas para a avaliação ${evaluationId}`);
-
-    // Converter as respostas em um formato de objeto answers para uso no formulário
+    
+    // Convert responses to the answers format
     const answers: Record<string, any> = {};
     
-    if (respostas) {
-      respostas.forEach((resposta) => {
-        answers[resposta.pergunta_id] = {
-          answer: resposta.resposta,
-          observation: resposta.observacao || "",
-          selectedOptions: resposta.opcoes_selecionadas || [],
-        };
-      });
+    respostasData.forEach((resposta) => {
+      answers[resposta.pergunta_id] = {
+        questionId: resposta.pergunta_id,
+        answer: resposta.resposta,
+        observation: resposta.observacao,
+        selectedOptions: resposta.opcoes_selecionadas || []
+      };
+    });
+    
+    // Create and return the FormResult
+    return {
+      id: avaliacaoData.id,
+      employeeId: avaliacaoData.funcionario_id,
+      empresa_id: avaliacaoData.empresa_id,
+      formulario_id: avaliacaoData.formulario_id,
+      totalYes: avaliacaoData.total_sim,
+      totalNo: avaliacaoData.total_nao,
+      total_sim: avaliacaoData.total_sim,
+      total_nao: avaliacaoData.total_nao,
+      isComplete: avaliacaoData.is_complete,
+      is_complete: avaliacaoData.is_complete,
+      analyistNotes: avaliacaoData.notas_analista,
+      notas_analista: avaliacaoData.notas_analista,
+      created_at: avaliacaoData.created_at,
+      updated_at: avaliacaoData.updated_at,
+      last_updated: avaliacaoData.last_updated,
+      answers,
+      respostas: respostasData as AvaliacaoResposta[]
+    };
+  } catch (error) {
+    console.error('Error in getFormResultByEmployeeId:', error);
+    return null;
+  }
+};
+
+// Save a form result (create or update)
+export const saveFormResult = async (formResult: FormResult): Promise<void> => {
+  try {
+    const now = new Date().toISOString();
+    const { id, employeeId, empresa_id, formulario_id, totalYes, totalNo, total_sim, total_nao, isComplete, is_complete, analyistNotes, notas_analista, answers } = formResult;
+    
+    // Prepare data for the avaliacoes table
+    const avaliacaoData = {
+      funcionario_id: employeeId,
+      empresa_id,
+      formulario_id,
+      total_sim: total_sim || totalYes || 0,
+      total_nao: total_nao || totalNo || 0,
+      is_complete: is_complete || isComplete || false,
+      notas_analista: notas_analista || analyistNotes || "",
+      last_updated: now,
+    };
+
+    let avaliacaoId = id;
+    
+    if (!avaliacaoId) {
+      // Create new evaluation
+      const { data, error } = await supabase
+        .from('avaliacoes')
+        .insert({
+          ...avaliacaoData,
+          created_at: now,
+          updated_at: now,
+        })
+        .select('id')
+        .single();
+      
+      if (error) {
+        console.error('Error creating evaluation:', error);
+        throw error;
+      }
+      
+      avaliacaoId = data.id;
+    } else {
+      // Update existing evaluation
+      const { error } = await supabase
+        .from('avaliacoes')
+        .update({
+          ...avaliacaoData,
+          updated_at: now,
+        })
+        .eq('id', avaliacaoId);
+      
+      if (error) {
+        console.error('Error updating evaluation:', error);
+        throw error;
+      }
     }
 
-    // Retornar no formato FormResult
-    return {
+    // Delete existing responses
+    const { error: deleteError } = await supabase
+      .from('respostas')
+      .delete()
+      .eq('avaliacao_id', avaliacaoId);
+    
+    if (deleteError) {
+      console.error('Error deleting existing responses:', deleteError);
+      throw deleteError;
+    }
+    
+    // Insert new responses
+    if (answers && Object.keys(answers).length > 0) {
+      const respostasToInsert = Object.entries(answers).map(([perguntaId, answer]) => ({
+        avaliacao_id: avaliacaoId,
+        pergunta_id: perguntaId,
+        resposta: answer.answer,
+        observacao: answer.observation || '',
+        opcoes_selecionadas: answer.selectedOptions || [],
+        created_at: now,
+        updated_at: now,
+      }));
+      
+      const { error: insertError } = await supabase
+        .from('respostas')
+        .insert(respostasToInsert);
+      
+      if (insertError) {
+        console.error('Error inserting responses:', insertError);
+        throw insertError;
+      }
+    }
+    
+    console.log(`Saved form result. Evaluation ID: ${avaliacaoId}, Answers: ${Object.keys(answers || {}).length}`);
+  } catch (error) {
+    console.error('Error in saveFormResult:', error);
+    throw error;
+  }
+};
+
+// Get employee form evaluation history
+export const getEmployeeFormHistory = async (employeeId: string): Promise<FormResult[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('avaliacoes')
+      .select(`
+        id, 
+        funcionario_id, 
+        empresa_id, 
+        formulario_id, 
+        total_sim, 
+        total_nao, 
+        is_complete, 
+        notas_analista, 
+        created_at, 
+        updated_at, 
+        last_updated
+      `)
+      .eq('funcionario_id', employeeId)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching employee evaluations:', error);
+      throw error;
+    }
+    
+    // Convert to FormResult format
+    return data.map(avaliacao => ({
       id: avaliacao.id,
       employeeId: avaliacao.funcionario_id,
       empresa_id: avaliacao.empresa_id,
-      formulario_id: avaliacao.formulario_id || "",
+      formulario_id: avaliacao.formulario_id,
+      totalYes: avaliacao.total_sim,
+      totalNo: avaliacao.total_nao,
       total_sim: avaliacao.total_sim,
       total_nao: avaliacao.total_nao,
-      notas_analista: avaliacao.notas_analista || "",
-      is_complete: avaliacao.is_complete || false,
+      isComplete: avaliacao.is_complete,
+      is_complete: avaliacao.is_complete,
+      analyistNotes: avaliacao.notas_analista,
+      notas_analista: avaliacao.notas_analista,
       created_at: avaliacao.created_at,
       updated_at: avaliacao.updated_at,
       last_updated: avaliacao.last_updated,
+    }));
+  } catch (error) {
+    console.error('Error in getEmployeeFormHistory:', error);
+    return [];
+  }
+};
 
-      // Propriedades adicionais para interface
-      totalYes: avaliacao.total_sim,
-      totalNo: avaliacao.total_nao,
-      analyistNotes: avaliacao.notas_analista || "",
-      answers,
-      respostas: respostas as AvaliacaoResposta[] || [],
+// Fetch a single evaluation by ID
+export const fetchEvaluation = async (evaluationId: string): Promise<FormResult | null> => {
+  try {
+    // Get the evaluation
+    const { data, error } = await supabase
+      .from('avaliacoes')
+      .select(`
+        id, 
+        funcionario_id, 
+        empresa_id, 
+        formulario_id, 
+        total_sim, 
+        total_nao, 
+        is_complete, 
+        notas_analista, 
+        created_at, 
+        updated_at, 
+        last_updated
+      `)
+      .eq('id', evaluationId)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching evaluation:', error);
+      return null;
+    }
+    
+    // Get the responses for this evaluation
+    const { data: respostas, error: respostasError } = await supabase
+      .from('respostas')
+      .select(`
+        id, 
+        pergunta_id, 
+        resposta, 
+        observacao, 
+        opcoes_selecionadas
+      `)
+      .eq('avaliacao_id', evaluationId);
+    
+    if (respostasError) {
+      console.error('Error fetching responses:', respostasError);
+      return null;
+    }
+    
+    // Convert responses to answers format
+    const answers: Record<string, any> = {};
+    
+    respostas.forEach((resposta) => {
+      answers[resposta.pergunta_id] = {
+        answer: resposta.resposta,
+        observation: resposta.observacao,
+        selectedOptions: resposta.opcoes_selecionadas
+      };
+    });
+    
+    return {
+      id: data.id,
+      employeeId: data.funcionario_id,
+      empresa_id: data.empresa_id,
+      formulario_id: data.formulario_id,
+      totalYes: data.total_sim,
+      totalNo: data.total_nao,
+      total_sim: data.total_sim,
+      total_nao: data.total_nao,
+      isComplete: data.is_complete,
+      is_complete: data.is_complete,
+      analyistNotes: data.notas_analista,
+      notas_analista: data.notas_analista,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      last_updated: data.last_updated,
+      answers
     };
   } catch (error) {
-    console.error("Erro ao buscar avaliação:", error);
+    console.error('Error in fetchEvaluation:', error);
     return null;
   }
-}
+};
 
-/**
- * Busca todas as avaliações de um funcionário
- */
-export async function fetchEmployeeEvaluations(employeeId: string): Promise<FormResult[]> {
+// Fetch all evaluations for an employee
+export const fetchEmployeeEvaluations = async (employeeId: string): Promise<FormResult[]> => {
   return getEmployeeFormHistory(employeeId);
-}
+};
 
-/**
- * Busca a avaliação mais recente de um funcionário
- */
-export async function fetchLatestEmployeeEvaluation(
-  employeeId: string,
-  formId?: string
-): Promise<FormResult | null> {
+// Fetch latest evaluation for an employee
+export const fetchLatestEmployeeEvaluation = async (employeeId: string, formId: string): Promise<FormResult | null> => {
   return getFormResultByEmployeeId(employeeId, formId);
-}
+};

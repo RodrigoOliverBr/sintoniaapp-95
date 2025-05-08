@@ -3,16 +3,18 @@ import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2, UserPlus } from "lucide-react";
 import { Search } from "lucide-react";
 import {
   AlertDialog,
@@ -34,6 +36,10 @@ import { ClienteSistema } from "@/types/cadastro";
 import NewContractModal from "@/components/admin/contratos/NewContractModal";
 import EditContractModal from "@/components/admin/contratos/EditContractModal";
 
+interface DataTableProps {
+  data: any[];
+}
+
 const ContratosPage: React.FC = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
   const [filteredClientes, setFilteredClientes] = useState<ClienteSistema[]>([]);
@@ -53,7 +59,7 @@ const ContratosPage: React.FC = () => {
       const { data, error } = await supabase
         .from("clientes_sistema")
         .select("*")
-        .order("nome", { ascending: true });
+        .order("razao_social", { ascending: true });
 
       if (error) {
         console.error("Erro ao buscar clientes:", error);
@@ -61,14 +67,17 @@ const ContratosPage: React.FC = () => {
         return;
       }
 
+      // Map the database fields to ClienteSistema interface
       const clientesFormatted = data.map((cliente) => ({
         ...cliente,
-        nome: cliente.razao_social || cliente.nome || "",
+        nome: cliente.razao_social, // Map razao_social to nome
+        cpfCnpj: cliente.cnpj, // Map cnpj to cpfCnpj
+        tipo: 'juridica', // Default tipo
         dataInclusao: cliente.created_at ? new Date(cliente.created_at) : null,
-      }));
+      })) as ClienteSistema[];
 
-      setClientes(clientesFormatted as ClienteSistema[]);
-      setFilteredClientes(clientesFormatted as ClienteSistema[]);
+      setClientes(clientesFormatted);
+      setFilteredClientes(clientesFormatted);
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
       toast.error((error as Error).message || "Erro ao buscar clientes.");
@@ -183,7 +192,7 @@ const ContratosPage: React.FC = () => {
                     <TableCell className="font-medium">{cliente.nome}</TableCell>
                     <TableCell>{cliente.email}</TableCell>
                     <TableCell>{cliente.telefone}</TableCell>
-                    <TableCell>{formatDate(cliente.dataInclusao)}</TableCell>
+                    <TableCell>{formatDate(cliente.dataInclusao as Date)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-2">
                         <Button
@@ -227,8 +236,7 @@ const ContratosPage: React.FC = () => {
 
       <NewContractModal
         open={isNewContractModalOpen}
-        onOpenChange={setIsNewContractModalOpen}
-        onContractCreated={fetchClientes}
+        onOpenChange={handleCloseNewContractModal}
       />
 
       {selectedCliente && (

@@ -35,6 +35,10 @@ export const ModalHeader: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
+export const ModalDescription: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <DialogDescription>{children}</DialogDescription>;
+};
+
 export const ModalBody: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <div className="py-4">{children}</div>;
 };
