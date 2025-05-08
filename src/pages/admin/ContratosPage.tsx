@@ -1,251 +1,330 @@
 
 import React, { useState, useEffect } from "react";
-import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Plus, Trash2, UserPlus } from "lucide-react";
-import { Search } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
+import { addMonths } from "date-fns";
+import { StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
-import { handleSupabaseError } from "@/integrations/supabase/client";
-import { supabase } from "@/integrations/supabase/client";
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { ClienteSistema } from "@/types/cadastro";
+import AdminLayout from "@/components/AdminLayout";
+import { useContratos } from "@/hooks/useContratos";
+import ContractTable from "@/components/admin/contratos/ContractTable";
+import ContractHeader, { ContractSearch } from "@/components/admin/contratos/ContractHeader";
 import NewContractModal from "@/components/admin/contratos/NewContractModal";
 import EditContractModal from "@/components/admin/contratos/EditContractModal";
-
-interface DataTableProps {
-  data: any[];
-}
+import DeleteContractModal from "@/components/admin/contratos/DeleteContractModal";
 
 const ContratosPage: React.FC = () => {
-  const [clientes, setClientes] = useState<ClienteSistema[]>([]);
-  const [filteredClientes, setFilteredClientes] = useState<ClienteSistema[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isNewContractModalOpen, setIsNewContractModalOpen] = useState(false);
-  const [isEditContractModalOpen, setIsEditContractModalOpen] = useState(false);
-  const [selectedCliente, setSelectedCliente] = useState<ClienteSistema | null>(null);
+  const { 
+    contratos, 
+    clientes, 
+    planos, 
+    isLoading,
+    currentContrato,
+    setCurrentContrato,
+    addContrato,
+    updateContrato,
+    deleteContrato
+  } = useContratos();
+  
+  const [openNewModal, setOpenNewModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const [formClienteId, setFormClienteId] = useState("");
+  const [formPlanoId, setFormPlanoId] = useState("");
+  const [formDataInicio, setFormDataInicio] = useState<Date>(new Date());
+  const [formDataFim, setFormDataFim] = useState<Date>(addMonths(new Date(), 12));
+  const [formDataPrimeiroVencimento, setFormDataPrimeiroVencimento] = useState<Date>(new Date());
+  const [formValorMensal, setFormValorMensal] = useState(0);
+  const [formStatus, setFormStatus] = useState<StatusContrato>("ativo");
+  const [formTaxaImplantacao, setFormTaxaImplantacao] = useState(0);
+  const [formObservacoes, setFormObservacoes] = useState("");
+  const [formNumeroContrato, setFormNumeroContrato] = useState("");
+  
+  useEffect(() => {
+    setFormDataFim(addMonths(formDataInicio, 12));
+  }, [formDataInicio]);
 
   useEffect(() => {
-    fetchClientes();
-  }, []);
-
-  const fetchClientes = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("clientes_sistema")
-        .select("*")
-        .order("razao_social", { ascending: true });
-
-      if (error) {
-        console.error("Erro ao buscar clientes:", error);
-        toast.error(handleSupabaseError(error) || "Erro ao buscar clientes.");
-        return;
-      }
-
-      // Map the database fields to ClienteSistema interface
-      const clientesFormatted = data.map((cliente) => ({
-        ...cliente,
-        nome: cliente.razao_social, // Map razao_social to nome
-        cpfCnpj: cliente.cnpj, // Map cnpj to cpfCnpj
-        tipo: 'juridica', // Default tipo
-        dataInclusao: cliente.created_at ? new Date(cliente.created_at) : null,
-      })) as ClienteSistema[];
-
-      setClientes(clientesFormatted);
-      setFilteredClientes(clientesFormatted);
-    } catch (error) {
-      console.error("Erro ao buscar clientes:", error);
-      toast.error((error as Error).message || "Erro ao buscar clientes.");
-    } finally {
-      setIsLoading(false);
+    if (openNewModal) {
+      const ano = new Date().getFullYear();
+      const numeroAleatorio = Math.floor(1000 + Math.random() * 9000);
+      setFormNumeroContrato(`CONT-${ano}-${numeroAleatorio}`);
     }
+  }, [openNewModal]);
+  
+  useEffect(() => {
+    if (formPlanoId) {
+      const planoSelecionado = planos.find(p => p.id === formPlanoId);
+      if (planoSelecionado) {
+        setFormValorMensal(planoSelecionado.valorMensal);
+        setFormTaxaImplantacao(planoSelecionado.valorImplantacao);
+      }
+    }
+  }, [formPlanoId, planos]);
+  
+  const filteredContratos = contratos.filter(contrato => {
+    const clienteNome = clientes.find(c => c.id === contrato.clienteSistemaId)?.razao_social || "";
+    return clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           contrato.numero.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+  
+  const clearForm = () => {
+    setFormClienteId("");
+    setFormPlanoId("");
+    setFormDataInicio(new Date());
+    setFormDataFim(addMonths(new Date(), 12));
+    setFormDataPrimeiroVencimento(new Date());
+    setFormValorMensal(0);
+    setFormStatus("ativo");
+    setFormTaxaImplantacao(0);
+    setFormObservacoes("");
+    const ano = new Date().getFullYear();
+    const numeroAleatorio = Math.floor(1000 + Math.random() * 9000);
+    setFormNumeroContrato(`CONT-${ano}-${numeroAleatorio}`);
+  };
+  
+  const handleOpenNewModal = () => {
+    clearForm();
+    setOpenNewModal(true);
+  };
+  
+  const handleOpenEditModal = (contrato: typeof currentContrato) => {
+    if (!contrato) return;
+    setCurrentContrato(contrato);
+    setFormClienteId(contrato.clienteSistemaId || contrato.clienteId);
+    setFormPlanoId(contrato.planoId);
+    setFormDataInicio(new Date(contrato.dataInicio));
+    setFormDataFim(new Date(contrato.dataFim));
+    setFormDataPrimeiroVencimento(new Date(contrato.dataPrimeiroVencimento));
+    setFormValorMensal(contrato.valorMensal);
+    setFormStatus(contrato.status);
+    setFormTaxaImplantacao(contrato.taxaImplantacao);
+    setFormObservacoes(contrato.observacoes || '');
+    setFormNumeroContrato(contrato.numero);
+    setOpenEditModal(true);
+  };
+  
+  const handleOpenDeleteModal = (contrato: typeof currentContrato) => {
+    if (!contrato) return;
+    setCurrentContrato(contrato);
+    setOpenDeleteModal(true);
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-
-    const filtered = clientes.filter((cliente) =>
-      cliente.nome.toLowerCase().includes(query.toLowerCase())
+  const verificarContratoAtivoExistente = async (clienteId: string) => {
+    const contratosDoCliente = contratos.filter(c => 
+      c.clienteSistemaId === clienteId && c.status === 'ativo'
     );
-    setFilteredClientes(filtered);
+    
+    if (contratosDoCliente.length > 0) {
+      if (!currentContrato || (currentContrato && currentContrato.id !== contratosDoCliente[0].id)) {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return "-";
-    return format(date, 'dd/MM/yyyy', { locale: ptBR });
-  };
-
-  const handleDelete = async (cliente: ClienteSistema) => {
+  const handleAddContrato = async () => {
     try {
-      const { error } = await supabase
-        .from('clientes_sistema')
-        .delete()
-        .eq('id', cliente.id);
-
-      if (error) {
-        console.error("Erro ao excluir cliente:", error);
-        toast.error(handleSupabaseError(error) || "Erro ao excluir cliente.");
-        return;
+      if (formStatus === 'ativo') {
+        const contratoAtivoExiste = await verificarContratoAtivoExistente(formClienteId);
+        if (contratoAtivoExiste) {
+          toast.error("Este cliente já possui um contrato ativo. Por favor, cancele o contrato existente antes de criar um novo.");
+          return;
+        }
       }
 
-      toast.success("Cliente excluído com sucesso!");
-      fetchClientes(); // Refresh the list
-    } catch (error) {
-      console.error("Erro ao excluir cliente:", error);
-      toast.error((error as Error).message || "Erro ao excluir cliente.");
+      const success = await addContrato(
+        formClienteId,
+        formPlanoId,
+        formNumeroContrato,
+        formDataInicio,
+        formDataFim,
+        formDataPrimeiroVencimento,
+        formValorMensal,
+        formStatus,
+        formTaxaImplantacao,
+        formObservacoes
+      );
+
+      if (success) {
+        toast.success("Contrato adicionado com sucesso!");
+        setOpenNewModal(false);
+        clearForm();
+      } else {
+        toast.error("Erro ao salvar o contrato. Verifique os dados e tente novamente.");
+      }
+    } catch (error: any) {
+      console.error("Erro ao adicionar contrato:", error);
+      toast.error(`Erro ao adicionar contrato: ${error.message || 'Erro desconhecido'}`);
     }
   };
+  
+  const handleUpdateContrato = async () => {
+    try {
+      if (!currentContrato) {
+        toast.error("Nenhum contrato selecionado para edição");
+        return;
+      }
+      
+      if (formStatus === 'ativo' && currentContrato.status !== 'ativo') {
+        const contratoAtivoExiste = await verificarContratoAtivoExistente(formClienteId);
+        if (contratoAtivoExiste) {
+          toast.error("Este cliente já possui um contrato ativo. Por favor, cancele o contrato existente antes de ativar este.");
+          return;
+        }
+      }
+      
+      const success = await updateContrato(
+        currentContrato.id,
+        formClienteId,
+        formPlanoId,
+        formNumeroContrato,
+        formDataInicio,
+        formDataFim,
+        formDataPrimeiroVencimento,
+        formValorMensal,
+        formStatus,
+        formTaxaImplantacao,
+        formObservacoes
+      );
 
-  const handleEdit = (cliente: ClienteSistema) => {
-    setSelectedCliente(cliente);
-    setIsEditContractModalOpen(true);
+      if (success) {
+        toast.success("Contrato atualizado com sucesso!");
+        setOpenEditModal(false);
+        clearForm();
+      } else {
+        toast.error("Erro ao atualizar o contrato. Verifique os dados e tente novamente.");
+      }
+    } catch (error: any) {
+      console.error("Erro ao atualizar contrato:", error);
+      toast.error(`Erro ao atualizar contrato: ${error.message || 'Erro desconhecido'}`);
+    }
   };
+  
+  const handleDeleteContrato = async () => {
+    try {
+      if (!currentContrato) {
+        toast.error("Nenhum contrato selecionado para exclusão");
+        return;
+      }
+      
+      const success = await deleteContrato(currentContrato.id, currentContrato.clienteSistemaId);
 
-  const handleOpenNewContractModal = () => {
-    setIsNewContractModalOpen(true);
-  };
-
-  const handleCloseNewContractModal = () => {
-    setIsNewContractModalOpen(false);
-    fetchClientes(); // Refresh the list
-  };
-
-  const handleCloseEditContractModal = () => {
-    setIsEditContractModalOpen(false);
-    setSelectedCliente(null);
-    fetchClientes(); // Refresh the list
+      if (success) {
+        toast.success("Contrato excluído com sucesso!");
+        setOpenDeleteModal(false);
+      } else {
+        toast.error("Erro ao excluir o contrato.");
+      }
+    } catch (error: any) {
+      console.error("Erro ao excluir contrato:", error);
+      toast.error(`Erro ao excluir contrato: ${error.message || 'Erro desconhecido'}`);
+    }
   };
 
   return (
     <AdminLayout title="Contratos">
       <Card>
-        <CardHeader className="flex justify-between items-center">
-          <CardTitle>Lista de Clientes</CardTitle>
-          <Button onClick={handleOpenNewContractModal}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Contrato
-          </Button>
+        <CardHeader>
+          <ContractHeader 
+            searchTerm={searchTerm} 
+            onSearchChange={setSearchTerm}
+            onNewContract={handleOpenNewModal}
+          />
+          <ContractSearch 
+            searchTerm={searchTerm} 
+            onSearchChange={setSearchTerm} 
+          />
         </CardHeader>
         <CardContent>
-          <div className="flex items-center py-4">
-            <Search className="mr-2 h-4 w-4" />
-            <Input
-              type="search"
-              placeholder="Buscar cliente..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-              className="ml-2"
-            />
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Data Inclusão</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Carregando...
-                  </TableCell>
-                </TableRow>
-              ) : filteredClientes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Nenhum cliente encontrado.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredClientes.map((cliente) => (
-                  <TableRow key={cliente.id}>
-                    <TableCell className="font-medium">{cliente.nome}</TableCell>
-                    <TableCell>{cliente.email}</TableCell>
-                    <TableCell>{cliente.telefone}</TableCell>
-                    <TableCell>{formatDate(cliente.dataInclusao as Date)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(cliente)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação irá excluir o cliente permanentemente.
-                                Deseja continuar?
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(cliente)}>
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <ContractTable 
+            contratos={filteredContratos}
+            clientes={clientes}
+            planos={planos}
+            onEdit={handleOpenEditModal}
+            onDelete={handleOpenDeleteModal}
+            isLoading={isLoading}
+          />
         </CardContent>
       </Card>
-
-      <NewContractModal
-        open={isNewContractModalOpen}
-        onOpenChange={handleCloseNewContractModal}
-      />
-
-      {selectedCliente && (
-        <EditContractModal
-          open={isEditContractModalOpen}
-          onClose={handleCloseEditContractModal}
-          cliente={selectedCliente}
+      
+      <Dialog open={openNewModal} onOpenChange={(open) => {
+        setOpenNewModal(open);
+        if (!open) clearForm();
+      }}>
+        <NewContractModal
+          formClienteId={formClienteId}
+          setFormClienteId={setFormClienteId}
+          formPlanoId={formPlanoId}
+          setFormPlanoId={setFormPlanoId}
+          formDataInicio={formDataInicio}
+          setFormDataInicio={setFormDataInicio}
+          formDataFim={formDataFim}
+          setFormDataFim={setFormDataFim}
+          formDataPrimeiroVencimento={formDataPrimeiroVencimento}
+          setFormDataPrimeiroVencimento={setFormDataPrimeiroVencimento}
+          formValorMensal={formValorMensal}
+          setFormValorMensal={setFormValorMensal}
+          formStatus={formStatus}
+          setFormStatus={setFormStatus}
+          formTaxaImplantacao={formTaxaImplantacao}
+          setFormTaxaImplantacao={setFormTaxaImplantacao}
+          formObservacoes={formObservacoes}
+          setFormObservacoes={setFormObservacoes}
+          formNumeroContrato={formNumeroContrato}
+          setFormNumeroContrato={setFormNumeroContrato}
+          clientes={clientes}
+          planos={planos}
+          isLoading={isLoading}
+          onClose={() => setOpenNewModal(false)}
+          onSave={handleAddContrato}
         />
-      )}
+      </Dialog>
+      
+      <Dialog open={openEditModal} onOpenChange={(open) => {
+        setOpenEditModal(open);
+        if (!open) clearForm();
+      }}>
+        <EditContractModal
+          formClienteId={formClienteId}
+          setFormClienteId={setFormClienteId}
+          formPlanoId={formPlanoId}
+          setFormPlanoId={setFormPlanoId}
+          formDataInicio={formDataInicio}
+          setFormDataInicio={setFormDataInicio}
+          formDataFim={formDataFim}
+          setFormDataFim={setFormDataFim}
+          formDataPrimeiroVencimento={formDataPrimeiroVencimento}
+          setFormDataPrimeiroVencimento={setFormDataPrimeiroVencimento}
+          formValorMensal={formValorMensal}
+          setFormValorMensal={setFormValorMensal}
+          formStatus={formStatus}
+          setFormStatus={setFormStatus}
+          formTaxaImplantacao={formTaxaImplantacao}
+          setFormTaxaImplantacao={setFormTaxaImplantacao}
+          formObservacoes={formObservacoes}
+          setFormObservacoes={setFormObservacoes}
+          formNumeroContrato={formNumeroContrato}
+          setFormNumeroContrato={setFormNumeroContrato}
+          clientes={clientes}
+          planos={planos}
+          isLoading={isLoading}
+          onClose={() => setOpenEditModal(false)}
+          onSave={handleUpdateContrato}
+        />
+      </Dialog>
+      
+      <Dialog open={openDeleteModal} onOpenChange={setOpenDeleteModal}>
+        <DeleteContractModal
+          isLoading={isLoading}
+          onClose={() => setOpenDeleteModal(false)}
+          onDelete={handleDeleteContrato}
+        />
+      </Dialog>
     </AdminLayout>
   );
 };

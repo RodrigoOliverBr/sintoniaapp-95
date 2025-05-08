@@ -4,9 +4,9 @@ import { BarChart } from "@/components/ui/BarChart";
 
 interface ResultsSeverityChartProps {
   severityCounts: {
-    light: number;
-    medium: number;
-    high: number;
+    "LEVEMENTE PREJUDICIAL": number;
+    "PREJUDICIAL": number;
+    "EXTREMAMENTE PREJUDICIAL": number;
   };
 }
 
@@ -16,15 +16,15 @@ export const ResultsSeverityChart: React.FC<ResultsSeverityChartProps> = ({
   const severityChartData = [
     {
       name: "Lev. Prej.",
-      total: severityCounts.light || 0,
+      total: severityCounts["LEVEMENTE PREJUDICIAL"] || 0,
     },
     {
       name: "Prejudicial",
-      total: severityCounts.medium || 0,
+      total: severityCounts["PREJUDICIAL"] || 0,
     },
     {
       name: "Extrema. Prej.",
-      total: severityCounts.high || 0,
+      total: severityCounts["EXTREMAMENTE PREJUDICIAL"] || 0,
     },
   ];
 

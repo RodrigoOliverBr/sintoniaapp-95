@@ -1,15 +1,6 @@
 
 // Define the client status type
-export type ClienteStatus = 
-  | 'liberado' 
-  | 'bloqueado' 
-  | 'pendente' 
-  | 'ativo' 
-  | 'em-analise' 
-  | 'sem-contrato' 
-  | 'bloqueado-manualmente'
-  | 'inativo';
-
+export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
 export type BatchSelection = Record<string, boolean>;
 export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
@@ -32,7 +23,6 @@ export interface ClienteSistema {
   contratoId: string;
   razaoSocial?: string;
   clienteId?: string;
-  statusContrato?: StatusContrato;
 }
 
 export interface ClienteComContrato extends ClienteSistema {
@@ -97,15 +87,7 @@ export interface Fatura {
 
 // Add these type definitions for the ClientesPage.tsx
 export type TipoPessoa = 'fisica' | 'juridica';
-export type StatusContrato = 
-  | 'ativo' 
-  | 'inativo' 
-  | 'cancelado' 
-  | 'pendente' 
-  | 'vencido' 
-  | 'vencimento-proximo' 
-  | 'sem-contrato' 
-  | 'em-analise';
+export type StatusContrato = 'ativo' | 'inativo' | 'cancelado' | 'pendente' | 'vencido' | 'vencimento-proximo' | 'sem-contrato' | 'em-analise';
 
 // Fix for InvoicePreview display type
 export type Display = "flex" | "block" | "inline" | "inline-block" | "grid" | "inline-flex" | 

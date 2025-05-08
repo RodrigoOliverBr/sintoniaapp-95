@@ -9,15 +9,11 @@ import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import { useQuery } from "@tanstack/react-query";
 import { getCompanies } from "@/services/company/companyService";
 import { getEmployeesByCompany } from "@/services/employee/employeeService";
-import { Question } from "@/types/form";
+import { Question, FormResult } from "@/types/form";
 import { Company, Employee } from "@/types/cadastro";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { AvaliacaoResposta } from '@/types/avaliacao';
-import { ResultsStatisticsChart } from "@/components/results/ResultsStatisticsChart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
 
 const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
@@ -26,9 +22,6 @@ const RelatoriosPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("diagnostico");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
-  const [respostas, setRespostas] = useState<AvaliacaoResposta[]>([]);
-  const [avaliacaoId, setAvaliacaoId] = useState<string | null>(null);
-  const [result, setResult] = useState<any>(null);
 
   // Sample questions and answers for demonstration
   const sampleQuestions: Question[] = [
@@ -83,8 +76,7 @@ const RelatoriosPage: React.FC = () => {
         const { data, error } = await supabase
           .from('avaliacoes')
           .select('*, formularios(*)')
-          .eq('funcionario_id', selectedEmployeeId)
-          .order('created_at', { ascending: false });
+          .eq('funcionario_id', selectedEmployeeId);
         
         if (error) throw error;
         console.log("Evaluations fetched:", data);
@@ -98,255 +90,15 @@ const RelatoriosPage: React.FC = () => {
     enabled: !!selectedEmployeeId
   });
 
-  // Fetch responses for the selected employee
-  const fetchEmployeeResponses = async () => {
-    if (!selectedEmployeeId || !reportGenerated) {
-      setRespostas([]);
-      setResult(null);
-      return;
-    }
-    
-    try {
-      setIsGenerating(true);
-      console.log("Fetching responses for employee:", selectedEmployeeId);
-      
-      // First get the evaluation ID
-      const { data: avaliacao, error: avaliacaoError } = await supabase
-        .from('avaliacoes')
-        .select('*')
-        .eq('funcionario_id', selectedEmployeeId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (avaliacaoError) {
-        console.error("Error fetching evaluation:", avaliacaoError);
-        toast.error("Erro ao carregar avaliação do funcionário");
-        setRespostas([]);
-        return;
-      }
-      
-      if (!avaliacao) {
-        console.log("No evaluation found for employee:", selectedEmployeeId);
-        toast.error("Nenhuma avaliação encontrada para este funcionário");
-        setRespostas([]);
-        return;
-      }
-      
-      setAvaliacaoId(avaliacao.id);
-      console.log("Found evaluation ID:", avaliacao.id);
-      console.log("Evaluation details:", avaliacao);
-      
-      // Set result with the evaluation data
-      setResult({
-        id: avaliacao.id,
-        employeeId: avaliacao.funcionario_id,
-        empresa_id: avaliacao.empresa_id,
-        formulario_id: avaliacao.formulario_id,
-        total_sim: avaliacao.total_sim || 0,
-        total_nao: avaliacao.total_nao || 0,
-        totalYes: avaliacao.total_sim || 0,
-        totalNo: avaliacao.total_nao || 0,
-        is_complete: avaliacao.is_complete,
-        notas_analista: avaliacao.notas_analista,
-        created_at: avaliacao.created_at,
-        updated_at: avaliacao.updated_at,
-        last_updated: avaliacao.last_updated
-      });
-      
-      // Then get the responses with the questions and risks
-      const { data, error } = await supabase
-        .from('respostas')
-        .select(`
-          id, 
-          avaliacao_id,
-          pergunta_id,
-          resposta,
-          observacao,
-          opcoes_selecionadas,
-          pergunta:perguntas (
-            id,
-            texto,
-            risco:riscos (
-              id,
-              texto,
-              severidade:severidade (
-                id,
-                nivel,
-                descricao
-              )
-            )
-          )
-        `)
-        .eq('avaliacao_id', avaliacao.id);
-      
-      if (error) {
-        console.error("Error fetching responses:", error);
-        toast.error("Erro ao carregar respostas do funcionário");
-        setRespostas([]);
-        return;
-      }
-      
-      console.log("Fetched responses:", data);
-      
-      if (data && data.length > 0) {
-        const typedRespostas = data.map(item => ({
-          ...item,
-          opcoes_selecionadas: Array.isArray(item.opcoes_selecionadas) 
-            ? item.opcoes_selecionadas 
-            : []
-        })) as AvaliacaoResposta[];
-        
-        setRespostas(typedRespostas);
-        
-        // Count true and false responses for charts
-        const trueResponses = typedRespostas.filter(r => r.resposta === true).length;
-        const falseResponses = typedRespostas.filter(r => r.resposta === false).length;
-        
-        console.log(`Contagem de respostas - Sim: ${trueResponses}, Não: ${falseResponses}`);
-        
-        // Update the result with the actual counts from the data
-        setResult(prev => prev ? {
-          ...prev,
-          total_sim: trueResponses,
-          total_nao: falseResponses,
-          totalYes: trueResponses,
-          totalNo: falseResponses
-        } : null);
-        
-        toast.success("Relatório gerado com sucesso!");
-      } else {
-        console.log("No responses found for evaluation:", avaliacao.id);
-        toast.warning("Nenhuma resposta encontrada para a avaliação");
-        setRespostas([]);
-      }
-    } catch (error) {
-      console.error("Error in fetchEmployeeResponses:", error);
-      toast.error("Erro ao carregar dados para o relatório");
-      setRespostas([]);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // Helper function to get question data from the responses
-  const extractQuestionsFromResponses = (): Question[] => {
-    if (!respostas || respostas.length === 0) return [];
-    
-    return respostas
-      .filter(r => r.pergunta)
-      .map(r => ({
-        id: r.pergunta_id,
-        texto: r.pergunta?.texto || '',
-        risco_id: r.pergunta?.risco?.id || '',
-        secao_id: '',  // We don't have this info in the responses
-        formulario_id: '',  // We don't have this info in the responses
-        risco: r.pergunta?.risco
-      }));
-  };
-
-  // Used to display statistics
-  const renderStatisticsSection = () => {
-    if (!reportGenerated) return null;
-    
-    const totalYes = result?.total_sim || result?.totalYes || 0;
-    const totalNo = result?.total_nao || result?.totalNo || 0;
-    
-    console.log("Rendering statistics with:", { totalYes, totalNo });
-    
-    return (
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Estatísticas de Respostas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Distribuição de Respostas</h3>
-              <ResultsStatisticsChart totalYes={totalYes} totalNo={totalNo} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // Display selection based on current state
-  const renderContent = () => {
-    if (isGenerating) {
-      return (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="h-10 w-10 animate-spin text-primary mb-2" />
-          <p className="text-muted-foreground">Gerando relatório, aguarde...</p>
-        </div>
-      );
-    }
-    
-    if (!reportGenerated) {
-      return (
-        <div className="flex items-center justify-center py-20 text-muted-foreground">
-          Selecione uma empresa e um funcionário, e clique em "Gerar Relatório" para visualizar os resultados.
-        </div>
-      );
-    }
-
-    return (
-      <>
-        {renderStatisticsSection()}
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 mb-8">
-            <TabsTrigger value="diagnostico">Diagnóstico Individual</TabsTrigger>
-            <TabsTrigger value="mapa">Mapa de Risco</TabsTrigger>
-            <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="diagnostico" className="mt-0">
-            <DiagnosticoIndividual 
-              result={result} 
-              respostas={respostas}
-              questions={extractQuestionsFromResponses()}
-            />
-          </TabsContent>
-
-          <TabsContent value="mapa" className="mt-0">
-            <MapaRiscoPsicossocial 
-              companyId={selectedCompanyId}
-              departmentId=""
-              dateRange={{ from: new Date(), to: new Date() }}
-            />
-          </TabsContent>
-
-          <TabsContent value="pgr" className="mt-0">
-            {selectedCompany && selectedEmployee ? (
-              <RelatorioPGR
-                company={selectedCompany}
-                employee={selectedEmployee}
-                questions={extractQuestionsFromResponses()}
-                respostas={respostas}
-              />
-            ) : (
-              <div className="flex items-center justify-center py-10 text-muted-foreground">
-                Selecione uma empresa e um funcionário para gerar o relatório PGR.
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </>
-    );
-  };
-
   const handleCompanyChange = (companyId: string) => {
     setSelectedCompanyId(companyId);
     setSelectedEmployeeId("");
     setReportGenerated(false);
-    setRespostas([]);
   };
 
   const handleEmployeeChange = (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
     setReportGenerated(false);
-    setRespostas([]);
   };
 
   const handlePeriodChange = (period: string) => {
@@ -360,24 +112,51 @@ const RelatoriosPage: React.FC = () => {
       return;
     }
     
-    if (!selectedEmployeeId) {
-      toast.warning("Por favor, selecione um funcionário");
-      return;
-    }
-    
-    setReportGenerated(true);
-    fetchEmployeeResponses();
+    setIsGenerating(true);
+    // Simulate report generation (in a real app, this would fetch data from the API)
+    setTimeout(() => {
+      setIsGenerating(false);
+      setReportGenerated(true);
+      toast.success("Relatório gerado com sucesso!");
+    }, 1500);
   };
 
   const selectedCompany = companies.find(c => c.id === selectedCompanyId) || null;
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) || null;
+
+  // Sample form result for diagnostic
+  const sampleFormResult: FormResult = {
+    id: "sample-result",
+    employeeId: selectedEmployeeId || "1",
+    empresa_id: selectedCompanyId || "1",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    answers: {
+      q1: { 
+        questionId: "q1",
+        answer: true 
+      },
+      q2: { 
+        questionId: "q2", 
+        answer: false 
+      },
+      q3: { 
+        questionId: "q3", 
+        answer: true 
+      }
+    },
+    total_sim: 2,
+    total_nao: 1,
+    is_complete: true,
+    last_updated: new Date().toISOString(),
+    formulario_id: "f1"
+  };
 
   return (
     <Layout title="Relatórios">
       <div className="space-y-4 px-4 py-6">
         <FilterSection
           companies={companies}
-          employees={employees}
           selectedCompanyId={selectedCompanyId}
           selectedEmployeeId={selectedEmployeeId}
           onCompanyChange={handleCompanyChange}
@@ -389,13 +168,58 @@ const RelatoriosPage: React.FC = () => {
         <div className="flex justify-end mb-4">
           <Button 
             onClick={handleGenerateReport} 
-            disabled={!selectedCompanyId || !selectedEmployeeId || isGenerating}
+            disabled={!selectedCompanyId || isGenerating}
           >
             {isGenerating ? "Gerando..." : "Gerar Relatório"}
           </Button>
         </div>
 
-        {renderContent()}
+        {reportGenerated && (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid grid-cols-3 mb-8">
+              <TabsTrigger value="diagnostico">Diagnóstico Individual</TabsTrigger>
+              <TabsTrigger value="mapa">Mapa de Risco</TabsTrigger>
+              <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="diagnostico" className="mt-0">
+              <DiagnosticoIndividual
+                result={sampleFormResult}
+                questions={sampleQuestions}
+                companyId={selectedCompanyId}
+              />
+            </TabsContent>
+
+            <TabsContent value="mapa" className="mt-0">
+              <MapaRiscoPsicossocial 
+                companyId={selectedCompanyId}
+                departmentId=""
+                dateRange={{ from: new Date(), to: new Date() }}
+              />
+            </TabsContent>
+
+            <TabsContent value="pgr" className="mt-0">
+              {selectedCompany && selectedEmployee ? (
+                <RelatorioPGR
+                  company={selectedCompany}
+                  employee={selectedEmployee}
+                  questions={sampleQuestions}
+                  answers={sampleAnswers}
+                />
+              ) : (
+                <div className="flex items-center justify-center py-10 text-muted-foreground">
+                  Selecione uma empresa e um funcionário para gerar o relatório PGR.
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+        
+        {!reportGenerated && (
+          <div className="flex items-center justify-center py-20 text-muted-foreground">
+            Selecione uma empresa e clique em "Gerar Relatório" para visualizar os resultados.
+          </div>
+        )}
       </div>
     </Layout>
   );

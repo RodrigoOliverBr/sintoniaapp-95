@@ -40,7 +40,7 @@ const FormResults: React.FC<FormResultsProps> = ({
   // Synchronize notes when result changes
   useEffect(() => {
     setNotes(result.notas_analista || result.analyistNotes || '');
-  }, [result.notas_analista, result.analyistNotes]);
+  }, [result]);
 
   const saveNotes = async (value: string) => {
     if (!result.id || isReadOnly) return false;

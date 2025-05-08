@@ -6,7 +6,7 @@ import FormPageWrapper from "@/components/form/FormPageWrapper";
 
 const FormularioPage: React.FC = () => {
   return (
-    <Layout title="Formulário de Avaliação">
+    <Layout title="Formulário">
       <FormPageProvider>
         <FormPageWrapper />
       </FormPageProvider>

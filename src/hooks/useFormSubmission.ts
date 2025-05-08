@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { FormResult } from "@/types/avaliacao";
+import { FormResult } from "@/types/form";
 import { saveFormResult, getFormResultByEmployeeId } from "@/services/form";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
@@ -102,7 +102,7 @@ export function useFormSubmission() {
       const updatedResult = await getFormResultByEmployeeId(selectedEmployeeId, selectedFormId);
       
       if (updatedResult) {
-        console.log('Resultado atualizado recebido:', updatedResult);
+        console.log('Resultado atualizado recebido');
         onSuccess(updatedResult);
 
         if (!completeForm) {

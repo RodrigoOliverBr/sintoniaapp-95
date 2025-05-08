@@ -1,182 +1,240 @@
 
-import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from './lib/react-query';
-import { AuthProvider } from "@/contexts/AuthContext";
-import { Toaster } from "@/components/ui/sonner";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import LoginPage from "@/pages/LoginPage";
+import { Toaster } from "@/components/ui/toaster";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import FormularioPage from "./pages/FormularioPage";
+import ComoPreencher from "./pages/ComoPreencher";
+import ComoAvaliar from "./pages/ComoAvaliar";
+import CompaniesPage from "./pages/CompaniesPage";
+import EmployeesPage from "./pages/EmployeesPage";
+import RelatoriosPage from "./pages/RelatoriosPage";
+import NotFound from "./pages/NotFound";
+import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/admin/DashboardPage";
+import ClientesPage from "./pages/admin/ClientesPage";
+import PlanosPage from "./pages/admin/PlanosPage";
+import ContratosPage from "./pages/admin/ContratosPage";
+import FaturamentoPage from "./pages/admin/FaturamentoPage";
+import UserAccountPage from "./pages/UserAccountPage";
+import UsersAdminPage from "./pages/admin/UsersAdminPage";
+import FormulariosPage from "./pages/admin/FormulariosPage";
+import { useEffect, useState } from "react";
+import { ThemeProvider } from "next-themes";
 
-// Import pages directly instead of lazy loading to simplify for now
-import FormularioPage from "@/pages/FormularioPage";
-import HomePage from "@/pages/HomePage";
-import CompaniesPage from "@/pages/CompaniesPage";
-import EmployeesPage from "@/pages/EmployeesPage";
-import RelatoriosPage from "@/pages/RelatoriosPage";
-import NotFoundPage from "@/pages/NotFoundPage";
-import UserAccountPage from "@/pages/UserAccountPage";
-import FormulariosPage from "@/pages/admin/FormulariosPage";
-import ContratosPage from "@/pages/ContratosPage";
-import FaturasPage from "@/pages/FaturasPage";
-import DashboardPage from "@/pages/DashboardPage";
-import ClientesPage from "@/pages/ClientesPage";
-import ComoPreencherPage from "@/pages/ComoPreencherPage";
-import ComoAvaliarPage from "@/pages/ComoAvaliarPage";
+const queryClient = new QueryClient();
 
-function App() {
+const ProtectedRoute = ({ children, userType }: { children: React.ReactNode, userType: 'admin' | 'client' | 'all' }) => {
+  const currentUserType = localStorage.getItem("sintonia:userType") || "";
+  
+  // Enforce light theme
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+    document.documentElement.style.backgroundColor = "white";
+    document.body.style.backgroundColor = "white";
+    document.documentElement.style.color = "black";
+    document.body.style.color = "black";
+  }, []);
+  
+  if (!currentUserType) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Verificar se o usuário tem o tipo correto para acessar a rota
+  if (userType === 'admin' && currentUserType !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+  
+  // Redirecionamento para módulo administrativo se usuário admin tentar acessar área de cliente
+  if (userType === 'client' && currentUserType === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  
+  return children;
+};
+
+const App = () => {
+  // Moved authentication check to this component only
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  useEffect(() => {
+    // Only check localStorage once during initialization
+    const userType = localStorage.getItem("sintonia:userType");
+    setIsAuthenticated(!!userType);
+    
+    // Enforce light theme
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+    document.documentElement.style.backgroundColor = "white";
+    document.body.style.backgroundColor = "white";
+    document.documentElement.style.color = "black";
+    document.body.style.color = "black";
+  }, []);
+  
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <Suspense fallback={<div>Carregando...</div>}>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<LoginPage />} />
-
-              {/* Protected routes */}
-              <Route
-                path="/"
+      <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">
+        <Toaster />
+        <BrowserRouter>
+          <Routes>
+            {/* Login route is accessible to everyone */}
+            <Route path="/login" element={<LoginPage />} />
+            
+            {/* Rotas do cliente */}
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute userType="client">
+                  <FormularioPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/como-preencher" 
+              element={
+                <ProtectedRoute userType="client">
+                  <ComoPreencher />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/como-avaliar" 
+              element={
+                <ProtectedRoute userType="client">
+                  <ComoAvaliar />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/minha-conta" 
+              element={
+                <ProtectedRoute userType="all">
+                  <UserAccountPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/cadastros/empresas" 
+              element={
+                <ProtectedRoute userType="client">
+                  <CompaniesPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/cadastros/funcionarios" 
+              element={
+                <ProtectedRoute userType="client">
+                  <EmployeesPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/relatorios" 
+              element={
+                <ProtectedRoute userType="client">
+                  <RelatoriosPage />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Rotas do admin */}
+            <Route 
+              path="/admin/dashboard" 
+              element={
+                <ProtectedRoute userType="admin">
+                  <DashboardPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/clientes" 
+              element={
+                <ProtectedRoute userType="admin">
+                  <ClientesPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/planos" 
+              element={
+                <ProtectedRoute userType="admin">
+                  <PlanosPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/contratos" 
+              element={
+                <ProtectedRoute userType="admin">
+                  <ContratosPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/faturamento" 
+              element={
+                <ProtectedRoute userType="admin">
+                  <FaturamentoPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/usuarios" 
+              element={
+                <ProtectedRoute userType="admin">
+                  <UsersAdminPage />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Rotas para o gerenciamento de formulários */}
+            <Route path="/admin/formularios">
+              <Route 
+                index
                 element={
-                  <ProtectedRoute>
-                    <HomePage />
+                  <ProtectedRoute userType="admin">
+                    <FormulariosPage />
                   </ProtectedRoute>
-                }
+                } 
+              />
+              <Route 
+                path=":formularioId"
+                element={
+                  <ProtectedRoute userType="admin">
+                    <FormulariosPage />
+                  </ProtectedRoute>
+                } 
               />
               <Route
-                path="/dashboard"
+                path="novo"
                 element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/companies"
-                element={
-                  <ProtectedRoute>
-                    <CompaniesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/employees"
-                element={
-                  <ProtectedRoute>
-                    <EmployeesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/formulario"
-                element={
-                  <ProtectedRoute>
-                    <FormularioPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/relatorios"
-                element={
-                  <ProtectedRoute>
-                    <RelatoriosPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/account"
-                element={
-                  <ProtectedRoute>
-                    <UserAccountPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/formularios"
-                element={
-                  <ProtectedRoute>
+                  <ProtectedRoute userType="admin">
                     <FormulariosPage />
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/contracts"
-                element={
-                  <ProtectedRoute>
-                    <ContratosPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/faturas"
-                element={
-                  <ProtectedRoute>
-                    <FaturasPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clientes"
-                element={
-                  <ProtectedRoute>
-                    <ClientesPage />
-                  </ProtectedRoute>
-                }
-              />
-              
-              {/* New routes based on SidebarLinks */}
-              <Route
-                path="/como-preencher"
-                element={
-                  <ProtectedRoute>
-                    <ComoPreencherPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/como-avaliar"
-                element={
-                  <ProtectedRoute>
-                    <ComoAvaliarPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/minha-conta"
-                element={
-                  <ProtectedRoute>
-                    <UserAccountPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/cadastros/empresas"
-                element={
-                  <ProtectedRoute>
-                    <CompaniesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/cadastros/funcionarios"
-                element={
-                  <ProtectedRoute>
-                    <EmployeesPage />
-                  </ProtectedRoute>
-                }
-              />
-              
-              {/* Fallback routes */}
-              <Route path="/404" element={<NotFoundPage />} />
-              <Route path="*" element={<Navigate to="/404" />} />
-            </Routes>
+            </Route>
             
-            <Toaster position="top-right" />
-          </Suspense>
-        </AuthProvider>
-      </Router>
+            {/* Fallback route para usuários autenticados */}
+            <Route 
+              path="/" 
+              element={
+                isAuthenticated ? 
+                  (localStorage.getItem("sintonia:userType") === 'admin' ? 
+                    <Navigate to="/admin/dashboard" replace /> : 
+                    <FormularioPage />
+                  ) : 
+                <Navigate to="/login" replace />
+              } 
+            />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
     </QueryClientProvider>
   );
-}
+};
 
 export default App;

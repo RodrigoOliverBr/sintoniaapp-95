@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Line, Users, Building, FileText } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Activity, Users, Building, FileCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const DashboardPage: React.FC = () => {
@@ -126,7 +125,7 @@ const DashboardPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avaliações</CardTitle>
-            <FileCheck className="h-4 w-4 text-muted-foreground" />
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{avaliacoes}</div>

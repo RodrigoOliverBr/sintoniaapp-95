@@ -8,11 +8,7 @@ export type StatusContrato =
   | "pendente" 
   | "vencido" 
   | "cancelado" 
-  | "renovado"
-  | "inativo"
-  | "sem-contrato"
-  | "vencimento-proximo"
-  | "em-analise";
+  | "renovado";
 
 export type ClienteStatus = 
   | "liberado" 
@@ -20,9 +16,7 @@ export type ClienteStatus =
   | "ativo" 
   | "em-analise" 
   | "sem-contrato" 
-  | "bloqueado-manualmente"
-  | "inativo"
-  | "pendente";
+  | "bloqueado-manualmente";
 
 export interface ClientePerfil {
   id: string;
@@ -37,13 +31,13 @@ export interface ClientePerfil {
 
 export interface ClienteSistema {
   id: string;
-  razao_social: string; // Changed from optional to required for compatibility with admin.ts
+  razao_social?: string;
   razaoSocial?: string;
   nome: string;
-  tipo: TipoPessoa; // Enforced as TipoPessoa
+  tipo: TipoPessoa;
   numeroEmpregados: number;
   dataInclusao: number; // timestamp
-  situacao: ClienteStatus; // Enforced as ClienteStatus
+  situacao: ClienteStatus;
   cnpj?: string;
   cpfCnpj: string;
   email: string;
@@ -52,6 +46,5 @@ export interface ClienteSistema {
   contato?: string;
   planoId?: string;
   contratoId?: string;
-  clienteId?: string;
-  statusContrato?: StatusContrato;
+  clienteId: string;
 }

@@ -1,59 +1,57 @@
 
 import React from "react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface FormNavigationProps {
-  currentSectionIndex: number;
-  sections: any[];
-  onNavigate: (index: number) => void;
-  onSave?: () => void;
-  isSaving?: boolean;
+  sections: { title: string }[];
+  currentSection: string;
+  onSectionChange: (value: string) => void;
 }
 
 const FormNavigation: React.FC<FormNavigationProps> = ({
-  currentSectionIndex,
   sections,
-  onNavigate,
-  onSave,
-  isSaving = false,
+  currentSection,
+  onSectionChange,
 }) => {
-  const isFirstSection = currentSectionIndex === 0;
-  const isLastSection = currentSectionIndex === sections.length - 1;
+  const halfLength = Math.ceil(sections.length / 2);
+  const firstRow = sections.slice(0, halfLength);
+  const secondRow = sections.slice(halfLength);
 
   return (
-    <div className="flex justify-between items-center">
-      <Button
-        variant="outline"
-        onClick={() => onNavigate(currentSectionIndex - 1)}
-        disabled={isFirstSection || isSaving}
-        className="flex items-center gap-2"
-      >
-        <ChevronLeft size={16} />
-        Anterior
-      </Button>
-
-      <div className="text-sm text-muted-foreground">
-        Seção {currentSectionIndex + 1} de {sections.length}
+    <div className="space-y-2 w-full p-1">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {firstRow.map((section) => (
+          <Button
+            key={section.title}
+            variant="outline"
+            size="sm"
+            className={cn(
+              "w-full whitespace-normal text-xs md:text-sm h-auto py-2",
+              currentSection === section.title && "bg-primary text-primary-foreground"
+            )}
+            onClick={() => onSectionChange(section.title)}
+          >
+            {section.title}
+          </Button>
+        ))}
       </div>
-
-      {isLastSection && onSave ? (
-        <Button
-          onClick={onSave}
-          disabled={isSaving}
-        >
-          {isSaving ? "Salvando..." : "Concluir"}
-        </Button>
-      ) : (
-        <Button
-          onClick={() => onNavigate(currentSectionIndex + 1)}
-          disabled={isSaving}
-          className="flex items-center gap-2"
-        >
-          Próxima
-          <ChevronRight size={16} />
-        </Button>
-      )}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {secondRow.map((section) => (
+          <Button
+            key={section.title}
+            variant="outline"
+            size="sm"
+            className={cn(
+              "w-full whitespace-normal text-xs md:text-sm h-auto py-2",
+              currentSection === section.title && "bg-primary text-primary-foreground"
+            )}
+            onClick={() => onSectionChange(section.title)}
+          >
+            {section.title}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 };

@@ -1,12 +1,16 @@
 
-export interface Form {
+export interface Question {
   id: string;
-  titulo: string;
-  descricao?: string;
-  version?: string;
-  ativo: boolean;
-  created_at: string;
-  updated_at: string;
+  texto: string;
+  risco_id: string;
+  secao_id: string;  // Keep this as the primary way to link to sections
+  ordem_pergunta?: number;
+  formulario_id: string;
+  opcoes?: { label: string; value: string; }[];
+  observacao_obrigatoria?: boolean;
+  risco?: Risk;
+  pergunta_opcoes?: QuestionOption[];
+  secao?: Section; // Add reference to section for compatibility
 }
 
 export interface Section {
@@ -17,6 +21,24 @@ export interface Section {
   formulario_id: string;
   created_at: string;
   updated_at: string;
+  count?: number;  // Add this for SecoesTab compatibility
+}
+
+export interface QuestionOption {
+  id: string;
+  pergunta_id: string;
+  texto: string;
+  ordem?: number;
+}
+
+export interface Risk {
+  id: string;
+  texto: string;
+  severidade_id: string;
+  created_at?: string;
+  updated_at?: string;
+  severidade?: Severity;
+  mitigations?: Mitigation[]; // Add this for compatibility with RiskTable
 }
 
 export interface Severity {
@@ -24,18 +46,6 @@ export interface Severity {
   nivel: string;
   descricao?: string;
   ordem?: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Risk {
-  id: string;
-  texto: string;
-  severidade_id: string;
-  severidade?: Severity;
-  created_at?: string;
-  updated_at?: string;
-  mitigations?: Mitigation[];
 }
 
 export interface Mitigation {
@@ -46,75 +56,51 @@ export interface Mitigation {
   updated_at?: string;
 }
 
-export interface Question {
-  id: string;
-  texto: string;
-  secao_id: string;
-  formulario_id: string;
-  risco_id: string;
-  risco?: Risk;
-  ordem_pergunta?: number;
-  observacao_obrigatoria?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  opcoes?: QuestionOption[];
-}
-
-export interface QuestionOption {
-  id: string;
-  texto: string;
-  pergunta_id: string;
-  ordem?: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
 export interface FormAnswer {
   questionId: string;
   answer: boolean | null;
   observation?: string;
   selectedOptions?: string[];
+  otherText?: string;
 }
 
 export interface FormResult {
   id: string;
-  funcionario_id: string;
+  employeeId: string;
   empresa_id: string;
-  formulario_id: string;
+  answers: Record<string, FormAnswer>;
   total_sim: number;
   total_nao: number;
-  is_complete: boolean;
   notas_analista?: string;
+  is_complete: boolean;
+  last_updated: string;
   created_at: string;
   updated_at: string;
-  last_updated: string;
+  formulario_id: string; // Make this required since we need it
   
-  // Aliases for English-friendly naming
-  employeeId?: string;
+  // These properties are used by the FormResults component
   totalYes?: number;
   totalNo?: number;
-  isComplete?: boolean;
   analyistNotes?: string;
-  
-  // Responses in multiple formats
-  respostas?: Answer[];
-  answers?: Record<string, {
-    questionId: string;
-    answer: boolean | null;
-    observation?: string;
-  }>;
-  
-  // Severity classification
   yesPerSeverity?: Record<string, number>;
 }
 
-export interface Answer {
+export interface SeverityLevel {
   id: string;
-  avaliacao_id: string;
-  pergunta_id: string;
-  resposta: boolean | null;
-  observacao?: string;
-  opcoes_selecionadas?: string[];
-  created_at?: string;
-  updated_at?: string;
+  level: string;
+  color: string;
+  description: string;
+}
+
+export interface FormData {
+  sections: {
+    title: string;
+    description?: string;
+    questions: {
+      id: string;
+      text: string;
+      severity: string;
+      options?: { label: string; value: string; }[];
+    }[];
+  }[];
 }

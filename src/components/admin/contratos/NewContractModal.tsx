@@ -1,213 +1,287 @@
 
-import React, { useState, useEffect } from "react";
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-} from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import React, { useEffect, useState } from "react";
+import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import ContractForm from "./ContractForm";
+import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
 import { toast } from "sonner";
-import { cnpj as cnpjValidator } from "cpf-cnpj-validator";
-import { cpf as cpfValidator } from "cpf-cnpj-validator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ClienteSistema } from "@/types/cadastro";
-import { supabase } from "@/integrations/supabase/client";
-import { handleSupabaseError } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { supabase, ensureAuthenticated, logAuthStatus } from "@/integrations/supabase/client";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface NewContractModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onContractCreated?: () => void;
+  formClienteId: string;
+  setFormClienteId: (value: string) => void;
+  formPlanoId: string;
+  setFormPlanoId: (value: string) => void;
+  formDataInicio: Date;
+  setFormDataInicio: (value: Date) => void;
+  formDataFim: Date;
+  setFormDataFim: (value: Date) => void;
+  formDataPrimeiroVencimento: Date;
+  setFormDataPrimeiroVencimento: (value: Date) => void;
+  formValorMensal: number;
+  setFormValorMensal: (value: number) => void;
+  formStatus: StatusContrato;
+  setFormStatus: (value: StatusContrato) => void;
+  formTaxaImplantacao: number;
+  setFormTaxaImplantacao: (value: number) => void;
+  formObservacoes: string;
+  setFormObservacoes: (value: string) => void;
+  formNumeroContrato: string;
+  setFormNumeroContrato: (value: string) => void;
+  clientes: ClienteSistema[];
+  planos: Plano[];
+  isLoading: boolean;
+  onClose: () => void;
+  onSave: () => void;
 }
 
-type ClienteStatus = "liberado" | "bloqueado" | "pendente" | "ativo" | "em-analise" | "sem-contrato" | "bloqueado-manualmente";
-type TipoPessoa = "fisica" | "juridica";
-
-const NewContractModal: React.FC<NewContractModalProps> = ({ open, onOpenChange, onContractCreated }) => {
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [cpfCnpj, setCpfCnpj] = useState("");
-  const [tipoPessoa, setTipoPessoa] = useState<TipoPessoa>("fisica");
-  const [clientes, setClientes] = useState<ClienteSistema[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast: legacyToast } = useToast();
+const NewContractModal: React.FC<NewContractModalProps> = ({
+  formClienteId,
+  setFormClienteId,
+  formPlanoId,
+  setFormPlanoId,
+  formDataInicio,
+  setFormDataInicio,
+  formDataFim,
+  setFormDataFim,
+  formDataPrimeiroVencimento,
+  setFormDataPrimeiroVencimento,
+  formValorMensal,
+  setFormValorMensal,
+  formStatus,
+  setFormStatus,
+  formTaxaImplantacao,
+  setFormTaxaImplantacao,
+  formObservacoes,
+  setFormObservacoes,
+  formNumeroContrato,
+  setFormNumeroContrato,
+  clientes,
+  planos,
+  isLoading,
+  onClose,
+  onSave,
+}) => {
+  const [clientesData, setClientesData] = useState<ClienteSistema[]>([]);
+  const [planosData, setPlanosData] = useState<Plano[]>([]);
+  const [localLoading, setLocalLoading] = useState(false);
 
   useEffect(() => {
-    const fetchClientes = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('clientes_sistema')
-          .select('*');
+    // Set local data from props, but also check if they might be empty
+    setClientesData(clientes);
+    setPlanosData(planos);
 
-        if (error) {
-          console.error("Erro ao buscar clientes:", error);
-          legacyToast({
-            variant: "destructive",
-            title: "Erro!",
-            description: handleSupabaseError(error),
-          });
-        } else {
-          const clientesFormatted = data.map(cliente => ({
-            ...cliente,
-            nome: cliente.razao_social || cliente.nome || "",
-            dataInclusao: cliente.created_at ? new Date(cliente.created_at).getTime() : null,
-            dataUltimaAlteracao: cliente.updated_at ? new Date(cliente.updated_at).getTime() : null,
-          }));
-          
-          setClientes(clientesFormatted as ClienteSistema[]);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar clientes:", error);
-        legacyToast({
-          variant: "destructive",
-          title: "Erro!",
-          description: "Não foi possível carregar a lista de clientes.",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchClientes();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-
-    // Validate CPF/CNPJ based on the selected type
-    if (tipoPessoa === "fisica" && !cpfValidator.isValid(cpfCnpj)) {
-      toast.error("CPF inválido.");
-      setIsSaving(false);
-      return;
+    if (clientes.length === 0 || planos.length === 0) {
+      loadMissingData();
     }
+  }, [clientes, planos]);
 
-    if (tipoPessoa === "juridica" && !cnpjValidator.isValid(cpfCnpj)) {
-      toast.error("CNPJ inválido.");
-      setIsSaving(false);
-      return;
-    }
+  const loadMissingData = async () => {
+    setLocalLoading(true);
+    console.log("NewContractModal: Carregando dados localmente devido a dados ausentes");
 
     try {
-      // Prepare data according to the database schema
-      const clienteData = {
-        razao_social: nome, // Required field on the server
-        nome: nome,
-        email: email,
-        cnpj: tipoPessoa === "juridica" ? cpfCnpj : "",
-        cpfCnpj: cpfCnpj,
-        tipo: tipoPessoa,
-        situacao: 'pendente' as ClienteStatus,
-        telefone: "", // Empty string for required field
-        responsavel: "",
-      };
+      // Load clients if needed
+      if (clientes.length === 0) {
+        const { data: clientesResult, error: clientesError } = await supabase
+          .from('clientes_sistema')
+          .select('*');
+        
+        if (clientesError) {
+          console.error("NewContractModal: Erro ao carregar clientes localmente:", clientesError);
+          toast.error("Erro ao carregar clientes");
+        } else if (clientesResult) {
+          console.log(`NewContractModal: ${clientesResult.length} clientes carregados localmente`);
+          
+          const clientesFormatted = clientesResult.map(c => ({
+            id: c.id,
+            nome: c.razao_social || "",
+            razao_social: c.razao_social || "",
+            razaoSocial: c.razao_social || "",
+            cnpj: c.cnpj || "",
+            cpfCnpj: c.cnpj || "",
+            telefone: c.telefone || "",
+            email: c.email || "",
+            responsavel: c.responsavel || "",
+            contato: c.responsavel || "",
+            situacao: c.situacao || "",
+            tipo: "cliente",
+            numeroEmpregados: 0,
+            dataInclusao: c.created_at ? new Date(c.created_at).getTime() : Date.now(),
+            ativo: true,
+            planoId: c.plano_id || "",
+            contratoId: c.contrato_id || ""
+          }));
+          
+          setClientesData(clientesFormatted);
+        }
+      }
       
-      const { data, error } = await supabase
-        .from('clientes_sistema')
-        .insert([clienteData]);
-
-      if (error) {
-        console.error("Erro ao criar cliente:", error);
-        toast.error(handleSupabaseError(error) || "Erro ao criar cliente.");
-      } else {
-        toast.success("Cliente criado com sucesso!");
-        setNome("");
-        setEmail("");
-        setCpfCnpj("");
-        setTipoPessoa("fisica");
-        onOpenChange(false); // Close the modal
-        if (onContractCreated) {
-          onContractCreated(); // Refresh the contracts list
+      // Load plans if needed
+      if (planos.length === 0) {
+        const { data: planosResult, error: planosError } = await supabase
+          .from('planos')
+          .select('*')
+          .eq('ativo', true);
+        
+        if (planosError) {
+          console.error("NewContractModal: Erro ao carregar planos localmente:", planosError);
+          toast.error("Erro ao carregar planos");
+        } else if (planosResult) {
+          console.log(`NewContractModal: ${planosResult.length} planos carregados localmente`);
+          
+          const planosFormatted = planosResult.map(p => ({
+            id: p.id,
+            nome: p.nome || "",
+            valor: p.valor_mensal || 0,
+            valorMensal: p.valor_mensal || 0,
+            valorImplantacao: p.valor_implantacao || 0,
+            descricao: p.descricao || "",
+            ativo: p.ativo || false,
+            numeroUsuarios: p.limite_empregados || 0,
+            limiteEmpresas: p.limite_empresas || 0,
+            limiteEmpregados: p.limite_empregados || 0,
+            empresasIlimitadas: p.empresas_ilimitadas || false,
+            empregadosIlimitados: p.empregados_ilimitados || false,
+            dataValidade: p.data_validade ? new Date(p.data_validade).getTime() : null,
+            semVencimento: p.sem_vencimento || false
+          }));
+          
+          setPlanosData(planosFormatted);
         }
       }
     } catch (error) {
-      console.error("Erro ao criar cliente:", error);
-      toast.error((error as Error).message || "Erro ao criar cliente.");
+      console.error("NewContractModal: Erro ao carregar dados localmente:", error);
     } finally {
-      setIsSaving(false);
+      setLocalLoading(false);
     }
   };
 
+  const validateForm = () => {
+    if (!formClienteId) {
+      toast.error("Por favor, selecione um cliente");
+      return false;
+    }
+    if (!formPlanoId) {
+      toast.error("Por favor, selecione um plano");
+      return false;
+    }
+    if (!formNumeroContrato) {
+      toast.error("Por favor, informe o número do contrato");
+      return false;
+    }
+    if (!formDataInicio) {
+      toast.error("Por favor, selecione a data de início");
+      return false;
+    }
+    if (!formDataFim) {
+      toast.error("Por favor, selecione a data de fim");
+      return false;
+    }
+    if (!formValorMensal || formValorMensal <= 0) {
+      toast.error("Por favor, informe um valor mensal válido");
+      return false;
+    }
+    if (!formStatus) {
+      toast.error("Por favor, selecione um status");
+      return false;
+    }
+    if (formTaxaImplantacao < 0) {
+      toast.error("A taxa de implantação não pode ser negativa");
+      return false;
+    }
+    return true;
+  };
+  
+  // Verificar autenticação quando o modal for aberto
+  useEffect(() => {
+    const checkAuth = async () => {
+      console.log("Verificando autenticação no NewContractModal...");
+      await logAuthStatus();
+      
+      // Verificar se há clientes e planos disponíveis
+      console.log("Clientes disponíveis:", clientesData.length);
+      console.log("Planos disponíveis:", planosData.length);
+    };
+    
+    checkAuth();
+  }, [clientesData, planosData]);
+  
+  const handleSave = async () => {
+    console.log("Tentando salvar novo contrato com dados:", {
+      cliente: formClienteId,
+      plano: formPlanoId,
+      dataInicio: formDataInicio,
+      dataFim: formDataFim,
+      valor: formValorMensal,
+      status: formStatus
+    });
+    
+    // Verificar autenticação antes de salvar
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error("Usuário não autenticado para criar contrato");
+      toast.error("Você precisa estar autenticado como administrador para criar o contrato");
+      return;
+    }
+    
+    // Log da sessão atual para debug
+    const { data: sessionData } = await supabase.auth.getSession();
+    console.log("Sessão atual durante handleSave (NewContractModal):", sessionData?.session?.user?.id);
+    
+    // Log das permissões do usuário
+    await logAuthStatus();
+    
+    if (!validateForm()) return;
+    onSave();
+  };
+
   return (
-    <Modal open={open} onOpenChange={onOpenChange}>
-      <ModalContent>
-        <ModalHeader>Novo Contrato</ModalHeader>
-        <ModalBody>
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                type="text"
-                id="name"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
-              <Input
-                type="text"
-                id="cpfCnpj"
-                value={cpfCnpj}
-                onChange={(e) => setCpfCnpj(e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Tipo Pessoa</Label>
-              <Select value={tipoPessoa} onValueChange={(value) => setTipoPessoa(value as TipoPessoa)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fisica">Física</SelectItem>
-                  <SelectItem value="juridica">Jurídica</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Criando..." : "Criar Contrato"}
-            </Button>
-          </form>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            Fechar
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+    <DialogContent className="sm:max-w-[600px]">
+      <DialogHeader>
+        <DialogTitle>Adicionar Novo Contrato</DialogTitle>
+        <DialogDescription>
+          Preencha as informações do novo contrato. Campos com * são obrigatórios.
+        </DialogDescription>
+      </DialogHeader>
+      <ScrollArea className="h-[500px]">
+        <ContractForm
+          formClienteId={formClienteId}
+          setFormClienteId={setFormClienteId}
+          formPlanoId={formPlanoId}
+          setFormPlanoId={setFormPlanoId}
+          formDataInicio={formDataInicio}
+          setFormDataInicio={setFormDataInicio}
+          formDataFim={formDataFim}
+          setFormDataFim={setFormDataFim}
+          formDataPrimeiroVencimento={formDataPrimeiroVencimento}
+          setFormDataPrimeiroVencimento={setFormDataPrimeiroVencimento}
+          formValorMensal={formValorMensal}
+          setFormValorMensal={setFormValorMensal}
+          formStatus={formStatus}
+          setFormStatus={setFormStatus}
+          formTaxaImplantacao={formTaxaImplantacao}
+          setFormTaxaImplantacao={setFormTaxaImplantacao}
+          formObservacoes={formObservacoes}
+          setFormObservacoes={setFormObservacoes}
+          formNumeroContrato={formNumeroContrato}
+          setFormNumeroContrato={setFormNumeroContrato}
+          clientes={clientesData}
+          planos={planosData}
+          isLoading={isLoading || localLoading}
+          validateForm={validateForm}
+        />
+      </ScrollArea>
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose} disabled={isLoading || localLoading}>
+          Cancelar
+        </Button>
+        <Button onClick={handleSave} disabled={isLoading || localLoading}>
+          {isLoading || localLoading ? "Salvando..." : "Salvar"}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   );
 };
 

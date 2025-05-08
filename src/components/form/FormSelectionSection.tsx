@@ -1,22 +1,24 @@
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import React from "react";
+import FormSelector from "@/components/form/FormSelector";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Company, Employee, Form } from "@/types/cadastro";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 interface FormSelectionSectionProps {
   companies: Company[];
   employees: Employee[];
   availableForms: Form[];
-  selectedCompanyId?: string;
-  selectedEmployeeId?: string;
-  selectedFormId?: string;
-  onCompanyChange: (companyId: string) => void;
-  onEmployeeChange: (employeeId: string) => void;
-  onFormChange: (formId: string) => void;
-  isLoadingHistory?: boolean;
+  selectedCompanyId: string | undefined;
+  selectedEmployeeId: string | undefined;
+  selectedFormId: string;
+  onCompanyChange: (value: string) => void;
+  onEmployeeChange: (value: string) => void;
+  onFormChange: (value: string) => void;
+  isLoadingHistory: boolean;
+  showNewEvaluationButton?: boolean;
+  onNewEvaluation?: () => void;
 }
 
 const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
@@ -29,93 +31,55 @@ const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
   onCompanyChange,
   onEmployeeChange,
   onFormChange,
-  isLoadingHistory = false,
+  isLoadingHistory,
+  showNewEvaluationButton,
+  onNewEvaluation
 }) => {
-  // Auto-select first form if available
-  useEffect(() => {
-    if (availableForms.length > 0 && !selectedFormId) {
-      onFormChange(availableForms[0].id);
+  const handleNewEvaluationClick = () => {
+    if (onNewEvaluation) {
+      console.log("Nova Avaliação button clicked");
+      onNewEvaluation();
     }
-  }, [availableForms, selectedFormId, onFormChange]);
-  
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Seleção de Avaliação</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="company">Empresa</Label>
-            <Select 
-              value={selectedCompanyId} 
-              onValueChange={onCompanyChange}
-            >
-              <SelectTrigger id="company">
-                <SelectValue placeholder="Selecione a empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <Card className="shadow-lg">
+      <CardHeader className="border-b bg-muted/40">
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-2xl text-primary">
+              Preenchimento do Formulário
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Selecione a empresa, o funcionário e o formulário para preencher.
+            </CardDescription>
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="employee">Funcionário</Label>
-            <Select
-              value={selectedEmployeeId}
-              onValueChange={onEmployeeChange}
-              disabled={!selectedCompanyId || employees.length === 0}
+          {showNewEvaluationButton && selectedEmployeeId && (
+            <Button 
+              onClick={handleNewEvaluationClick}
+              variant="outline" 
+              className="flex items-center gap-2"
+              type="button"
             >
-              <SelectTrigger id="employee">
-                <SelectValue placeholder={
-                  !selectedCompanyId 
-                    ? "Selecione uma empresa primeiro"
-                    : employees.length === 0
-                      ? "Nenhum funcionário disponível"
-                      : "Selecione o funcionário"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((employee) => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="form">Formulário</Label>
-            <Select
-              value={selectedFormId}
-              onValueChange={onFormChange}
-              disabled={!selectedEmployeeId || availableForms.length === 0}
-            >
-              <SelectTrigger id="form">
-                <SelectValue placeholder={
-                  !selectedEmployeeId 
-                    ? "Selecione um funcionário primeiro"
-                    : availableForms.length === 0
-                      ? "Nenhum formulário disponível"
-                      : "Selecione o formulário"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {availableForms.map((form) => (
-                  <SelectItem key={form.id} value={form.id}>
-                    {form.titulo}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <Plus size={16} />
+              Nova Avaliação
+            </Button>
+          )}
         </div>
+      </CardHeader>
+      
+      <CardContent className="pt-6">
+        <FormSelector
+          companies={companies}
+          employees={employees}
+          availableForms={availableForms}
+          selectedCompanyId={selectedCompanyId}
+          selectedEmployeeId={selectedEmployeeId}
+          selectedFormId={selectedFormId}
+          onCompanyChange={onCompanyChange}
+          onEmployeeChange={onEmployeeChange}
+          onFormChange={onFormChange}
+        />
       </CardContent>
     </Card>
   );
