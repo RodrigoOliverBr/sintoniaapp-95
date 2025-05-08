@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
   onView 
 }) => {
   const formatDate = (date: number) => {
+    if (!date) return "-";
     return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
   };
 
@@ -33,7 +35,7 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
       case "bloqueado":
         return <Badge variant="destructive">Bloqueado</Badge>;
       case "pendente":
-        return <Badge variant="warning">Pendente</Badge>;
+        return <Badge variant="default">Pendente</Badge>; // Changed from "warning" to "default"
       case "ativo":
         return <Badge variant="default">Ativo</Badge>;
       case "em-analise":
@@ -64,7 +66,7 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
           <TableRow key={cliente.id}>
             <TableCell className="font-medium">{cliente.nome}</TableCell>
             <TableCell>{cliente.email}</TableCell>
-            <TableCell>{cliente.cpfCnpj}</TableCell>
+            <TableCell>{cliente.cpfCnpj || cliente.cnpj}</TableCell>
             <TableCell>{formatDate(cliente.dataInclusao)}</TableCell>
             <TableCell>{renderStatus(cliente.situacao)}</TableCell>
             <TableCell className="text-right">
