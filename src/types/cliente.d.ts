@@ -47,4 +47,5 @@ export interface ClienteSistema {
   planoId?: string;
   contratoId?: string;
   clienteId: string;
+  senha?: string; // Add password field for user creation
 }
