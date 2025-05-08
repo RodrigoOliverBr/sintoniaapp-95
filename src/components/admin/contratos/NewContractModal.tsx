@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Modal,
@@ -68,14 +69,12 @@ const NewContractModal: React.FC<NewContractModalProps> = ({ open, onOpenChange,
         } else {
           const clientesFormatted = data.map(cliente => ({
             ...cliente,
-            dataInclusao: cliente.dataInclusao ? new Date(cliente.dataInclusao).getTime() : null,
-            dataUltimaAlteracao: cliente.dataUltimaAlteracao ? new Date(cliente.dataUltimaAlteracao).getTime() : null,
+            nome: cliente.razao_social || cliente.nome || "",
+            dataInclusao: cliente.created_at ? new Date(cliente.created_at).getTime() : null,
+            dataUltimaAlteracao: cliente.updated_at ? new Date(cliente.updated_at).getTime() : null,
           }));
-          setClientes(clientesFormatted.map(cliente => ({
-            ...cliente, 
-            situacao: cliente.situacao as ClienteStatus,
-            tipo: cliente.tipo as TipoPessoa
-          })));
+          
+          setClientes(clientesFormatted as ClienteSistema[]);
         }
       } catch (error) {
         console.error("Erro ao buscar clientes:", error);
@@ -110,19 +109,22 @@ const NewContractModal: React.FC<NewContractModalProps> = ({ open, onOpenChange,
     }
 
     try {
+      // Prepare data according to the database schema
+      const clienteData = {
+        razao_social: nome, // Required field on the server
+        nome: nome,
+        email: email,
+        cnpj: tipoPessoa === "juridica" ? cpfCnpj : "",
+        cpfCnpj: cpfCnpj,
+        tipo: tipoPessoa,
+        situacao: 'pendente' as ClienteStatus,
+        telefone: "", // Empty string for required field
+        responsavel: "",
+      };
+      
       const { data, error } = await supabase
         .from('clientes_sistema')
-        .insert([
-          {
-            nome: nome,
-            email: email,
-            cpfCnpj: cpfCnpj,
-            tipo: tipoPessoa,
-            dataInclusao: new Date().toISOString(),
-            dataUltimaAlteracao: new Date().toISOString(),
-            situacao: 'pendente', // Set initial status to 'pendente'
-          },
-        ]);
+        .insert([clienteData]);
 
       if (error) {
         console.error("Erro ao criar cliente:", error);

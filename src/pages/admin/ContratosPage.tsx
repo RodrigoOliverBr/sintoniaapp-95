@@ -3,18 +3,16 @@ import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Plus, Trash2, UserPlus } from "lucide-react";
+import { Edit, Plus, Trash2 } from "lucide-react";
 import { Search } from "lucide-react";
 import {
   AlertDialog,
@@ -35,10 +33,6 @@ import { ptBR } from 'date-fns/locale';
 import { ClienteSistema } from "@/types/cadastro";
 import NewContractModal from "@/components/admin/contratos/NewContractModal";
 import EditContractModal from "@/components/admin/contratos/EditContractModal";
-
-interface DataTableProps {
-  data: any[];
-}
 
 const ContratosPage: React.FC = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
@@ -69,11 +63,12 @@ const ContratosPage: React.FC = () => {
 
       const clientesFormatted = data.map((cliente) => ({
         ...cliente,
-        dataInclusao: cliente.dataInclusao ? new Date(cliente.dataInclusao) : null,
+        nome: cliente.razao_social || cliente.nome || "",
+        dataInclusao: cliente.created_at ? new Date(cliente.created_at) : null,
       }));
 
-      setClientes(clientesFormatted as any);
-      setFilteredClientes(clientesFormatted as any);
+      setClientes(clientesFormatted as ClienteSistema[]);
+      setFilteredClientes(clientesFormatted as ClienteSistema[]);
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
       toast.error((error as Error).message || "Erro ao buscar clientes.");
@@ -232,7 +227,8 @@ const ContratosPage: React.FC = () => {
 
       <NewContractModal
         open={isNewContractModalOpen}
-        onClose={handleCloseNewContractModal}
+        onOpenChange={setIsNewContractModalOpen}
+        onContractCreated={fetchClientes}
       />
 
       {selectedCliente && (
