@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -12,20 +11,16 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  ClienteStatus,
-  TipoPessoa,
-} from "@/types/cliente.d.ts";
+import { ClienteStatus, TipoPessoa } from "@/types/admin"; // Usando tipos do admin
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ClientesTable from "@/components/admin/clientes/ClientesTable";
-import { Search } from 'lucide-react';
 
-// Ensure we're using the right types for consistency
-import { ClienteSistema } from "@/types/cliente.d.ts"; 
+// Usando apenas o tipo de admin para consistência
+import { ClienteSistema } from "@/types/admin";
 
 const ClientesPage: React.FC = () => {
   const [openNewModal, setOpenNewModal] = useState(false);
@@ -71,21 +66,21 @@ const ClientesPage: React.FC = () => {
       // Convert database schema to ClienteSistema type
       const clientesFormatted: ClienteSistema[] = data?.map((c) => ({
         id: c.id,
-        nome: c.nome || c.razao_social || "",  // Use razao_social as fallback for nome
+        nome: c.razao_social || "", // Use razao_social como nome
         razao_social: c.razao_social || "",
         razaoSocial: c.razao_social || "",
         cnpj: c.cnpj || "",
-        cpfCnpj: c.cpf_cnpj || c.cnpj || "",  // Map between different field naming conventions
+        cpfCnpj: c.cnpj || "", // Usar cnpj como cpfCnpj
         telefone: c.telefone || "",
         email: c.email || "",
         responsavel: c.responsavel || "",
-        contato: c.contato || "",
+        contato: c.responsavel || "", // Usar responsavel como contato
         situacao: (c.situacao || "liberado") as ClienteStatus,
-        tipo: (c.tipo || "juridica") as TipoPessoa,
-        numeroEmpregados: c.numero_empregados || 0,
-        dataInclusao: c.data_inclusao || Date.now(),
+        tipo: "juridica" as TipoPessoa, // Defina um tipo padrão
+        numeroEmpregados: 0, // Valor padrão
+        dataInclusao: Date.now(), // Timestamp atual como padrão
         planoId: c.plano_id || "",
-        contratoId: c.contrato_id || "",
+        contratoId: c.contrato_id || ""
       })) || [];
 
       setClientes(clientesFormatted);
@@ -199,7 +194,7 @@ const ClientesPage: React.FC = () => {
     }
   };
 
-  // Renamed to confirmDeleteCliente to avoid duplication with the handler below
+  // Renomeado para confirmDeleteCliente para evitar duplicação
   const confirmDeleteCliente = async () => {
     if (!selectedCliente) {
       toast({
@@ -282,7 +277,7 @@ const ClientesPage: React.FC = () => {
     setSituacao(clienteTyped.situacao as ClienteStatus);
   };
 
-  // This function opens delete modal only, renamed to avoid duplication
+  // Função renomeada para handleDeleteClick para evitar conflito de nomes
   const handleDeleteClick = (cliente: any) => {
     // Cast to correct type for consistency
     const clienteTyped = cliente as unknown as ClienteSistema;

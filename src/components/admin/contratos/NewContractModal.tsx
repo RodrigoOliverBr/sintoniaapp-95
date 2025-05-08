@@ -1,8 +1,10 @@
-import React from "react";
-import { DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+import React, { useState, useEffect } from "react";
+import { DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import ContractForm from "./ContractForm";
-import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
+import { Plano, StatusContrato } from "@/types/admin";
+import { ClienteSistema } from "@/types/admin"; // Usando apenas o tipo de admin
 import { toast } from "sonner";
 import { supabase, ensureAuthenticated, logAuthStatus } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -196,8 +198,9 @@ const NewContractModal: React.FC<NewContractModalProps> = ({
   // Fix the clientesAtivos type casting
   const clientesAtivos = React.useMemo(() => {
     // Cast the clientes to ClienteSistema[] to avoid type errors
-    return (clientes as unknown as ClienteSistema[])
-      .filter(cliente => cliente.situacao === "liberado" || cliente.situacao === "ativo");
+    return clientes.filter(cliente => 
+      cliente.situacao === "liberado" || cliente.situacao === "ativo"
+    );
   }, [clientes]);
   
   // Verificar autenticação quando o modal for aberto

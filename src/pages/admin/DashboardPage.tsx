@@ -1,6 +1,7 @@
-import React from "react";
+
+import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Activity, Users, Building, FileCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 

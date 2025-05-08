@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 import SimpleLayout from '@/components/SimpleLayout';
 
 interface UserProfile {
+  id?: string;
   nome?: string;
   email?: string;
   telefone?: string;
@@ -62,7 +64,7 @@ const UserAccountPage: React.FC = () => {
           id: profileData.id || "",
           nome: profileData.nome || "",
           email: profileData.email || "",
-          telefone: profileData.telefone || "", // Only access if exists
+          telefone: profileData.telefone || "", // Adicionamos telefone ao perfil
           tipo: profileData.tipo || "cliente"
         });
       }
@@ -88,10 +90,11 @@ const UserAccountPage: React.FC = () => {
           description: handleSupabaseError(error),
         });
       } else {
-        setUserProfile({
+        // Use spread conditionally apenas se data não for null
+        setUserProfile(data ? {
           ...data,
           telefone: data.telefone || ''
-        });
+        } : null);
         console.log("Perfil carregado:", data);
       }
     } catch (error) {

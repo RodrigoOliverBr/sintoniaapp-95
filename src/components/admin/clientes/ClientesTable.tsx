@@ -22,13 +22,20 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
   onDelete, 
   onView 
 }) => {
-  const formatDate = (date: number) => {
+  const formatDate = (date: number | null | undefined) => {
     if (!date) return "-";
-    return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+    try {
+      return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "-";
+    }
   };
 
   // Fix for ReactNode error - ensure we return valid React nodes
-  const renderStatus = (status: string) => {
+  const renderStatus = (status: string | null | undefined) => {
+    if (!status) return <span>Desconhecido</span>;
+    
     switch (status?.toLowerCase()) {
       case "liberado":
         return <Badge variant="success">Liberado</Badge>;
@@ -49,6 +56,12 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
     }
   };
 
+  const getCPFCNPJ = (cliente: any) => {
+    if (cliente.cpfCnpj) return cliente.cpfCnpj;
+    if (cliente.cnpj) return cliente.cnpj;
+    return "-";
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -62,43 +75,51 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {clientes.map((cliente) => (
-          <TableRow key={cliente.id}>
-            <TableCell className="font-medium">{cliente.nome}</TableCell>
-            <TableCell>{cliente.email}</TableCell>
-            <TableCell>{cliente.cpfCnpj || cliente.cnpj}</TableCell>
-            <TableCell>{formatDate(cliente.dataInclusao)}</TableCell>
-            <TableCell>{renderStatus(cliente.situacao)}</TableCell>
-            <TableCell className="text-right">
-              <div className="flex justify-end gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => onView(cliente)}
-                  disabled={isLoading}
-                >
-                  <Eye size={16} />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => onEdit(cliente)}
-                  disabled={isLoading}
-                >
-                  <Pencil size={16} />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => onDelete(cliente)}
-                  disabled={isLoading}
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </div>
+        {clientes.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={6} className="text-center py-8">
+              Nenhum cliente encontrado
             </TableCell>
           </TableRow>
-        ))}
+        ) : (
+          clientes.map((cliente) => (
+            <TableRow key={cliente.id}>
+              <TableCell className="font-medium">{cliente.nome || cliente.razao_social}</TableCell>
+              <TableCell>{cliente.email || "-"}</TableCell>
+              <TableCell>{getCPFCNPJ(cliente)}</TableCell>
+              <TableCell>{formatDate(cliente.dataInclusao)}</TableCell>
+              <TableCell>{renderStatus(cliente.situacao)}</TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => onView(cliente)}
+                    disabled={isLoading}
+                  >
+                    <Eye size={16} />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => onEdit(cliente)}
+                    disabled={isLoading}
+                  >
+                    <Pencil size={16} />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => onDelete(cliente)}
+                    disabled={isLoading}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))
+        )}
       </TableBody>
     </Table>
   );
