@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ interface DataTableProps {
 
 const ContratosPage: React.FC = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
-  const [filteredClientes, setFilteredClientes] useState<ClienteSistema[]>([]);
+  const [filteredClientes, setFilteredClientes] = useState<ClienteSistema[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isNewContractModalOpen, setIsNewContractModalOpen] = useState(false);
