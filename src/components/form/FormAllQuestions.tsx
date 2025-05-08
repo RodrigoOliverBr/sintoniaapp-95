@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Question } from "@/types/form";
 import QuestionComponent from "@/components/QuestionComponent";
+import { X } from "lucide-react";
 
 interface FormAllQuestionsProps {
   sections: any[];
@@ -41,6 +42,18 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
     }, 3000);
   };
 
+  // Função para marcar todas as perguntas como "Não"
+  const markAllAsNo = () => {
+    // Percorrer todas as perguntas no array questions
+    questions.forEach(question => {
+      // Verificar se a resposta é diferente de "false" antes de alterar
+      // (para evitar chamadas desnecessárias se já estiver marcado como "Não")
+      if (answers[question.id]?.answer !== false) {
+        onAnswerChange(question.id, false);
+      }
+    });
+  };
+
   // Get questions for each section
   const getQuestionsForSection = (sectionId: string) => {
     return questions.filter(q => q.secao_id === sectionId);
@@ -57,6 +70,21 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
 
   return (
     <div className="space-y-10">
+      {/* Botão "Marcar Todas como Não" */}
+      <div className="bg-white p-4 rounded-lg shadow-sm">
+        <Button 
+          onClick={markAllAsNo}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <X size={16} /> 
+          Marcar Todas como Não
+        </Button>
+        <span className="text-sm text-muted-foreground ml-4">
+          Clique para definir todas as perguntas como "Não" de uma vez
+        </span>
+      </div>
+
       {sortedSections.map(section => {
         const sectionQuestions = getQuestionsForSection(section.id);
         

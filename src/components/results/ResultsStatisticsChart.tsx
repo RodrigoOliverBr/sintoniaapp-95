@@ -11,9 +11,13 @@ export const ResultsStatisticsChart: React.FC<ResultsStatisticsChartProps> = ({
   totalYes,
   totalNo,
 }) => {
+  // Garantir que os valores são numéricos
+  const yes = typeof totalYes === 'number' ? totalYes : 0;
+  const no = typeof totalNo === 'number' ? totalNo : 0;
+  
   const chartData = [
-    { name: "Sim", total: totalYes },
-    { name: "Não", total: totalNo },
+    { name: "Sim", total: yes },
+    { name: "Não", total: no },
   ];
 
   return (

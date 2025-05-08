@@ -41,24 +41,34 @@ export interface Avaliacao {
   answers?: Record<string, any>; // To match FormResult interface
 }
 
-// FormResult interface to ensure compatibility
+// FormResult interface para garantir compatibilidade entre formatos diferentes
 export interface FormResult {
   id: string;
   employeeId: string;
-  empresa_id?: string;
-  formulario_id?: string;
-  totalYes?: number;
-  totalNo?: number;
+  empresa_id: string; // Este campo é necessário em ambos os formatos
+  formulario_id: string;
+  
+  // Campos com nomes em português (formato antigo)
   total_sim?: number;
   total_nao?: number;
-  isComplete?: boolean;
   is_complete?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  last_updated?: string;
   notas_analista?: string;
+  
+  // Campos com nomes em inglês (formato novo)
+  totalYes?: number;
+  totalNo?: number;
+  isComplete?: boolean;
   analyistNotes?: string;
+  
+  // Campos comuns
+  created_at: string;
+  updated_at: string;
+  last_updated: string;
+  
+  // Dados de respostas em diferentes formatos
   answers?: Record<string, any>;
   respostas?: AvaliacaoResposta[];
+  
+  // Dados de classificação por severidade
   yesPerSeverity?: Record<string, number>;
 }
