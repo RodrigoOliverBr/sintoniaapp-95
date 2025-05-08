@@ -2,22 +2,14 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
-import { supabase, handleSupabaseError, checkAdminAuth, ensureAuthenticated } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import ClientesTable from "@/components/admin/clientes/ClientesTable";
 import { ClienteDialogs } from "@/components/admin/clientes/ClienteDialogs";
 import { ClienteActions } from "@/components/admin/clientes/ClienteActions";
 import { ClienteForm } from "@/components/admin/ClienteForm";
-import { ClienteSistema, TipoPessoa } from '@/types/admin';
-
-// Create a separate Supabase client for admin operations that won't affect the current session
-// This approach avoids logging out the admin when creating new users
-const createAdminClient = () => {
-  // Use the same URL but with admin headers - this avoids using service role key in frontend
-  // The RLS policies should allow admin users to perform these operations
-  return supabase;
-};
+import { ClienteSistema, ClienteStatus } from "@/types/cliente";
 
 const ClientesPage: React.FC = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
@@ -34,15 +26,6 @@ const ClientesPage: React.FC = () => {
     try {
       console.log("ClientesPage: Iniciando carregamento de clientes...");
       
-      // Verificar autenticação antes de carregar dados
-      const isAuthenticated = await ensureAuthenticated();
-      if (!isAuthenticated) {
-        console.error("Usuário não autenticado ou sem permissões suficientes");
-        toast.error("Você precisa estar autenticado para acessar esta página");
-        setIsLoading(false);
-        return;
-      }
-      
       // Fetch all clients
       const { data: clientesData, error: clientesError } = await supabase
         .from("clientes_sistema")
@@ -51,8 +34,7 @@ const ClientesPage: React.FC = () => {
       
       if (clientesError) {
         console.error("ClientesPage: Erro ao carregar clientes:", clientesError);
-        toast.error("Erro ao carregar clientes: " + handleSupabaseError(clientesError));
-        setIsLoading(false);
+        toast.error("Erro ao carregar clientes");
         return;
       }
       
@@ -66,13 +48,13 @@ const ClientesPage: React.FC = () => {
         
       if (contratosError) {
         console.error("ClientesPage: Erro ao carregar contratos:", contratosError);
-        toast.error("Erro ao carregar informações de contratos: " + handleSupabaseError(contratosError));
+        toast.error("Erro ao carregar informações de contratos");
       }
       
       console.log(`ClientesPage: ${contratosData?.length || 0} contratos ativos encontrados`);
       
       // Map clients to include contract status
-      const clientesProcessed = clientsData?.map(cliente => {
+      const clientesProcessed = clientesData?.map(cliente => {
         // Check if client has active contracts
         const hasActiveContract = contratosData?.some(
           contrato => contrato.cliente_sistema_id === cliente.id && contrato.status === "ativo"
@@ -93,15 +75,14 @@ const ClientesPage: React.FC = () => {
           telefone: cliente.telefone || "",
           responsavel: cliente.responsavel || "",
           contato: cliente.responsavel || "",
-          tipo: "juridica" as TipoPessoa, // Explicit type casting
+          tipo: "juridica" as const,
           numeroEmpregados: 0,
           dataInclusao: cliente.created_at ? new Date(cliente.created_at).getTime() : Date.now(),
-          ativo: true,
-          situacao: hasActiveContract ? "ativo" : "sem-contrato",
+          situacao: (hasActiveContract ? "ativo" : "sem-contrato") as ClienteStatus,
           planoId: cliente.plano_id || "",
           contratoId: contratoId,
-          clienteId: cliente.id,
-          statusContrato: hasActiveContract ? "ativo" : "sem-contrato"
+          clienteId: "",
+          statusContrato: hasActiveContract ? "ativo" : "sem-contrato",
         } as ClienteSistema;
       }) || [];
       
@@ -213,7 +194,7 @@ const ClientesPage: React.FC = () => {
       const { error } = await supabase
         .from("clientes_sistema")
         .update({
-          situacao: "bloqueado", 
+          situacao: "bloqueado", // Assuming 'bloqueado' is a valid value for situacao
         })
         .eq("id", selectedCliente.id);
 
@@ -237,30 +218,52 @@ const ClientesPage: React.FC = () => {
   const handleCreateNew = async (formData: any) => {
     setIsLoading(true);
     try {
-      console.log("Iniciando criação de novo cliente:", formData);
+      console.log("Criando novo cliente com dados:", { 
+        ...formData, 
+        senha: formData.senha ? "[SENHA FORNECIDA]" : "[SEM SENHA]" 
+      });
       
-      // 1. First, check if the email already exists to avoid errors
-      const { data: existingEmail, error: emailCheckError } = await supabase
-        .from("clientes_sistema")
-        .select("id")
-        .eq("email", formData.email)
-        .maybeSingle();
-        
-      if (emailCheckError) {
-        console.error("Erro ao verificar email existente:", emailCheckError);
-        toast.error("Erro ao verificar disponibilidade de email: " + handleSupabaseError(emailCheckError));
-        setIsLoading(false);
-        return;
+      // 1. Primeiro criamos o cliente no Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.senha,
+        options: {
+          data: {
+            full_name: formData.razao_social,
+          }
+        }
+      });
+      
+      if (authError) {
+        console.error("Erro ao criar usuário:", authError);
+        throw new Error(`Erro ao criar usuário: ${authError.message}`);
       }
       
-      if (existingEmail) {
-        toast.error("Este email já está sendo usado por outro cliente");
-        setIsLoading(false);
-        return;
+      if (!authData.user) {
+        throw new Error("Falha ao criar o usuário. Nenhum usuário retornado.");
+      }
+      
+      console.log("Usuário criado com ID:", authData.user.id);
+      
+      // 2. Criamos o perfil do cliente
+      const { error: perfilError } = await supabase
+        .from("perfis")
+        .insert([{
+          id: authData.user.id,
+          email: formData.email,
+          nome: formData.razao_social,
+          tipo: "client"  // Tipo de perfil: client (não admin)
+        }]);
+        
+      if (perfilError) {
+        console.error("Erro ao criar perfil:", perfilError);
+        // Tente desfazer a criação do usuário se possível
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error(`Erro ao criar perfil: ${perfilError.message}`);
       }
 
-      // 2. Insert new cliente in clientes_sistema table first
-      const { data: clienteData, error: clienteError } = await supabase
+      // 3. Por fim, inserimos os dados do cliente no sistema
+      const { data, error } = await supabase
         .from("clientes_sistema")
         .insert([{
           razao_social: formData.razao_social,
@@ -268,58 +271,22 @@ const ClientesPage: React.FC = () => {
           email: formData.email,
           telefone: formData.telefone,
           responsavel: formData.responsavel,
-          situacao: "liberado"
+          situacao: "liberado"  // Inicialmente liberado
         }])
         .select();
 
-      if (clienteError) {
-        console.error("Erro ao criar cliente no sistema:", clienteError);
-        toast.error("Erro ao criar cliente no sistema: " + handleSupabaseError(clienteError));
+      if (error) {
+        console.error("Erro ao criar dados do cliente:", error);
+        // Consideramos desfazer as operações anteriores
+        toast.error("Erro ao criar dados do cliente");
         return;
       }
       
-      if (!clienteData || clienteData.length === 0) {
-        toast.error("Erro: Não foi possível obter os dados do cliente após criação");
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log("Cliente criado com sucesso no sistema:", clienteData[0]);
-      
-      try {
-        // 3. Use Edge Function to create a user without affecting admin session
-        // This is the key change to prevent admin logout
-        const { data: authResponse, error: authError } = await supabase.functions.invoke('admin-create-user', {
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.senha,
-            clienteId: clienteData[0].id,
-            nome: formData.razao_social,
-          })
-        });
-
-        if (authError) {
-          console.error("Erro ao criar usuário via Edge Function:", authError);
-          
-          // Continue anyway as we already created the client record
-          toast.warning("Cliente criado, mas houve um erro ao configurar o acesso: " + authError.message);
-        } else {
-          console.log("Usuário de autenticação criado via Edge Function:", authResponse);
-        }
-        
-        // Loading clientes will refresh the list with the new client
-        loadClientes();
-        toast.success("Cliente criado com sucesso!");
-      } catch (authError: any) {
-        console.error("Erro ao criar usuário de autenticação:", authError);
-        toast.warning("Cliente criado, mas houve um problema ao configurar o acesso: " + authError.message);
-        // Still reload clients as we successfully created the client record
-        loadClientes();
-      }
-      
+      toast.success("Cliente criado com sucesso!");
+      loadClientes();
     } catch (error: any) {
       console.error("Erro ao criar cliente:", error);
-      toast.error("Erro ao criar cliente: " + error.message);
+      toast.error(error.message || "Erro ao criar cliente");
     } finally {
       setIsLoading(false);
       setOpenNewModal(false);
@@ -339,8 +306,8 @@ const ClientesPage: React.FC = () => {
         <CardContent>
           <ClientesTable
             clientes={clientes.filter(cliente =>
-              cliente.razao_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              cliente.cnpj.toLowerCase().includes(searchTerm.toLowerCase())
+              cliente.razao_social?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              cliente.cnpj?.toLowerCase().includes(searchTerm.toLowerCase())
             )}
             isLoading={isLoading}
             onEdit={handleOpenEdit}

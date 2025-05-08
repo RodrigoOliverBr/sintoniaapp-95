@@ -15,20 +15,12 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'Lovable Web App',
-      'Content-Type': 'application/json',
-    },
   }
 });
 
 // Verificar se o usuário está autenticado e tem o perfil correto
 export const checkAdminAuth = async () => {
   try {
-    console.log("Verificando autenticação do admin...");
-    
     // Verificar sessão atual
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
@@ -41,8 +33,6 @@ export const checkAdminAuth = async () => {
       console.error("Sessão não encontrada");
       return false;
     }
-    
-    console.log("Sessão encontrada, verificando perfil do usuário:", session.user.id);
     
     // Verificar se o usuário é admin
     const { data: perfil, error: perfilError } = await supabase
@@ -57,11 +47,10 @@ export const checkAdminAuth = async () => {
     }
     
     if (!perfil || perfil.tipo !== 'admin') {
-      console.error("Usuário não é administrador ou perfil não encontrado:", perfil);
+      console.error("Usuário não é administrador ou perfil não encontrado");
       return false;
     }
     
-    console.log("Usuário confirmado como admin");
     return true;
   } catch (err) {
     console.error("Erro ao verificar autenticação:", err);
@@ -130,32 +119,6 @@ export const ensureAuthenticated = async (): Promise<boolean> => {
     toast.error("Erro ao verificar autenticação. Por favor, faça login novamente.");
     return false;
   }
-};
-
-// Clean up supabase auth state - helpful for fixing auth problems
-export const cleanupAuthState = () => {
-  console.log("Limpando estado de autenticação...");
-  
-  // Remove standard auth tokens
-  localStorage.removeItem('supabase.auth.token');
-  
-  // Remove all Supabase auth keys from localStorage
-  Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-      console.log(`Removendo chave de auth: ${key}`);
-      localStorage.removeItem(key);
-    }
-  });
-  
-  // Remove from sessionStorage if in use
-  Object.keys(sessionStorage || {}).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-      console.log(`Removendo chave de auth do sessionStorage: ${key}`);
-      sessionStorage.removeItem(key);
-    }
-  });
-  
-  console.log("Estado de autenticação limpo");
 };
 
 // Função auxiliar para debug de autenticação

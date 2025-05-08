@@ -1,14 +1,18 @@
 
 // Type definition for Client related interfaces
 
-export type TipoPessoa = "fisica" | "juridica" | "cliente";
+export type TipoPessoa = "fisica" | "juridica";
 
 export type StatusContrato = 
   | "ativo" 
   | "pendente" 
   | "vencido" 
   | "cancelado" 
-  | "renovado";
+  | "renovado"
+  | "inativo"
+  | "sem-contrato"
+  | "vencimento-proximo"
+  | "em-analise";
 
 export type ClienteStatus = 
   | "liberado" 
@@ -16,7 +20,9 @@ export type ClienteStatus =
   | "ativo" 
   | "em-analise" 
   | "sem-contrato" 
-  | "bloqueado-manualmente";
+  | "bloqueado-manualmente"
+  | "inativo"
+  | "pendente";
 
 export interface ClientePerfil {
   id: string;
@@ -46,6 +52,6 @@ export interface ClienteSistema {
   contato?: string;
   planoId?: string;
   contratoId?: string;
-  clienteId: string;
-  senha?: string; // Add password field for user creation
+  clienteId?: string;
+  statusContrato?: StatusContrato;
 }

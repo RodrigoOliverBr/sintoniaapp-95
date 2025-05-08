@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Eye, EyeOff } from "lucide-react";
 
 const clienteFormSchema = z.object({
   razao_social: z.string().min(2, { message: 'Nome deve ter pelo menos 2 caracteres' }),
@@ -38,6 +39,8 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
   isLoading = false,
   isEditing = false
 }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   const form = useForm<ClienteFormValues>({
     resolver: zodResolver(clienteFormSchema),
     defaultValues
@@ -119,16 +122,31 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="senha"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Senha</FormLabel>
-              <FormControl>
-                <Input type="password" {...field} disabled={isLoading} placeholder="Mínimo 6 caracteres" />
-              </FormControl>
+              <div className="relative">
+                <FormControl>
+                  <Input 
+                    type={showPassword ? "text" : "password"} 
+                    {...field} 
+                    disabled={isLoading} 
+                  />
+                </FormControl>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
               <FormMessage />
             </FormItem>
           )}
