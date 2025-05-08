@@ -1,61 +1,53 @@
 
-import React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
-// Define the form schema with validation
-const formSchema = z.object({
-  razao_social: z.string().min(2, "Razão social deve ter pelo menos 2 caracteres"),
-  cnpj: z.string().min(14, "CNPJ inválido"),
-  email: z.string().email("Email inválido"),
-  telefone: z.string().optional(),
-  responsavel: z.string().optional(),
-  senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
+const clienteFormSchema = z.object({
+  razao_social: z.string().min(2, { message: 'Nome deve ter pelo menos 2 caracteres' }),
+  cnpj: z.string().min(14, { message: 'CNPJ inválido' }),
+  email: z.string().email({ message: 'Email inválido' }).optional().or(z.literal('')),
+  telefone: z.string().optional().or(z.literal('')),
+  responsavel: z.string().optional().or(z.literal(''))
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type ClienteFormValues = z.infer<typeof clienteFormSchema>;
 
-export interface ClienteFormProps {
-  onSubmit: (values: FormValues) => void;
-  initialValues?: Partial<FormValues>;
+interface ClienteFormProps {
+  onSubmit: (data: ClienteFormValues) => Promise<void>;
+  defaultValues?: Partial<ClienteFormValues>;
   isLoading?: boolean;
-  isUpdate?: boolean;
+  isEditing?: boolean;
 }
 
 export const ClienteForm: React.FC<ClienteFormProps> = ({
   onSubmit,
-  initialValues = {},
+  defaultValues = {
+    razao_social: '',
+    cnpj: '',
+    email: '',
+    telefone: '',
+    responsavel: ''
+  },
   isLoading = false,
-  isUpdate = false,
+  isEditing = false
 }) => {
-  // Set up the form with default values and validation
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      razao_social: initialValues.razao_social || "",
-      cnpj: initialValues.cnpj || "",
-      email: initialValues.email || "",
-      telefone: initialValues.telefone || "",
-      responsavel: initialValues.responsavel || "",
-      senha: initialValues.senha || "",
-    },
+  const form = useForm<ClienteFormValues>({
+    resolver: zodResolver(clienteFormSchema),
+    defaultValues
   });
+
+  const handleSubmit = async (data: ClienteFormValues) => {
+    await onSubmit(data);
+  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="razao_social"
@@ -63,12 +55,13 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
             <FormItem>
               <FormLabel>Razão Social</FormLabel>
               <FormControl>
-                <Input placeholder="Nome da empresa" {...field} />
+                <Input {...field} disabled={isLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+        
         <FormField
           control={form.control}
           name="cnpj"
@@ -76,12 +69,13 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
             <FormItem>
               <FormLabel>CNPJ</FormLabel>
               <FormControl>
-                <Input placeholder="00.000.000/0000-00" {...field} />
+                <Input {...field} disabled={isLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+        
         <FormField
           control={form.control}
           name="email"
@@ -89,12 +83,13 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="contato@empresa.com.br" {...field} />
+                <Input type="email" {...field} disabled={isLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+        
         <FormField
           control={form.control}
           name="telefone"
@@ -102,12 +97,13 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
             <FormItem>
               <FormLabel>Telefone</FormLabel>
               <FormControl>
-                <Input placeholder="(00) 00000-0000" {...field} />
+                <Input {...field} disabled={isLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+        
         <FormField
           control={form.control}
           name="responsavel"
@@ -115,31 +111,16 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
             <FormItem>
               <FormLabel>Responsável</FormLabel>
               <FormControl>
-                <Textarea placeholder="Nome do responsável" {...field} />
+                <Input {...field} disabled={isLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         
-        {/* Password field - always shown, not optional for new clients */}
-        <FormField
-          control={form.control}
-          name="senha"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{isUpdate ? "Nova senha" : "Senha"}</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="••••••" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <div className="flex justify-end pt-4">
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Processando..." : isUpdate ? "Atualizar" : "Cadastrar"}
+            {isLoading ? 'Salvando...' : isEditing ? 'Atualizar' : 'Cadastrar'}
           </Button>
         </div>
       </form>

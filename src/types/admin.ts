@@ -1,10 +1,6 @@
 
-// Import the client types to ensure they stay in sync
-import { ClienteStatus as ClienteStatusType, TipoPessoa } from "./cliente";
-
 // Define the client status type
-export type ClienteStatus = ClienteStatusType;
-
+export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
 export type BatchSelection = Record<string, boolean>;
 export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
@@ -13,7 +9,7 @@ export interface ClienteSistema {
   id: string;
   razao_social: string;
   nome: string;
-  tipo: TipoPessoa;
+  tipo: string;
   numeroEmpregados: number;
   dataInclusao: number;
   situacao: ClienteStatus;
@@ -27,7 +23,6 @@ export interface ClienteSistema {
   contratoId: string;
   razaoSocial?: string;
   clienteId?: string;
-  statusContrato?: StatusContrato;
 }
 
 export interface ClienteComContrato extends ClienteSistema {
@@ -91,15 +86,8 @@ export interface Fatura {
 }
 
 // Add these type definitions for the ClientesPage.tsx
-export type StatusContrato = 
-  | 'ativo' 
-  | 'inativo' 
-  | 'cancelado' 
-  | 'pendente' 
-  | 'vencido' 
-  | 'vencimento-proximo' 
-  | 'sem-contrato' 
-  | 'em-analise';
+export type TipoPessoa = 'fisica' | 'juridica';
+export type StatusContrato = 'ativo' | 'inativo' | 'cancelado' | 'pendente' | 'vencido' | 'vencimento-proximo' | 'sem-contrato' | 'em-analise';
 
 // Fix for InvoicePreview display type
 export type Display = "flex" | "block" | "inline" | "inline-block" | "grid" | "inline-flex" | 

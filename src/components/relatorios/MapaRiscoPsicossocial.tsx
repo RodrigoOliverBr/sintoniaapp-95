@@ -53,6 +53,9 @@ const MapaRiscoPsicossocial: React.FC<MapaRiscoPsicossocialProps> = ({
     try {
       console.log("Carregando dados das dimensões para empresa:", companyId);
       
+      // In a real implementation, we would fetch data from Supabase
+      // and calculate the actual values based on employee responses
+      
       // 1. Get all evaluations for the company
       const { data: avaliacoes, error: avaliacoesError } = await supabase
         .from('avaliacoes')
@@ -69,7 +72,6 @@ const MapaRiscoPsicossocial: React.FC<MapaRiscoPsicossocialProps> = ({
       
       if (!avaliacoes || avaliacoes.length === 0) {
         setDimensionData([]);
-        setIsLoading(false);
         return;
       }
       
@@ -146,10 +148,9 @@ const MapaRiscoPsicossocial: React.FC<MapaRiscoPsicossocialProps> = ({
         }
       });
       
-      // Format data for the chart - Calculate percentage correctly
+      // Format data for the chart
       const formattedData: DimensionData[] = Object.entries(dimensionStats).map(([dim, stats]) => {
         const { totalYes, totalResponses } = stats;
-        // Calculate percentage correctly - only if there are responses
         const percentYes = totalResponses > 0 ? Math.round((totalYes / totalResponses) * 100) : 0;
         
         return {
