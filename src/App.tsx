@@ -21,6 +21,8 @@ import ContratosPage from "@/pages/ContratosPage";
 import FaturasPage from "@/pages/FaturasPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ClientesPage from "@/pages/ClientesPage";
+import ComoPreencherPage from "@/pages/ComoPreencherPage";
+import ComoAvaliarPage from "@/pages/ComoAvaliarPage";
 
 function App() {
   return (
@@ -118,6 +120,48 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ClientesPage />
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* New routes based on SidebarLinks */}
+              <Route
+                path="/como-preencher"
+                element={
+                  <ProtectedRoute>
+                    <ComoPreencherPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/como-avaliar"
+                element={
+                  <ProtectedRoute>
+                    <ComoAvaliarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/minha-conta"
+                element={
+                  <ProtectedRoute>
+                    <UserAccountPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cadastros/empresas"
+                element={
+                  <ProtectedRoute>
+                    <CompaniesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cadastros/funcionarios"
+                element={
+                  <ProtectedRoute>
+                    <EmployeesPage />
                   </ProtectedRoute>
                 }
               />

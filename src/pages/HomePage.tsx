@@ -52,17 +52,42 @@ const HomePage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 w-full">
                   <Button 
                     variant="outline" 
-                    onClick={() => navigate("/companies")}
+                    onClick={() => navigate("/cadastros/empresas")}
                   >
                     Empresas
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={() => navigate("/employees")}
+                    onClick={() => navigate("/cadastros/funcionarios")}
                   >
                     Funcionários
                   </Button>
                 </div>
+              </CardFooter>
+            </Card>
+          </div>
+          
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Relatórios</CardTitle>
+                <CardDescription>
+                  Acesse os relatórios e análises das avaliações realizadas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Visualize diagnósticos individuais, mapas de risco psicossocial
+                  e relatórios PGR para tomada de decisões.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  onClick={() => navigate("/relatorios")}
+                  className="w-full"
+                >
+                  Ver Relatórios
+                </Button>
               </CardFooter>
             </Card>
           </div>
