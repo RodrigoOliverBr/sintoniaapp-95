@@ -55,11 +55,10 @@ const FormPageWrapper: React.FC = () => {
   // Handler to view results in read-only mode
   const handleViewResults = () => {
     setShowResults(true);
-    // Don't change other state - just show the results view
   };
 
   // Handler to edit an evaluation
-  const handleEditEvaluation = (evaluation) => {
+  const handleEditEvaluation = (evaluation: any) => {
     console.log("Editing evaluation:", evaluation.id);
     setSelectedEvaluation(evaluation);
     setFormResult(evaluation);
@@ -73,6 +72,23 @@ const FormPageWrapper: React.FC = () => {
   const handleStartNewEvaluation = () => {
     console.log("Starting new evaluation from the button");
     handleNewEvaluation();
+  };
+
+  const handleNotesChange = (notes: string) => {
+    console.log("Updating notes:", notes);
+    if (selectedEvaluation) {
+      setSelectedEvaluation({
+        ...selectedEvaluation,
+        notas_analista: notes,
+        analyistNotes: notes
+      });
+    } else if (formResult) {
+      setFormResult({
+        ...formResult,
+        notas_analista: notes,
+        analyistNotes: notes
+      });
+    }
   };
 
   return (
@@ -162,22 +178,7 @@ const FormPageWrapper: React.FC = () => {
               selectedEvaluation={selectedEvaluation}
               formResult={formResult}
               questions={questions}
-              onNotesChange={(notes) => {
-                console.log("Updating notes:", notes);
-                if (selectedEvaluation) {
-                  setSelectedEvaluation({
-                    ...selectedEvaluation,
-                    notas_analista: notes,
-                    analyistNotes: notes
-                  });
-                } else if (formResult) {
-                  setFormResult({
-                    ...formResult,
-                    notas_analista: notes,
-                    analyistNotes: notes
-                  });
-                }
-              }}
+              onNotesChange={handleNotesChange}
               evaluationHistory={evaluationHistory || []}
               formComplete={formComplete}
               isSubmitting={isSubmitting}

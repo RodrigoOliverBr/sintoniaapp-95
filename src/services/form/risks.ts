@@ -76,4 +76,3 @@ export async function getAllSeverities(): Promise<Severity[]> {
     throw error;
   }
 }
-

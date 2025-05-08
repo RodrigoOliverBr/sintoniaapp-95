@@ -38,6 +38,7 @@ export interface Contrato {
 export interface Company {
   id: string;
   nome: string;
+  name?: string; // Adding an alias for name to maintain compatibility
   tipo: string;
   cpf_cnpj?: string;
   email?: string;
@@ -57,26 +58,32 @@ export interface Company {
 export interface Employee {
   id: string;
   nome: string;
+  name?: string; // Adding an alias for name to maintain compatibility
   cpf?: string;
   empresa_id: string;
   cargo_id?: string;
   email?: string;
   role?: string;
-  company_id?: string;
+  company_id?: string; // Alias for empresa_id
   created_at: string;
   updated_at: string;
+  department_id?: string; // Added for department reference
 }
 
 export interface Department {
   id: string;
-  name: string;
+  name?: string;
+  nome: string;
   empresa_id: string;
+  companyId?: string; // Alias for empresa_id
 }
 
 export interface JobRole {
   id: string;
-  name: string;
+  name?: string;
+  nome: string;
   empresa_id: string;
+  company_id?: string; // Alias for empresa_id
 }
 
 // Form type to be used in form selection components

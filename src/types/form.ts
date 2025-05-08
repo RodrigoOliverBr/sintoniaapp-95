@@ -88,7 +88,24 @@ export interface FormResult {
   created_at: string;
   updated_at: string;
   last_updated: string;
+  
+  // Aliases for English-friendly naming
+  employeeId?: string;
+  totalYes?: number;
+  totalNo?: number;
+  isComplete?: boolean;
+  analyistNotes?: string;
+  
+  // Responses in multiple formats
   respostas?: Answer[];
+  answers?: Record<string, {
+    questionId: string;
+    answer: boolean | null;
+    observation?: string;
+  }>;
+  
+  // Severity classification
+  yesPerSeverity?: Record<string, number>;
 }
 
 export interface Answer {

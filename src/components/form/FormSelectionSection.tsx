@@ -23,6 +23,7 @@ interface FormSelectionSectionProps {
   showNewEvaluationButton?: boolean;
   onNewEvaluation?: () => void;
   isLoading?: boolean;
+  isLoadingHistory?: boolean;
 }
 
 const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
@@ -38,6 +39,7 @@ const FormSelectionSection: React.FC<FormSelectionSectionProps> = ({
   showNewEvaluationButton = false,
   onNewEvaluation,
   isLoading = false,
+  isLoadingHistory = false,
 }) => {
   return (
     <Card className="mb-6">

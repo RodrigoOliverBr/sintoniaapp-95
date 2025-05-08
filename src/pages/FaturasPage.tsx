@@ -1,0 +1,16 @@
+
+import React from "react";
+import Layout from "@/components/Layout";
+
+const FaturasPage: React.FC = () => {
+  return (
+    <Layout title="Faturas">
+      <div className="container mx-auto p-6">
+        <h1 className="text-2xl font-bold mb-4">Faturas</h1>
+        <p>Conteúdo da página de faturas será implementado aqui.</p>
+      </div>
+    </Layout>
+  );
+};
+
+export default FaturasPage;

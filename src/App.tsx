@@ -11,19 +11,19 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "@/pages/LoginPage";
 
-// Lazy load pages
-const FormularioPage = React.lazy(() => import("@/pages/FormularioPage"));
-const HomePage = React.lazy(() => import("@/pages/HomePage"));
-const CompaniesPage = React.lazy(() => import("@/pages/CompaniesPage"));
-const EmployeesPage = React.lazy(() => import("@/pages/EmployeesPage"));
-const RelatoriosPage = React.lazy(() => import("@/pages/RelatoriosPage"));
-const NotFoundPage = React.lazy(() => import("@/pages/NotFoundPage"));
-const UserAccountPage = React.lazy(() => import("@/pages/UserAccountPage"));
-const FormulariosPage = React.lazy(() => import("@/pages/admin/FormulariosPage"));
-const ContratosPage = React.lazy(() => import("@/pages/ContratosPage"));
-const FaturasPage = React.lazy(() => import("@/pages/FaturasPage"));
-const DashboardPage = React.lazy(() => import("@/pages/DashboardPage"));
-const ClientesPage = React.lazy(() => import("@/pages/ClientesPage"));
+// Import pages directly instead of lazy loading to simplify for now
+import FormularioPage from "@/pages/FormularioPage";
+import HomePage from "@/pages/HomePage";
+import CompaniesPage from "@/pages/CompaniesPage";
+import EmployeesPage from "@/pages/EmployeesPage";
+import RelatoriosPage from "@/pages/RelatoriosPage";
+import NotFoundPage from "@/pages/NotFoundPage";
+import UserAccountPage from "@/pages/UserAccountPage";
+import FormulariosPage from "@/pages/admin/FormulariosPage";
+import ContratosPage from "@/pages/ContratosPage";
+import FaturasPage from "@/pages/FaturasPage";
+import DashboardPage from "@/pages/DashboardPage";
+import ClientesPage from "@/pages/ClientesPage";
 
 function App() {
   return (
