@@ -1,8 +1,3 @@
 
-export * from './forms';
-export * from './questions';
-export * from './evaluations';
-export * from './risks';
-
-// Explicitly re-export these functions to avoid conflicts
-export { deleteFormEvaluation, updateAnalystNotes } from './evaluations';
+// Just re-export everything from the main index file
+export * from './index';

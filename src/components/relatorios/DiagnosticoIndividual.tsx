@@ -2,31 +2,47 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AvaliacaoResposta } from "@/types/avaliacao";
+import { FormResult, Question } from "@/types/form";
 import SeverityBadge from "@/components/SeverityBadge";
 
 interface DiagnosticoIndividualProps {
-  respostas: AvaliacaoResposta[];
+  result: FormResult;
+  questions: Question[];
+  companyId?: string;
 }
 
-const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas }) => {
-  // Verificar se respostas é undefined ou vazio
-  const hasRespostas = Array.isArray(respostas) && respostas.length > 0;
+const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ 
+  result, 
+  questions 
+}) => {
+  // Check if we have valid data
+  const hasQuestions = Array.isArray(questions) && questions.length > 0;
+  const hasAnswers = result?.answers && Object.keys(result.answers).length > 0;
   
-  // Agrupar respostas por risco - validando que respostas é um array primeiro
-  const respostasPorRisco = hasRespostas ? respostas.reduce((acc, resposta) => {
-    if (!resposta.pergunta?.risco) return acc;
+  // Group questions by risk if both data points exist
+  const questionsByRisk = hasQuestions && hasAnswers ? Object.entries(result.answers)
+    .filter(([_, answer]) => answer.answer === true) // Only show "Yes" answers
+    .reduce((acc, [questionId, answer]) => {
+      // Find the question details
+      const question = questions.find(q => q.id === questionId);
+      
+      if (!question || !question.risco) return acc;
 
-    const riscoId = resposta.pergunta.risco.id;
-    if (!acc[riscoId]) {
-      acc[riscoId] = {
-        risco: resposta.pergunta.risco,
-        respostas: []
-      };
-    }
-    acc[riscoId].respostas.push(resposta);
-    return acc;
-  }, {} as { [key: string]: { risco: any, respostas: AvaliacaoResposta[] } }) : {};
+      const riscoId = question.risco.id;
+      if (!acc[riscoId]) {
+        acc[riscoId] = {
+          risco: question.risco,
+          questions: []
+        };
+      }
+      
+      acc[riscoId].questions.push({
+        question,
+        answer
+      });
+      
+      return acc;
+    }, {} as Record<string, { risco: any, questions: Array<{question: Question, answer: any}> }>) : {};
 
   return (
     <Card className="w-full">
@@ -34,25 +50,22 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas
         <CardTitle>Diagnóstico Individual por Risco</CardTitle>
       </CardHeader>
       <CardContent className="pl-2 pb-4">
-        {hasRespostas ? (
+        {hasQuestions && hasAnswers ? (
           <ScrollArea className="h-[500px] w-full pr-2">
             <div className="space-y-4">
-              {Object.entries(respostasPorRisco).map(([riscoId, { risco, respostas }]) => (
+              {Object.entries(questionsByRisk).map(([riscoId, { risco, questions }]) => (
                 <div key={riscoId} className="border rounded-md p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-lg font-semibold">{risco.texto}</h3>
                     {risco.severidade && <SeverityBadge severity={risco.severidade} />}
                   </div>
                   <ul className="list-disc pl-5 space-y-2">
-                    {respostas.map((resposta) => (
-                      <li key={resposta.id}>
-                        <p className="font-medium">{resposta.pergunta.texto}</p>
-                        <p className="text-sm text-gray-500">
-                          Resposta: {resposta.resposta_texto || (resposta.resposta ? "Sim" : "Não")}
-                        </p>
-                        {resposta.observacao && (
+                    {questions.map(({ question, answer }) => (
+                      <li key={question.id}>
+                        <p className="font-medium">{question.texto}</p>
+                        {answer.observation && (
                           <p className="text-sm italic mt-1">
-                            Observação: {resposta.observacao}
+                            Observação: {answer.observation}
                           </p>
                         )}
                       </li>
@@ -60,11 +73,21 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas
                   </ul>
                 </div>
               ))}
+              
+              {Object.keys(questionsByRisk).length === 0 && (
+                <div className="text-center p-8 text-gray-500">
+                  Nenhuma resposta "Sim" encontrada para exibir riscos.
+                </div>
+              )}
             </div>
           </ScrollArea>
         ) : (
           <div className="text-center p-8 text-gray-500">
-            Nenhuma resposta disponível para exibir.
+            {!hasQuestions 
+              ? "Nenhuma pergunta disponível." 
+              : !hasAnswers 
+                ? "Nenhuma resposta disponível." 
+                : "Dados insuficientes para gerar o diagnóstico."}
           </div>
         )}
       </CardContent>

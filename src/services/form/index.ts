@@ -1,8 +1,16 @@
 
 export * from './forms';
 export * from './questions';
-export * from './evaluations';
 export * from './risks';
 
-// Explicitly re-export these functions instead of using wildcards to avoid conflicts
-export { deleteFormEvaluation, updateAnalystNotes, getFormResultByEmployeeId, saveFormResult, getEmployeeFormHistory } from './evaluations';
+// Export all evaluation-related functions
+export {
+  deleteFormEvaluation,
+  updateAnalystNotes,
+  getFormResultByEmployeeId,
+  saveFormResult,
+  getEmployeeFormHistory,
+  fetchEvaluation,
+  fetchEmployeeEvaluations,
+  fetchLatestEmployeeEvaluation
+} from './evaluations';
