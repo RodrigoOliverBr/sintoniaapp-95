@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,10 +18,8 @@ import { AvaliacaoResposta } from '@/types/avaliacao';
 import { ResultsStatisticsChart } from "@/components/results/ResultsStatisticsChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "@/lib/react-query";
 
-const RelatoriosPageContent: React.FC = () => {
+const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
@@ -399,15 +398,6 @@ const RelatoriosPageContent: React.FC = () => {
         {renderContent()}
       </div>
     </Layout>
-  );
-};
-
-// Wrap the component with QueryClientProvider
-const RelatoriosPage: React.FC = () => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <RelatoriosPageContent />
-    </QueryClientProvider>
   );
 };
 
