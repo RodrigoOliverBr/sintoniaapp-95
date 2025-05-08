@@ -1,168 +1,214 @@
-
 import React, { useState, useEffect } from "react";
-import { toast } from "sonner";
-import AdminLayout from "@/components/AdminLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Plus } from "lucide-react";
+import AdminLayout from "@/components/AdminLayout";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  ClienteStatus,
+  TipoPessoa,
+} from "@/types/admin";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ClientesTable from "@/components/admin/clientes/ClientesTable";
-import { ClienteDialogs } from "@/components/admin/clientes/ClienteDialogs";
-import { ClienteActions } from "@/components/admin/clientes/ClienteActions";
-import { ClienteForm } from "@/components/admin/ClienteForm";
-import { ClienteSistema, ClienteStatus } from "@/types/cliente";
+import { Search } from 'lucide-react';
+
+// Ensure we're using the admin types for consistency
+import { ClienteSistema } from "@/types/admin"; 
 
 const ClientesPage: React.FC = () => {
-  const [clientes, setClientes] = useState<ClienteSistema[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [openNewModal, setOpenNewModal] = useState<boolean>(false);
-  const [openEditModal, setOpenEditModal] = useState<boolean>(false);
-  const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
-  const [openBlockModal, setOpenBlockModal] = useState<boolean>(false);
+  const [openNewModal, setOpenNewModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openViewModal, setOpenViewModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<ClienteSistema | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const loadClientes = async () => {
+  const [nome, setNome] = useState("");
+  const [razaoSocial, setRazaoSocial] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [tipo, setTipo] = useState<TipoPessoa>("juridica");
+  const [cpfCnpj, setCpfCnpj] = useState("");
+  const [situacao, setSituacao] = useState<ClienteStatus>("liberado");
+  const [clientes, setClientes] = useState<ClienteSistema[]>([]);
+
+  useEffect(() => {
+    fetchClientes();
+  }, []);
+
+  const fetchClientes = async () => {
     setIsLoading(true);
     try {
-      console.log("ClientesPage: Iniciando carregamento de clientes...");
-      
-      // Fetch all clients
-      const { data: clientesData, error: clientesError } = await supabase
+      const { data, error } = await supabase
         .from("clientes_sistema")
         .select("*")
-        .order("razao_social", { ascending: true });
-      
-      if (clientesError) {
-        console.error("ClientesPage: Erro ao carregar clientes:", clientesError);
-        toast.error("Erro ao carregar clientes");
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Erro ao buscar clientes:", error);
+        toast({
+          title: "Erro",
+          description: "Erro ao buscar clientes: " + error.message,
+          variant: "destructive",
+        });
         return;
       }
-      
-      console.log(`ClientesPage: ${clientesData?.length || 0} clientes carregados`);
-      
-      // Fetch active contracts for all clients
-      const { data: contratosData, error: contratosError } = await supabase
-        .from("contratos")
-        .select("cliente_sistema_id, status")
-        .eq("status", "ativo");
-        
-      if (contratosError) {
-        console.error("ClientesPage: Erro ao carregar contratos:", contratosError);
-        toast.error("Erro ao carregar informações de contratos");
-      }
-      
-      console.log(`ClientesPage: ${contratosData?.length || 0} contratos ativos encontrados`);
-      
-      // Map clients to include contract status
-      const clientesProcessed = clientesData?.map(cliente => {
-        // Check if client has active contracts
-        const hasActiveContract = contratosData?.some(
-          contrato => contrato.cliente_sistema_id === cliente.id && contrato.status === "ativo"
-        );
-        
-        const contratoId = "";
-        
-        console.log(`Cliente ${cliente.razao_social}: ${hasActiveContract ? 'Com contrato ativo' : 'Sem contrato ativo'}`);
-        
-        return {
-          id: cliente.id,
-          nome: cliente.razao_social,
-          razao_social: cliente.razao_social,
-          razaoSocial: cliente.razao_social,
-          cnpj: cliente.cnpj,
-          cpfCnpj: cliente.cnpj,
-          email: cliente.email || "",
-          telefone: cliente.telefone || "",
-          responsavel: cliente.responsavel || "",
-          contato: cliente.responsavel || "",
-          tipo: "juridica" as const,
-          numeroEmpregados: 0,
-          dataInclusao: cliente.created_at ? new Date(cliente.created_at).getTime() : Date.now(),
-          situacao: (hasActiveContract ? "ativo" : "sem-contrato") as ClienteStatus,
-          planoId: cliente.plano_id || "",
-          contratoId: contratoId,
-          clienteId: "",
-          statusContrato: hasActiveContract ? "ativo" : "sem-contrato",
-        } as ClienteSistema;
-      }) || [];
-      
-      console.log("Clientes carregados com informações de contrato:", clientesProcessed);
-      setClientes(clientesProcessed);
-    } catch (error) {
-      console.error("ClientesPage: Erro inesperado ao carregar clientes:", error);
-      toast.error("Erro inesperado ao carregar clientes");
+
+      // Convert database schema to ClienteSistema type
+      const clientesFormatted: ClienteSistema[] = data?.map((c) => ({
+        id: c.id,
+        nome: c.nome || "",
+        razao_social: c.razao_social || "",
+        razaoSocial: c.razao_social || "",
+        cnpj: c.cnpj || "",
+        cpfCnpj: c.cpfCnpj || "",
+        telefone: c.telefone || "",
+        email: c.email || "",
+        responsavel: c.responsavel || "",
+        contato: c.contato || "",
+        situacao: (c.situacao || "liberado") as ClienteStatus,
+        tipo: (c.tipo || "juridica") as TipoPessoa,
+        numeroEmpregados: c.numeroEmpregados || 0,
+        dataInclusao: c.dataInclusao || 0,
+        planoId: c.planoId || "",
+        contratoId: c.contratoId || "",
+      })) || [];
+
+      setClientes(clientesFormatted);
+    } catch (error: any) {
+      console.error("Erro ao buscar clientes:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao buscar clientes: " + error.message,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadClientes();
-  }, []);
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-  };
-
-  const handleOpenNew = () => {
-    setOpenNewModal(true);
-  };
-
-  const handleOpenEdit = (cliente: ClienteSistema) => {
-    setSelectedCliente(cliente);
-    setOpenEditModal(true);
-  };
-
-  const handleOpenDelete = (cliente: ClienteSistema) => {
-    setSelectedCliente(cliente);
-    setOpenDeleteModal(true);
-  };
-  
-  const handleOpenBlock = (cliente: ClienteSistema) => {
-    setSelectedCliente(cliente);
-    setOpenBlockModal(true);
-  };
-
-  const handleUpdateCliente = async (formData: any) => {
-    if (!selectedCliente) return;
-    
+  const handleCreateCliente = async () => {
     setIsLoading(true);
     try {
-      // Update the cliente in Supabase
+      const { error } = await supabase.from("clientes_sistema").insert([
+        {
+          nome,
+          razao_social: razaoSocial,
+          email,
+          telefone,
+          tipo,
+          cpfCnpj,
+          situacao,
+        },
+      ]);
+
+      if (error) {
+        console.error("Erro ao criar cliente:", error);
+        toast({
+          title: "Erro",
+          description: "Erro ao criar cliente: " + error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: "Cliente criado com sucesso!",
+      });
+      setOpenNewModal(false);
+      fetchClientes();
+      clearForm();
+    } catch (error: any) {
+      console.error("Erro ao criar cliente:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar cliente: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateCliente = async () => {
+    if (!selectedCliente) {
+      toast({
+        title: "Erro",
+        description: "Nenhum cliente selecionado para editar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
       const { error } = await supabase
         .from("clientes_sistema")
         .update({
-          razao_social: formData.razao_social,
-          cnpj: formData.cnpj,
-          email: formData.email,
-          telefone: formData.telefone,
-          responsavel: formData.responsavel
+          nome,
+          razao_social: razaoSocial,
+          email,
+          telefone,
+          tipo,
+          cpfCnpj,
+          situacao,
         })
         .eq("id", selectedCliente.id);
 
       if (error) {
         console.error("Erro ao atualizar cliente:", error);
-        toast.error("Erro ao atualizar cliente");
+        toast({
+          title: "Erro",
+          description: "Erro ao atualizar cliente: " + error.message,
+          variant: "destructive",
+        });
         return;
       }
-      
-      toast.success("Cliente atualizado com sucesso!");
-      loadClientes();
-    } catch (error) {
+
+      toast({
+        title: "Sucesso",
+        description: "Cliente atualizado com sucesso!",
+      });
+      setOpenEditModal(false);
+      fetchClientes();
+      clearForm();
+    } catch (error: any) {
       console.error("Erro ao atualizar cliente:", error);
-      toast.error("Erro ao atualizar cliente");
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar cliente: " + error.message,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
-      setOpenEditModal(false);
     }
   };
 
   const handleDeleteCliente = async () => {
-    if (!selectedCliente) return;
-    
+    if (!selectedCliente) {
+      toast({
+        title: "Erro",
+        description: "Nenhum cliente selecionado para excluir.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Delete the cliente from Supabase
       const { error } = await supabase
         .from("clientes_sistema")
         .delete()
@@ -170,181 +216,449 @@ const ClientesPage: React.FC = () => {
 
       if (error) {
         console.error("Erro ao excluir cliente:", error);
-        toast.error("Erro ao excluir cliente");
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir cliente: " + error.message,
+          variant: "destructive",
+        });
         return;
       }
-      
-      toast.success("Cliente excluído com sucesso!");
-      loadClientes();
-    } catch (error) {
-      console.error("Erro ao excluir cliente:", error);
-      toast.error("Erro ao excluir cliente");
-    } finally {
-      setIsLoading(false);
+
+      toast({
+        title: "Sucesso",
+        description: "Cliente excluído com sucesso!",
+      });
       setOpenDeleteModal(false);
-    }
-  };
-  
-  const handleBlockCliente = async () => {
-    if (!selectedCliente) return;
-    
-    setIsLoading(true);
-    try {
-      // Since bloqueado isn't a column in the database schema, we'll use situacao
-      const { error } = await supabase
-        .from("clientes_sistema")
-        .update({
-          situacao: "bloqueado", // Assuming 'bloqueado' is a valid value for situacao
-        })
-        .eq("id", selectedCliente.id);
-
-      if (error) {
-        console.error("Erro ao bloquear cliente:", error);
-        toast.error("Erro ao bloquear cliente");
-        return;
-      }
-      
-      toast.success("Cliente bloqueado com sucesso!");
-      loadClientes();
-    } catch (error) {
-      console.error("Erro ao bloquear cliente:", error);
-      toast.error("Erro ao bloquear cliente");
-    } finally {
-      setIsLoading(false);
-      setOpenBlockModal(false);
-    }
-  };
-  
-  const handleCreateNew = async (formData: any) => {
-    setIsLoading(true);
-    try {
-      console.log("Criando novo cliente com dados:", { 
-        ...formData, 
-        senha: formData.senha ? "[SENHA FORNECIDA]" : "[SEM SENHA]" 
-      });
-      
-      // 1. Primeiro criamos o cliente no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.senha,
-        options: {
-          data: {
-            full_name: formData.razao_social,
-          }
-        }
-      });
-      
-      if (authError) {
-        console.error("Erro ao criar usuário:", authError);
-        throw new Error(`Erro ao criar usuário: ${authError.message}`);
-      }
-      
-      if (!authData.user) {
-        throw new Error("Falha ao criar o usuário. Nenhum usuário retornado.");
-      }
-      
-      console.log("Usuário criado com ID:", authData.user.id);
-      
-      // 2. Criamos o perfil do cliente
-      const { error: perfilError } = await supabase
-        .from("perfis")
-        .insert([{
-          id: authData.user.id,
-          email: formData.email,
-          nome: formData.razao_social,
-          tipo: "client"  // Tipo de perfil: client (não admin)
-        }]);
-        
-      if (perfilError) {
-        console.error("Erro ao criar perfil:", perfilError);
-        // Tente desfazer a criação do usuário se possível
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        throw new Error(`Erro ao criar perfil: ${perfilError.message}`);
-      }
-
-      // 3. Por fim, inserimos os dados do cliente no sistema
-      const { data, error } = await supabase
-        .from("clientes_sistema")
-        .insert([{
-          razao_social: formData.razao_social,
-          cnpj: formData.cnpj,
-          email: formData.email,
-          telefone: formData.telefone,
-          responsavel: formData.responsavel,
-          situacao: "liberado"  // Inicialmente liberado
-        }])
-        .select();
-
-      if (error) {
-        console.error("Erro ao criar dados do cliente:", error);
-        // Consideramos desfazer as operações anteriores
-        toast.error("Erro ao criar dados do cliente");
-        return;
-      }
-      
-      toast.success("Cliente criado com sucesso!");
-      loadClientes();
+      fetchClientes();
+      clearForm();
     } catch (error: any) {
-      console.error("Erro ao criar cliente:", error);
-      toast.error(error.message || "Erro ao criar cliente");
+      console.error("Erro ao excluir cliente:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir cliente: " + error.message,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
-      setOpenNewModal(false);
     }
+  };
+
+  const clearForm = () => {
+    setNome("");
+    setRazaoSocial("");
+    setEmail("");
+    setTelefone("");
+    setTipo("juridica");
+    setCpfCnpj("");
+    setSituacao("liberado");
+    setSelectedCliente(null);
+  };
+
+  const filteredClientes = clientes.filter((cliente) => {
+    const searchTermLower = searchTerm.toLowerCase();
+    return (
+      cliente.nome.toLowerCase().includes(searchTermLower) ||
+      cliente.razao_social?.toLowerCase().includes(searchTermLower) ||
+      cliente.email.toLowerCase().includes(searchTermLower) ||
+      cliente.cpfCnpj.toLowerCase().includes(searchTermLower)
+    );
+  });
+
+  // Update client handlers with proper type casting
+  const handleEditCliente = (cliente: any) => {
+    // Cast to correct type for consistency
+    const clienteTyped = cliente as unknown as ClienteSistema;
+    setSelectedCliente(clienteTyped);
+    setOpenEditModal(true);
+    setNome(clienteTyped.nome);
+    setRazaoSocial(clienteTyped.razao_social || "");
+    setEmail(clienteTyped.email);
+    setTelefone(clienteTyped.telefone);
+    setTipo(clienteTyped.tipo);
+    setCpfCnpj(clienteTyped.cpfCnpj);
+    setSituacao(clienteTyped.situacao);
+  };
+
+  const handleDeleteCliente = (cliente: any) => {
+    // Cast to correct type for consistency
+    const clienteTyped = cliente as unknown as ClienteSistema;
+    setSelectedCliente(clienteTyped);
+    setOpenDeleteModal(true);
+  };
+
+  const handleViewCliente = (cliente: any) => {
+    // Cast to correct type for consistency
+    const clienteTyped = cliente as unknown as ClienteSistema;
+    setSelectedCliente(clienteTyped);
+    setOpenViewModal(true);
   };
 
   return (
     <AdminLayout title="Clientes">
       <Card>
-        <CardHeader>
-          <ClienteActions
-            onSearch={handleSearch}
-            searchTerm={searchTerm}
-            onNew={handleOpenNew}
-          />
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Criar Cliente</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Nome
+                  </Label>
+                  <Input
+                    id="name"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="razaoSocial" className="text-right">
+                    Razão Social
+                  </Label>
+                  <Input
+                    id="razaoSocial"
+                    value={razaoSocial}
+                    onChange={(e) => setRazaoSocial(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="email" className="text-right">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="telefone" className="text-right">
+                    Telefone
+                  </Label>
+                  <Input
+                    id="telefone"
+                    type="tel"
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="tipo" className="text-right">
+                    Tipo
+                  </Label>
+                  <Select onValueChange={setTipo} defaultValue={tipo}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fisica">Física</SelectItem>
+                      <SelectItem value="juridica">Jurídica</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="cpfCnpj" className="text-right">
+                    CPF/CNPJ
+                  </Label>
+                  <Input
+                    id="cpfCnpj"
+                    value={cpfCnpj}
+                    onChange={(e) => setCpfCnpj(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="situacao" className="text-right">
+                    Situação
+                  </Label>
+                  <Select onValueChange={setSituacao} defaultValue={situacao}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Selecione a situação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="liberado">Liberado</SelectItem>
+                      <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                      <SelectItem value="pendente">Pendente</SelectItem>
+                      <SelectItem value="ativo">Ativo</SelectItem>
+                      <SelectItem value="em-analise">Em Análise</SelectItem>
+                      <SelectItem value="sem-contrato">Sem Contrato</SelectItem>
+                      <SelectItem value="bloqueado-manualmente">
+                        Bloqueado Manualmente
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleCreateCliente}>
+                  Criar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Buscar cliente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-10"
+            />
+            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+          </div>
         </CardHeader>
         <CardContent>
           <ClientesTable
-            clientes={clientes.filter(cliente =>
-              cliente.razao_social?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              cliente.cnpj?.toLowerCase().includes(searchTerm.toLowerCase())
-            )}
+            clientes={filteredClientes}
             isLoading={isLoading}
-            onEdit={handleOpenEdit}
-            onDelete={handleOpenDelete}
-            onBlock={handleOpenBlock}
+            onEdit={handleEditCliente}
+            onDelete={handleDeleteCliente}
+            onView={handleViewCliente}
           />
         </CardContent>
       </Card>
 
-      {/* Use the unified ClienteDialogs component */}
-      <ClienteDialogs
-        openEditModal={openEditModal}
-        setOpenEditModal={setOpenEditModal}
-        openDeleteModal={openDeleteModal}
-        setOpenDeleteModal={setOpenDeleteModal}
-        openBlockModal={openBlockModal}
-        setOpenBlockModal={setOpenBlockModal}
-        currentCliente={selectedCliente}
-        isLoading={isLoading}
-        onUpdateCliente={handleUpdateCliente}
-        onDeleteCliente={handleDeleteCliente}
-        onBlockCliente={handleBlockCliente}
-      />
-      
-      {/* Handle New Client Dialog separately for now */}
-      <Dialog open={openNewModal} onOpenChange={setOpenNewModal}>
-        <DialogContent className="sm:max-w-[600px]">
+      {/* Edit Client Modal */}
+      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Novo Cliente</DialogTitle>
-            <DialogDescription>
-              Preencha os dados para cadastrar um novo cliente.
-            </DialogDescription>
+            <DialogTitle>Editar Cliente</DialogTitle>
           </DialogHeader>
-          <ClienteForm 
-            onSubmit={handleCreateNew}
-            isLoading={isLoading}
-          />
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="name"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="razaoSocial" className="text-right">
+                Razão Social
+              </Label>
+              <Input
+                id="razaoSocial"
+                value={razaoSocial}
+                onChange={(e) => setRazaoSocial(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="telefone" className="text-right">
+                Telefone
+              </Label>
+              <Input
+                id="telefone"
+                type="tel"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="tipo" className="text-right">
+                Tipo
+              </Label>
+              <Select onValueChange={setTipo} value={tipo}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fisica">Física</SelectItem>
+                  <SelectItem value="juridica">Jurídica</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cpfCnpj" className="text-right">
+                CPF/CNPJ
+              </Label>
+              <Input
+                id="cpfCnpj"
+                value={cpfCnpj}
+                onChange={(e) => setCpfCnpj(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="situacao" className="text-right">
+                Situação
+              </Label>
+              <Select onValueChange={setSituacao} value={situacao}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecione a situação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="liberado">Liberado</SelectItem>
+                  <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="em-analise">Em Análise</SelectItem>
+                  <SelectItem value="sem-contrato">Sem Contrato</SelectItem>
+                  <SelectItem value="bloqueado-manualmente">
+                    Bloqueado Manualmente
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={handleUpdateCliente}>
+              Atualizar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Client Modal */}
+      <Dialog open={openDeleteModal} onOpenChange={setOpenDeleteModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Excluir Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <p>
+              Tem certeza que deseja excluir o cliente{" "}
+              {selectedCliente?.nome}?
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={handleDeleteCliente}>
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Client Modal */}
+      <Dialog open={openViewModal} onOpenChange={setOpenViewModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Visualizar Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="name"
+                value={selectedCliente?.nome}
+                className="col-span-3"
+                readOnly
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="razaoSocial" className="text-right">
+                Razão Social
+              </Label>
+              <Input
+                id="razaoSocial"
+                value={selectedCliente?.razao_social}
+                className="col-span-3"
+                readOnly
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={selectedCliente?.email}
+                className="col-span-3"
+                readOnly
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="telefone" className="text-right">
+                Telefone
+              </Label>
+              <Input
+                id="telefone"
+                type="tel"
+                value={selectedCliente?.telefone}
+                className="col-span-3"
+                readOnly
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="tipo" className="text-right">
+                Tipo
+              </Label>
+              <Select disabled value={selectedCliente?.tipo}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fisica">Física</SelectItem>
+                  <SelectItem value="juridica">Jurídica</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cpfCnpj" className="text-right">
+                CPF/CNPJ
+              </Label>
+              <Input
+                id="cpfCnpj"
+                value={selectedCliente?.cpfCnpj}
+                className="col-span-3"
+                readOnly
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="situacao" className="text-right">
+                Situação
+              </Label>
+              <Select disabled value={selectedCliente?.situacao}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecione a situação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="liberado">Liberado</SelectItem>
+                  <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="em-analise">Em Análise</SelectItem>
+                  <SelectItem value="sem-contrato">Sem Contrato</SelectItem>
+                  <SelectItem value="bloqueado-manualmente">
+                    Bloqueado Manualmente
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </AdminLayout>

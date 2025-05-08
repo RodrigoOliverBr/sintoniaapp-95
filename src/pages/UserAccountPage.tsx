@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -37,6 +36,40 @@ const UserAccountPage: React.FC = () => {
     
     fetchUserSession();
   }, []);
+
+  const getUserProfile = async () => {
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Error getting user:", userError);
+        return;
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("perfis")
+        .select("*")
+        .eq("id", userData?.user?.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error getting profile:", profileError);
+        return;
+      }
+
+      if (profileData) {
+        setUserProfile({
+          id: profileData.id || "",
+          nome: profileData.nome || "",
+          email: profileData.email || "",
+          telefone: profileData.telefone || "", // Only access if exists
+          tipo: profileData.tipo || "cliente"
+        });
+      }
+    } catch (error) {
+      console.error("Error in getUserProfile:", error);
+    }
+  };
 
   const fetchUserProfile = async (userId: string) => {
     setIsLoading(true);

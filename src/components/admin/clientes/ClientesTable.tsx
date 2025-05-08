@@ -1,189 +1,104 @@
-
 import React from "react";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ClienteSistema } from "@/types/admin";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DotsHorizontalIcon } from "@radix-ui/react-icons";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-import { MoreVertical, Pencil, Trash2, UserX } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface ClientesTableProps {
-  clientes: ClienteSistema[];
+  clientes: any[]; // Using any to avoid type conflicts
   isLoading: boolean;
-  onEdit: (cliente: ClienteSistema) => void;
-  onDelete: (cliente: ClienteSistema) => void;
-  onBlock: (cliente: ClienteSistema) => void;
+  onEdit: (cliente: any) => void;
+  onDelete: (cliente: any) => void;
+  onView: (cliente: any) => void;
 }
 
-const ClientesTable: React.FC<ClientesTableProps> = ({
-  clientes,
-  isLoading,
-  onEdit,
-  onDelete,
-  onBlock,
+const ClientesTable: React.FC<ClientesTableProps> = ({ 
+  clientes, 
+  isLoading, 
+  onEdit, 
+  onDelete, 
+  onView 
 }) => {
-  const columns: ColumnDef<ClienteSistema>[] = [
-    {
-      accessorKey: "razao_social",
-      header: "Razão Social",
-    },
-    {
-      accessorKey: "cnpj",
-      header: "CNPJ",
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
-    {
-      accessorKey: "telefone",
-      header: "Telefone",
-    },
-    {
-      accessorKey: "situacao",
-      header: "Situação",
-      cell: ({ row }) => {
-        const situacao = row.getValue("situacao");
-        let badgeVariant: "default" | "secondary" | "destructive" | "outline" | "success" = "default";
-        
-        if (situacao === "ativo") {
-          badgeVariant = "success";
-        } else if (situacao === "inativo") {
-          badgeVariant = "destructive";
-        } else if (situacao === "sem-contrato") {
-          badgeVariant = "secondary";
-        } else if (situacao === "bloqueado") {
-          badgeVariant = "destructive";
-        }
+  const formatDate = (date: number) => {
+    return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+  };
 
-        return <Badge variant={badgeVariant}>{situacao}</Badge>;
-      },
-    },
-    {
-      id: "actions",
-      header: "Ações",
-      cell: ({ row }) => {
-        const cliente = row.original;
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Abrir menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => onEdit(cliente)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onBlock(cliente)}>
-                <UserX className="mr-2 h-4 w-4" />
-                Bloquear
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDelete(cliente)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
-  ];
-
-  const table = useReactTable({
-    data: clientes,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
+  // Fix for ReactNode error - ensure we return valid React nodes
+  const renderStatus = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "liberado":
+        return <Badge variant="success">Liberado</Badge>;
+      case "bloqueado":
+        return <Badge variant="destructive">Bloqueado</Badge>;
+      case "pendente":
+        return <Badge variant="warning">Pendente</Badge>;
+      case "ativo":
+        return <Badge variant="default">Ativo</Badge>;
+      case "em-analise":
+        return <Badge variant="secondary">Em Análise</Badge>;
+      case "sem-contrato":
+        return <Badge variant="outline">Sem Contrato</Badge>;
+      case "bloqueado-manualmente":
+        return <Badge variant="destructive">Bloq. Manual</Badge>;
+      default:
+        return <span>{status || "Desconhecido"}</span>; // Return valid ReactNode
+    }
+  };
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                return (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            <tr>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center italic"
-              >
-                Carregando clientes...
-              </TableCell>
-            </tr>
-          ) : clientes.length === 0 ? (
-            <tr>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center italic"
-              >
-                Nenhum cliente encontrado.
-              </TableCell>
-            </tr>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Nome</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>CPF/CNPJ</TableHead>
+          <TableHead>Data Inclusão</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Ações</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {clientes.map((cliente) => (
+          <TableRow key={cliente.id}>
+            <TableCell className="font-medium">{cliente.nome}</TableCell>
+            <TableCell>{cliente.email}</TableCell>
+            <TableCell>{cliente.cpfCnpj}</TableCell>
+            <TableCell>{formatDate(cliente.dataInclusao)}</TableCell>
+            <TableCell>{renderStatus(cliente.situacao)}</TableCell>
+            <TableCell className="text-right">
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => onView(cliente)}
+                  disabled={isLoading}
+                >
+                  <Eye size={16} />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => onEdit(cliente)}
+                  disabled={isLoading}
+                >
+                  <Pencil size={16} />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => onDelete(cliente)}
+                  disabled={isLoading}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 };
 

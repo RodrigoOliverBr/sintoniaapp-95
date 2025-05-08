@@ -37,13 +37,13 @@ export interface ClientePerfil {
 
 export interface ClienteSistema {
   id: string;
-  razao_social?: string;
+  razao_social: string; // Changed from optional to required for compatibility with admin.ts
   razaoSocial?: string;
   nome: string;
-  tipo: TipoPessoa;
+  tipo: TipoPessoa; // Enforced as TipoPessoa
   numeroEmpregados: number;
   dataInclusao: number; // timestamp
-  situacao: ClienteStatus;
+  situacao: ClienteStatus; // Enforced as ClienteStatus
   cnpj?: string;
   cpfCnpj: string;
   email: string;

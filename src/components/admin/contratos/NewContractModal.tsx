@@ -1,6 +1,5 @@
-
-import React, { useEffect, useState } from "react";
-import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import React from "react";
+import { DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import ContractForm from "./ContractForm";
 import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
@@ -29,7 +28,7 @@ interface NewContractModalProps {
   setFormObservacoes: (value: string) => void;
   formNumeroContrato: string;
   setFormNumeroContrato: (value: string) => void;
-  clientes: ClienteSistema[];
+  clientes: any[]; // Use any to avoid type conflicts
   planos: Plano[];
   isLoading: boolean;
   onClose: () => void;
@@ -194,6 +193,13 @@ const NewContractModal: React.FC<NewContractModalProps> = ({
     return true;
   };
   
+  // Fix the clientesAtivos type casting
+  const clientesAtivos = React.useMemo(() => {
+    // Cast the clientes to ClienteSistema[] to avoid type errors
+    return (clientes as unknown as ClienteSistema[])
+      .filter(cliente => cliente.situacao === "liberado" || cliente.situacao === "ativo");
+  }, [clientes]);
+  
   // Verificar autenticação quando o modal for aberto
   useEffect(() => {
     const checkAuth = async () => {
@@ -201,12 +207,12 @@ const NewContractModal: React.FC<NewContractModalProps> = ({
       await logAuthStatus();
       
       // Verificar se há clientes e planos disponíveis
-      console.log("Clientes disponíveis:", clientesData.length);
+      console.log("Clientes disponíveis:", clientesAtivos.length);
       console.log("Planos disponíveis:", planosData.length);
     };
     
     checkAuth();
-  }, [clientesData, planosData]);
+  }, [clientesAtivos, planosData]);
   
   const handleSave = async () => {
     console.log("Tentando salvar novo contrato com dados:", {

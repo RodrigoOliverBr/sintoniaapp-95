@@ -1,3 +1,4 @@
+
 export interface Question {
   id: string;
   texto: string;
@@ -62,6 +63,9 @@ export interface FormAnswer {
   selectedOptions?: string[];
   otherText?: string;
 }
+
+// Import from avaliacao to avoid type duplication
+import { AvaliacaoResposta } from './avaliacao';
 
 export interface FormResult {
   id: string;

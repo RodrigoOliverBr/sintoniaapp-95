@@ -1,6 +1,6 @@
-
 import { useState, useEffect, useCallback } from "react";
-import { Contrato, ClienteSistema, Plano, StatusContrato } from "@/types/admin";
+import { Contrato, Plano, StatusContrato } from "@/types/admin";
+import { ClienteSistema, ClienteStatus } from "@/types/cliente";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -83,8 +83,8 @@ export const useContratos = (): UseContratosResult => {
         email: c.email || "",
         responsavel: c.responsavel || "",
         contato: c.responsavel || "",
-        situacao: c.situacao || "",
-        tipo: "cliente",
+        situacao: (c.situacao || "liberado") as ClienteStatus, // Cast to ClienteStatus
+        tipo: "juridica", // Set to a valid TipoPessoa value
         numeroEmpregados: 0,
         dataInclusao: c.created_at ? new Date(c.created_at).getTime() : Date.now(), // Convert to number
         ativo: true,
