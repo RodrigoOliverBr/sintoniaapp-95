@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext } from "react";
-import { FormResult, Question } from "@/types/form";
+import { FormResult, Question, Section } from "@/types/form";
 import { Company, Employee, Form } from "@/types/cadastro";
 
 interface FormPageContextProps {
@@ -21,13 +21,13 @@ interface FormPageContextProps {
   
   // Questions and sections
   questions: Question[];
-  formSections: any[];
+  sections: Section[];
   
   // Form state
   answers: Record<string, any>;
   setAnswers: React.Dispatch<React.SetStateAction<Record<string, any>>>;
-  formResult: FormResult | null;
-  setFormResult: React.Dispatch<React.SetStateAction<FormResult | null>>;
+  currentEvaluation: FormResult | null;
+  setCurrentEvaluation: React.Dispatch<React.SetStateAction<FormResult | null>>;
   showResults: boolean;
   setShowResults: React.Dispatch<React.SetStateAction<boolean>>;
   formComplete: boolean;
@@ -53,6 +53,7 @@ interface FormPageContextProps {
   handleNewEvaluation: () => void;
   handleExitResults: () => void;
   handleSaveAndComplete: () => Promise<void>;
+  handleSaveAndExit: () => Promise<void>;
   
   // Form state
   isSubmitting: boolean;

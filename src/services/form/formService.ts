@@ -78,6 +78,44 @@ export async function getMitigationsByRiskId(riskId: string): Promise<Mitigation
   }
 }
 
+// Update analyst notes
+export async function updateAnalystNotes(evaluationId: string, notes: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('avaliacoes')
+      .update({ notas_analista: notes })
+      .eq('id', evaluationId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error updating analyst notes:', error);
+    throw error;
+  }
+}
+
+// Get evaluation by employee and form ID
+export async function getFormResultByEmployeeId(employeeId: string, formId: string): Promise<FormResult | null> {
+  try {
+    const { data, error } = await supabase
+      .from('avaliacoes')
+      .select(`
+        *,
+        respostas:respostas (*)
+      `)
+      .eq('funcionario_id', employeeId)
+      .eq('formulario_id', formId)
+      .order('created_at', { ascending: false })
+      .maybeSingle();
+      
+    if (error) throw error;
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching form result:', error);
+    return null;
+  }
+}
+
 // Save form evaluation result
 export async function saveFormResult(evaluation: {
   id?: string;
@@ -95,6 +133,7 @@ export async function saveFormResult(evaluation: {
   }>;
 }): Promise<string> {
   try {
+    console.log("Saving form result:", evaluation);
     // First, save or update the evaluation
     let evaluationId = evaluation.id;
     
@@ -114,9 +153,13 @@ export async function saveFormResult(evaluation: {
         .select('id')
         .single();
         
-      if (evalError) throw evalError;
+      if (evalError) {
+        console.error("Error creating evaluation:", evalError);
+        throw evalError;
+      }
       
       evaluationId = newEvaluation.id;
+      console.log("Created new evaluation with ID:", evaluationId);
     } else {
       // Update existing evaluation
       const { error: evalError } = await supabase
@@ -129,17 +172,25 @@ export async function saveFormResult(evaluation: {
         })
         .eq('id', evaluationId);
         
-      if (evalError) throw evalError;
+      if (evalError) {
+        console.error("Error updating evaluation:", evalError);
+        throw evalError;
+      }
+      console.log("Updated evaluation with ID:", evaluationId);
     }
     
     // If updating an existing evaluation, delete the old answers
     if (evaluation.id) {
+      console.log("Deleting existing answers for evaluation:", evaluationId);
       const { error: deleteError } = await supabase
         .from('respostas')
         .delete()
         .eq('avaliacao_id', evaluationId);
         
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error("Error deleting existing answers:", deleteError);
+        throw deleteError;
+      }
     }
     
     // Insert the new answers
@@ -152,11 +203,17 @@ export async function saveFormResult(evaluation: {
     }));
     
     if (answers.length > 0) {
+      console.log(`Inserting ${answers.length} answers for evaluation:`, evaluationId);
       const { error: answersError } = await supabase
         .from('respostas')
         .insert(answers);
         
-      if (answersError) throw answersError;
+      if (answersError) {
+        console.error("Error inserting answers:", answersError);
+        throw answersError;
+      }
+      
+      console.log("Successfully inserted answers");
     }
     
     return evaluationId;

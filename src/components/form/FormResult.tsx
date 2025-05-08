@@ -22,13 +22,48 @@ const FormResult: React.FC<FormResultProps> = ({
 }) => {
   // Group questions by severity
   const questionsBySeverity = React.useMemo(() => {
-    const grouped: Record<string, { questions: Question[], yesCount: number }> = {};
+    const grouped: Record<string, { 
+      questions: Question[], 
+      yesCount: number, 
+      color: string,
+      textColor: string
+    }> = {
+      "EXTREMAMENTE PREJUDICIAL": { 
+        questions: [], 
+        yesCount: 0, 
+        color: "bg-red-100", 
+        textColor: "text-red-700" 
+      },
+      "PREJUDICIAL": { 
+        questions: [], 
+        yesCount: 0, 
+        color: "bg-orange-100", 
+        textColor: "text-orange-700"
+      },
+      "LEVEMENTE PREJUDICIAL": { 
+        questions: [], 
+        yesCount: 0, 
+        color: "bg-yellow-100", 
+        textColor: "text-yellow-700"
+      },
+      "Desconhecida": { 
+        questions: [], 
+        yesCount: 0, 
+        color: "bg-gray-100", 
+        textColor: "text-gray-700"
+      }
+    };
     
     questions.forEach(question => {
       const severity = question.risco?.severidade?.nivel || "Desconhecida";
       
       if (!grouped[severity]) {
-        grouped[severity] = { questions: [], yesCount: 0 };
+        grouped[severity] = { 
+          questions: [], 
+          yesCount: 0, 
+          color: "bg-gray-100", 
+          textColor: "text-gray-700"
+        };
       }
       
       grouped[severity].questions.push(question);
@@ -53,6 +88,12 @@ const FormResult: React.FC<FormResultProps> = ({
     })
   ) : "Desconhecida";
 
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (onNotesChange) {
+      onNotesChange(e.target.value);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -65,63 +106,102 @@ const FormResult: React.FC<FormResultProps> = ({
               <span className="text-sm text-muted-foreground">Total SIM</span>
               <span className="text-lg font-semibold">{result.total_sim}</span>
             </div>
+            
             <div className="flex flex-col">
               <span className="text-sm text-muted-foreground">Total NÃO</span>
               <span className="text-lg font-semibold">{result.total_nao}</span>
             </div>
+            
             <div className="flex flex-col">
-              <span className="text-sm text-muted-foreground">Estado</span>
-              <span className="text-lg font-semibold">{result.is_complete ? "Completo" : "Em andamento"}</span>
+              <span className="text-sm text-muted-foreground">Status</span>
+              <span className="text-lg font-semibold">
+                {result.is_complete ? "Completa" : "Em andamento"}
+              </span>
             </div>
+            
             <div className="flex flex-col">
-              <span className="text-sm text-muted-foreground">Concluído</span>
+              <span className="text-sm text-muted-foreground">Atualizada</span>
               <span className="text-lg font-semibold">{completionDate}</span>
             </div>
           </div>
           
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Riscos por Severidade</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {Object.entries(questionsBySeverity).map(([severity, data]) => (
-                <Card key={severity}>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col">
-                      <h4 className="font-semibold">{severity}</h4>
-                      <div className="mt-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>Perguntas:</span>
-                          <span>{data.questions.length}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Riscos identificados:</span>
-                          <span>{data.yesCount}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Percentual:</span>
-                          <span>
-                            {data.questions.length > 0 
-                              ? `${Math.round((data.yesCount / data.questions.length) * 100)}%` 
-                              : "0%"}
-                          </span>
-                        </div>
-                      </div>
+          <div className="pt-4">
+            <h3 className="text-lg font-semibold mb-4">Respostas por Severidade</h3>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+              {Object.entries(questionsBySeverity)
+                .filter(([severity]) => severity !== "Desconhecida")
+                .sort(([sevA], [sevB]) => {
+                  if (sevA === "EXTREMAMENTE PREJUDICIAL") return -1;
+                  if (sevB === "EXTREMAMENTE PREJUDICIAL") return 1;
+                  if (sevA === "PREJUDICIAL") return -1;
+                  if (sevB === "PREJUDICIAL") return 1;
+                  return 0;
+                })
+                .map(([severity, data]) => (
+                <div key={severity} className={`p-4 rounded-lg ${data.color}`}>
+                  <div className={`text-sm font-medium mb-1 ${data.textColor}`}>
+                    {severity}
+                  </div>
+                  <div className="flex justify-between items-end">
+                    <div className="text-2xl font-bold">
+                      {data.yesCount}/{data.questions.length}
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="text-sm font-medium">
+                      {((data.yesCount / data.questions.length) * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas do Analista</Label>
-            <Textarea
-              id="notes"
-              value={result.notas_analista || ""}
-              onChange={(e) => onNotesChange && onNotesChange(e.target.value)}
-              placeholder="Adicione observações sobre esta avaliação"
-              className="min-h-[200px]"
+          <div className="pt-4">
+            <h3 className="text-lg font-semibold mb-4">Observações do Analista</h3>
+            <Textarea 
+              value={result.notas_analista || ""} 
+              onChange={handleNotesChange}
+              placeholder="Adicione observações sobre a avaliação aqui..."
               readOnly={isReadOnly}
+              className="min-h-[150px]"
             />
+          </div>
+          
+          <div className="pt-4">
+            <h3 className="text-lg font-semibold mb-4">Detalhes das Respostas</h3>
+            {Object.entries(questionsBySeverity)
+              .filter(([severity, data]) => data.questions.length > 0)
+              .map(([severity, data]) => (
+                <div key={severity} className="mb-6">
+                  <h4 className={`font-semibold mb-2 ${data.textColor}`}>
+                    {severity}
+                  </h4>
+                  <div className="space-y-3">
+                    {data.questions.map(question => {
+                      const response = result.respostas?.find(r => r.pergunta_id === question.id);
+                      return (
+                        <div key={question.id} className="border-b pb-3">
+                          <div className="flex justify-between">
+                            <span>{question.texto}</span>
+                            <span className={
+                              response?.resposta === true 
+                                ? "font-medium text-green-600" 
+                                : "font-medium text-gray-600"
+                            }>
+                              {response?.resposta === true ? "SIM" : "NÃO"}
+                            </span>
+                          </div>
+                          {response?.observacao && (
+                            <div className="mt-1 text-sm text-gray-600">
+                              <span className="font-medium">Observação: </span>
+                              {response.observacao}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+            ))}
           </div>
         </CardContent>
       </Card>

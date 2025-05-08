@@ -1,18 +1,19 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Question } from "@/types/form";
+import { Question, Section } from "@/types/form";
 import QuestionComponent from "@/components/QuestionComponent";
-import { X } from "lucide-react";
+import { X, Save } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 interface FormAllQuestionsProps {
-  sections: any[];
+  sections: Section[];
   questions: Question[];
   answers: Record<string, any>;
   onAnswerChange: (questionId: string, answer: boolean | null) => void;
   onObservationChange: (questionId: string, observation: string) => void;
-  onOptionsChange: (questionId: string, options: string[]) => void;
   onSaveAndComplete: () => void;
+  onSaveAndExit: () => void;
   isSubmitting: boolean;
 }
 
@@ -22,11 +23,11 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
   answers,
   onAnswerChange,
   onObservationChange,
-  onOptionsChange,
   onSaveAndComplete,
+  onSaveAndExit,
   isSubmitting
 }) => {
-  // Track if the button has been clicked to prevent double submissions
+  // Track if buttons have been clicked to prevent double submissions
   const [hasClicked, setHasClicked] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
 
@@ -75,6 +76,21 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
     return a.ordem - b.ordem;
   });
 
+  // Function to get severity class based on risk level
+  const getSeverityClass = (question: Question) => {
+    const severity = question.risco?.severidade?.nivel || "";
+    
+    if (severity.includes("EXTREMAMENTE")) {
+      return "border-l-4 border-red-500";
+    } else if (severity.includes("PREJUDICIAL")) {
+      return "border-l-4 border-orange-500";
+    } else if (severity.includes("LEVEMENTE")) {
+      return "border-l-4 border-yellow-500";
+    }
+    
+    return "";
+  };
+
   return (
     <div className="space-y-10">
       {/* Botão "Marcar Todas como Não" */}
@@ -113,23 +129,56 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
               {sectionQuestions
                 .sort((a, b) => (a.ordem_pergunta || 0) - (b.ordem_pergunta || 0))
                 .map((question) => (
-                <QuestionComponent
-                  key={question.id}
-                  question={question}
-                  answer={answers[question.id]?.answer}
-                  observations={answers[question.id]?.observation || ""}
-                  selectedOptions={answers[question.id]?.selectedOptions || []}
-                  onAnswerChange={(answer) => onAnswerChange(question.id, answer)}
-                  onObservationChange={(observation) => onObservationChange(question.id, observation)}
-                  onOptionsChange={(options) => onOptionsChange(question.id, options)}
-                />
+                <Card 
+                  key={question.id} 
+                  className={`overflow-hidden ${getSeverityClass(question)}`}
+                >
+                  <CardContent className="pt-6">
+                    <QuestionComponent
+                      question={question}
+                      answer={answers[question.id]?.answer}
+                      observations={answers[question.id]?.observation || ""}
+                      selectedOptions={answers[question.id]?.selectedOptions || []}
+                      onAnswerChange={(answer) => onAnswerChange(question.id, answer)}
+                      onObservationChange={(observation) => onObservationChange(question.id, observation)}
+                      onOptionsChange={() => {}}
+                    />
+                    {question.risco?.severidade && (
+                      <div className="mt-2 text-sm">
+                        <span className="font-medium">Severidade: </span>
+                        <span 
+                          className={
+                            question.risco.severidade.nivel.includes("EXTREMAMENTE") 
+                              ? "text-red-600 font-semibold" 
+                              : question.risco.severidade.nivel.includes("PREJUDICIAL")
+                                ? "text-orange-600 font-semibold"
+                                : "text-yellow-600 font-semibold"
+                          }
+                        >
+                          {question.risco.severidade.nivel}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
         );
       })}
       
-      <div className="flex justify-end pb-8">
+      <div className="flex justify-between pb-8 gap-4">
+        <Button 
+          onClick={onSaveAndExit}
+          variant="outline"
+          size="lg"
+          className="w-full md:w-auto"
+          disabled={isSubmitting || hasClicked}
+        >
+          <Save className="mr-2 h-4 w-4" />
+          Salvar e Sair
+        </Button>
+
         <Button 
           onClick={handleSaveClick} 
           size="lg" 
