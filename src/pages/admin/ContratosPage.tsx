@@ -19,6 +19,7 @@ const ContratosPage: React.FC = () => {
     contratos, 
     clientes, 
     planos, 
+    loading: loadingData,
     isLoading,
     currentContrato,
     setCurrentContrato,
@@ -56,7 +57,7 @@ const ContratosPage: React.FC = () => {
   }, [openNewModal]);
   
   useEffect(() => {
-    if (formPlanoId) {
+    if (formPlanoId && planos) {
       const planoSelecionado = planos.find(p => p.id === formPlanoId);
       if (planoSelecionado) {
         setFormValorMensal(planoSelecionado.valorMensal);
@@ -97,10 +98,10 @@ const ContratosPage: React.FC = () => {
     setFormClienteId(contrato.clienteSistemaId || contrato.clienteId);
     setFormPlanoId(contrato.planoId);
     setFormDataInicio(new Date(contrato.dataInicio));
-    setFormDataFim(new Date(contrato.dataFim));
+    setFormDataFim(new Date(contrato.dataFim || Date.now()));
     setFormDataPrimeiroVencimento(new Date(contrato.dataPrimeiroVencimento));
     setFormValorMensal(contrato.valorMensal);
-    setFormStatus(contrato.status);
+    setFormStatus(contrato.status as StatusContrato);
     setFormTaxaImplantacao(contrato.taxaImplantacao);
     setFormObservacoes(contrato.observacoes || '');
     setFormNumeroContrato(contrato.numero);
@@ -178,19 +179,21 @@ const ContratosPage: React.FC = () => {
         }
       }
       
-      const success = await updateContrato(
-        currentContrato.id,
-        formClienteId,
-        formPlanoId,
-        formNumeroContrato,
-        formDataInicio,
-        formDataFim,
-        formDataPrimeiroVencimento,
-        formValorMensal,
-        formStatus,
-        formTaxaImplantacao,
-        formObservacoes
-      );
+      // Create an update object with the necessary fields
+      const updates = {
+        clienteSistemaId: formClienteId,
+        planoId: formPlanoId,
+        numero: formNumeroContrato,
+        dataInicio: formDataInicio.getTime(),
+        dataFim: formDataFim.getTime(),
+        dataPrimeiroVencimento: formDataPrimeiroVencimento.getTime(),
+        valorMensal: formValorMensal,
+        status: formStatus,
+        taxaImplantacao: formTaxaImplantacao,
+        observacoes: formObservacoes
+      };
+      
+      const success = await updateContrato(currentContrato.id, updates);
 
       if (success) {
         toast.success("Contrato atualizado com sucesso!");
@@ -212,7 +215,7 @@ const ContratosPage: React.FC = () => {
         return;
       }
       
-      const success = await deleteContrato(currentContrato.id, currentContrato.clienteSistemaId);
+      const success = await deleteContrato(currentContrato.id);
 
       if (success) {
         toast.success("Contrato excluído com sucesso!");
@@ -244,10 +247,10 @@ const ContratosPage: React.FC = () => {
           <ContractTable 
             contratos={filteredContratos}
             clientes={clientes}
-            planos={planos}
+            planos={planos || []}
             onEdit={handleOpenEditModal}
             onDelete={handleOpenDeleteModal}
-            isLoading={isLoading}
+            isLoading={isLoading || loadingData}
           />
         </CardContent>
       </Card>
@@ -278,8 +281,8 @@ const ContratosPage: React.FC = () => {
           formNumeroContrato={formNumeroContrato}
           setFormNumeroContrato={setFormNumeroContrato}
           clientes={clientes}
-          planos={planos}
-          isLoading={isLoading}
+          planos={planos || []}
+          isLoading={isLoading || loadingData}
           onClose={() => setOpenNewModal(false)}
           onSave={handleAddContrato}
         />
@@ -311,8 +314,8 @@ const ContratosPage: React.FC = () => {
           formNumeroContrato={formNumeroContrato}
           setFormNumeroContrato={setFormNumeroContrato}
           clientes={clientes}
-          planos={planos}
-          isLoading={isLoading}
+          planos={planos || []}
+          isLoading={isLoading || loadingData}
           onClose={() => setOpenEditModal(false)}
           onSave={handleUpdateContrato}
         />
@@ -320,7 +323,7 @@ const ContratosPage: React.FC = () => {
       
       <Dialog open={openDeleteModal} onOpenChange={setOpenDeleteModal}>
         <DeleteContractModal
-          isLoading={isLoading}
+          isLoading={isLoading || loadingData}
           onClose={() => setOpenDeleteModal(false)}
           onDelete={handleDeleteContrato}
         />

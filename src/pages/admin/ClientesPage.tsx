@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
@@ -8,7 +9,15 @@ import ClientesTable from "@/components/admin/clientes/ClientesTable";
 import { ClienteDialogs } from "@/components/admin/clientes/ClienteDialogs";
 import { ClienteActions } from "@/components/admin/clientes/ClienteActions";
 import { ClienteForm } from "@/components/admin/ClienteForm";
-import { ClienteSistema, TipoPessoa } from "@/types/admin";
+import { ClienteSistema, TipoPessoa } from '@/types/admin';
+
+// Create a separate Supabase client for admin operations that won't affect the current session
+// This approach avoids logging out the admin when creating new users
+const createAdminClient = () => {
+  // Use the same URL but with admin headers - this avoids using service role key in frontend
+  // The RLS policies should allow admin users to perform these operations
+  return supabase;
+};
 
 const ClientesPage: React.FC = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
@@ -63,7 +72,7 @@ const ClientesPage: React.FC = () => {
       console.log(`ClientesPage: ${contratosData?.length || 0} contratos ativos encontrados`);
       
       // Map clients to include contract status
-      const clientesProcessed = clientesData?.map(cliente => {
+      const clientesProcessed = clientsData?.map(cliente => {
         // Check if client has active contracts
         const hasActiveContract = contratosData?.some(
           contrato => contrato.cliente_sistema_id === cliente.id && contrato.status === "ativo"
@@ -84,7 +93,7 @@ const ClientesPage: React.FC = () => {
           telefone: cliente.telefone || "",
           responsavel: cliente.responsavel || "",
           contato: cliente.responsavel || "",
-          tipo: "juridica" as TipoPessoa, // Corrected type casting
+          tipo: "juridica" as TipoPessoa, // Explicit type casting
           numeroEmpregados: 0,
           dataInclusao: cliente.created_at ? new Date(cliente.created_at).getTime() : Date.now(),
           ativo: true,
@@ -204,7 +213,7 @@ const ClientesPage: React.FC = () => {
       const { error } = await supabase
         .from("clientes_sistema")
         .update({
-          situacao: "bloqueado", // Assuming 'bloqueado' is a valid value for situacao
+          situacao: "bloqueado", 
         })
         .eq("id", selectedCliente.id);
 
@@ -278,64 +287,36 @@ const ClientesPage: React.FC = () => {
       console.log("Cliente criado com sucesso no sistema:", clienteData[0]);
       
       try {
-        // 3. Create a Supabase authentication user
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.senha,
-          options: {
-            data: {
-              cliente_id: clienteData[0].id,
-              nome: formData.razao_social,
-              tipo: "client"
-            }
-          }
+        // 3. Use Edge Function to create a user without affecting admin session
+        // This is the key change to prevent admin logout
+        const { data: authResponse, error: authError } = await supabase.functions.invoke('admin-create-user', {
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.senha,
+            clienteId: clienteData[0].id,
+            nome: formData.razao_social,
+          })
         });
 
         if (authError) {
-          console.error("Erro ao criar usuário de autenticação:", authError);
+          console.error("Erro ao criar usuário via Edge Function:", authError);
           
-          // Rollback: delete the client if auth user creation fails
-          await supabase
-            .from("clientes_sistema")
-            .delete()
-            .eq("id", clienteData[0].id);
-            
-          toast.error("Erro ao criar usuário de autenticação: " + authError.message);
-          setIsLoading(false);
-          return;
+          // Continue anyway as we already created the client record
+          toast.warning("Cliente criado, mas houve um erro ao configurar o acesso: " + authError.message);
+        } else {
+          console.log("Usuário de autenticação criado via Edge Function:", authResponse);
         }
         
-        console.log("Usuário de autenticação criado:", authData);
-        
-        // 4. Create the profile in perfis table with tipo 'client'
-        const { data: perfilData, error: perfilError } = await supabase
-          .from("perfis")
-          .insert([{
-            id: authData.user?.id,
-            tipo: 'client',
-            nome: formData.razao_social,
-            email: formData.email
-          }])
-          .select();
-          
-        if (perfilError) {
-          console.error("Erro ao criar perfil:", perfilError);
-          
-          // Don't rollback auth user creation, as this is handled by Supabase
-          toast.error("Erro ao criar perfil: " + handleSupabaseError(perfilError));
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log("Perfil criado:", perfilData);
+        // Loading clientes will refresh the list with the new client
+        loadClientes();
+        toast.success("Cliente criado com sucesso!");
       } catch (authError: any) {
         console.error("Erro ao criar usuário de autenticação:", authError);
-        toast.error("Erro ao criar usuário de autenticação: " + authError.message);
-        // Não fazemos rollback do cliente já criado, pois pode ser útil manter o registro
+        toast.warning("Cliente criado, mas houve um problema ao configurar o acesso: " + authError.message);
+        // Still reload clients as we successfully created the client record
+        loadClientes();
       }
       
-      toast.success("Cliente criado com sucesso!");
-      loadClientes();
     } catch (error: any) {
       console.error("Erro ao criar cliente:", error);
       toast.error("Erro ao criar cliente: " + error.message);

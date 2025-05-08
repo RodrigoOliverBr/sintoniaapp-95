@@ -7,16 +7,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -25,7 +17,6 @@ import {
 import { ClienteSistema } from "@/types/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +25,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { MoreVertical, Pencil, Trash2, UserX } from "lucide-react";
 
 interface ClientesTableProps {
@@ -73,7 +63,7 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
       accessorKey: "situacao",
       header: "Situação",
       cell: ({ row }) => {
-        const situacao = row.getValue("situacao");
+        const situacao = row.getValue("situacao") as string;
         let badgeVariant: "default" | "secondary" | "destructive" | "outline" | "success" = "default";
         
         if (situacao === "ativo") {
@@ -153,23 +143,23 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
         </TableHeader>
         <TableBody>
           {isLoading ? (
-            <tr>
+            <TableRow>
               <TableCell
                 colSpan={columns.length}
                 className="h-24 text-center italic"
               >
                 Carregando clientes...
               </TableCell>
-            </tr>
+            </TableRow>
           ) : clientes.length === 0 ? (
-            <tr>
+            <TableRow>
               <TableCell
                 colSpan={columns.length}
                 className="h-24 text-center italic"
               >
                 Nenhum cliente encontrado.
               </TableCell>
-            </tr>
+            </TableRow>
           ) : (
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id}>
