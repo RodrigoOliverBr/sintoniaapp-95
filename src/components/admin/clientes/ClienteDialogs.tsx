@@ -45,15 +45,16 @@ export const ClienteDialogs: React.FC<ClienteDialogsProps> = ({
           </DialogHeader>
           <ClienteForm 
             onSubmit={onUpdateCliente}
-            defaultValues={{
-              razao_social: currentCliente?.razaoSocial || '',
+            initialValues={{
+              razao_social: currentCliente?.razaoSocial || currentCliente?.razao_social || '',
               cnpj: currentCliente?.cnpj || '',
               email: currentCliente?.email || '',
               telefone: currentCliente?.telefone || '',
-              responsavel: currentCliente?.responsavel || ''
+              responsavel: currentCliente?.responsavel || '',
+              senha: '' // Empty for security
             }}
             isLoading={isLoading}
-            isEditing={true}
+            isUpdate={true}
           />
         </DialogContent>
       </Dialog>
@@ -63,7 +64,7 @@ export const ClienteDialogs: React.FC<ClienteDialogsProps> = ({
           <DialogHeader>
             <DialogTitle>Confirmar exclusão</DialogTitle>
             <DialogDescription>
-              Você está prestes a excluir o cliente "{currentCliente?.razaoSocial}". Esta ação não pode ser desfeita.
+              Você está prestes a excluir o cliente "{currentCliente?.razaoSocial || currentCliente?.razao_social}". Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
@@ -89,7 +90,7 @@ export const ClienteDialogs: React.FC<ClienteDialogsProps> = ({
           <DialogHeader>
             <DialogTitle>Confirmar bloqueio</DialogTitle>
             <DialogDescription>
-              Você está prestes a bloquear manualmente o acesso do cliente "{currentCliente?.razaoSocial}". 
+              Você está prestes a bloquear manualmente o acesso do cliente "{currentCliente?.razaoSocial || currentCliente?.razao_social}". 
               O cliente não poderá acessar o sistema após esta ação.
             </DialogDescription>
           </DialogHeader>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,11 +8,12 @@ import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import { useQuery } from "@tanstack/react-query";
 import { getCompanies } from "@/services/company/companyService";
 import { getEmployeesByCompany } from "@/services/employee/employeeService";
-import { Question, FormResult } from "@/types/form";
+import { Question } from "@/types/form";
 import { Company, Employee } from "@/types/cadastro";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { AvaliacaoResposta } from "@/types/avaliacao";
 
 const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
@@ -22,6 +22,8 @@ const RelatoriosPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("diagnostico");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
+  const [respostas, setRespostas] = useState<AvaliacaoResposta[]>([]);
+  const [avaliacaoId, setAvaliacaoId] = useState<string | null>(null);
 
   // Sample questions and answers for demonstration
   const sampleQuestions: Question[] = [
@@ -76,7 +78,8 @@ const RelatoriosPage: React.FC = () => {
         const { data, error } = await supabase
           .from('avaliacoes')
           .select('*, formularios(*)')
-          .eq('funcionario_id', selectedEmployeeId);
+          .eq('funcionario_id', selectedEmployeeId)
+          .order('created_at', { ascending: false });
         
         if (error) throw error;
         console.log("Evaluations fetched:", data);
@@ -90,15 +93,135 @@ const RelatoriosPage: React.FC = () => {
     enabled: !!selectedEmployeeId
   });
 
+  // Fetch responses for the selected employee
+  const fetchEmployeeResponses = async () => {
+    if (!selectedEmployeeId || !reportGenerated) {
+      setRespostas([]);
+      return;
+    }
+    
+    try {
+      setIsGenerating(true);
+      console.log("Fetching responses for employee:", selectedEmployeeId);
+      
+      // First get the evaluation ID
+      const { data: avaliacao, error: avaliacaoError } = await supabase
+        .from('avaliacoes')
+        .select('id')
+        .eq('funcionario_id', selectedEmployeeId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (avaliacaoError) {
+        console.error("Error fetching evaluation:", avaliacaoError);
+        toast.error("Erro ao carregar avaliação do funcionário");
+        setRespostas([]);
+        return;
+      }
+      
+      if (!avaliacao) {
+        console.log("No evaluation found for employee:", selectedEmployeeId);
+        toast.error("Nenhuma avaliação encontrada para este funcionário");
+        setRespostas([]);
+        return;
+      }
+      
+      setAvaliacaoId(avaliacao.id);
+      console.log("Found evaluation ID:", avaliacao.id);
+      
+      // Then get the responses with the questions and risks
+      const { data, error } = await supabase
+        .from('respostas')
+        .select(`
+          id, 
+          avaliacao_id,
+          pergunta_id,
+          resposta,
+          observacao,
+          opcoes_selecionadas,
+          pergunta:perguntas (
+            id,
+            texto,
+            risco:riscos (
+              id,
+              texto,
+              severidade:severidade (
+                id,
+                nivel,
+                descricao
+              )
+            )
+          )
+        `)
+        .eq('avaliacao_id', avaliacao.id);
+      
+      if (error) {
+        console.error("Error fetching responses:", error);
+        toast.error("Erro ao carregar respostas do funcionário");
+        setRespostas([]);
+        return;
+      }
+      
+      console.log("Fetched responses:", data);
+      
+      if (data && data.length > 0) {
+        // Transform the data to match our AvaliacaoResposta type
+        const formattedRespostas: AvaliacaoResposta[] = data.map(item => {
+          // Safely convert opcoes_selecionadas to string array
+          let opcoesSelecionadas: string[] = [];
+          if (item.opcoes_selecionadas) {
+            if (Array.isArray(item.opcoes_selecionadas)) {
+              opcoesSelecionadas = item.opcoes_selecionadas.map(opt => String(opt));
+            } else if (typeof item.opcoes_selecionadas === 'string') {
+              opcoesSelecionadas = [item.opcoes_selecionadas];
+            } else if (typeof item.opcoes_selecionadas === 'object') {
+              opcoesSelecionadas = Object.values(item.opcoes_selecionadas).map(opt => String(opt));
+            }
+          }
+
+          return {
+            id: item.id,
+            avaliacao_id: item.avaliacao_id,
+            pergunta_id: item.pergunta_id,
+            pergunta: {
+              id: item.pergunta.id,
+              texto: item.pergunta.texto,
+              risco: item.pergunta.risco
+            },
+            resposta: item.resposta,
+            observacao: item.observacao,
+            opcoes_selecionadas: opcoesSelecionadas,
+          };
+        });
+        
+        setRespostas(formattedRespostas);
+        toast.success("Relatório gerado com sucesso!");
+      } else {
+        console.log("No responses found for evaluation:", avaliacao.id);
+        toast.warning("Nenhuma resposta encontrada para a avaliação");
+        setRespostas([]);
+      }
+    } catch (error) {
+      console.error("Error in fetchEmployeeResponses:", error);
+      toast.error("Erro ao carregar dados para o relatório");
+      setRespostas([]);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleCompanyChange = (companyId: string) => {
     setSelectedCompanyId(companyId);
     setSelectedEmployeeId("");
     setReportGenerated(false);
+    setRespostas([]);
   };
 
   const handleEmployeeChange = (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
     setReportGenerated(false);
+    setRespostas([]);
   };
 
   const handlePeriodChange = (period: string) => {
@@ -112,51 +235,26 @@ const RelatoriosPage: React.FC = () => {
       return;
     }
     
-    setIsGenerating(true);
-    // Simulate report generation (in a real app, this would fetch data from the API)
-    setTimeout(() => {
-      setIsGenerating(false);
-      setReportGenerated(true);
-      toast.success("Relatório gerado com sucesso!");
-    }, 1500);
+    if (!selectedEmployeeId) {
+      toast.warning("Por favor, selecione um funcionário");
+      return;
+    }
+    
+    setReportGenerated(true);
+    fetchEmployeeResponses();
   };
 
-  const selectedCompany = companies.find(c => c.id === selectedCompanyId) || null;
-  const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) || null;
+  // Disable the Generate Report button if company or employee not selected
+  const isGenerateButtonDisabled = !selectedCompanyId || !selectedEmployeeId || isGenerating;
 
-  // Sample form result for diagnostic
-  const sampleFormResult: FormResult = {
-    id: "sample-result",
-    employeeId: selectedEmployeeId || "1",
-    empresa_id: selectedCompanyId || "1",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    answers: {
-      q1: { 
-        questionId: "q1",
-        answer: true 
-      },
-      q2: { 
-        questionId: "q2", 
-        answer: false 
-      },
-      q3: { 
-        questionId: "q3", 
-        answer: true 
-      }
-    },
-    total_sim: 2,
-    total_nao: 1,
-    is_complete: true,
-    last_updated: new Date().toISOString(),
-    formulario_id: "f1"
-  };
+  const selectedCompany = companies?.find(c => c.id === selectedCompanyId) || null;
+  const selectedEmployee = employees?.find(e => e.id === selectedEmployeeId) || null;
 
   return (
     <Layout title="Relatórios">
       <div className="space-y-4 px-4 py-6">
         <FilterSection
-          companies={companies}
+          companies={companies || []}
           selectedCompanyId={selectedCompanyId}
           selectedEmployeeId={selectedEmployeeId}
           onCompanyChange={handleCompanyChange}
@@ -168,7 +266,7 @@ const RelatoriosPage: React.FC = () => {
         <div className="flex justify-end mb-4">
           <Button 
             onClick={handleGenerateReport} 
-            disabled={!selectedCompanyId || isGenerating}
+            disabled={isGenerateButtonDisabled}
           >
             {isGenerating ? "Gerando..." : "Gerar Relatório"}
           </Button>
@@ -183,11 +281,7 @@ const RelatoriosPage: React.FC = () => {
             </TabsList>
 
             <TabsContent value="diagnostico" className="mt-0">
-              <DiagnosticoIndividual
-                result={sampleFormResult}
-                questions={sampleQuestions}
-                companyId={selectedCompanyId}
-              />
+              <DiagnosticoIndividual respostas={respostas} />
             </TabsContent>
 
             <TabsContent value="mapa" className="mt-0">
@@ -203,8 +297,9 @@ const RelatoriosPage: React.FC = () => {
                 <RelatorioPGR
                   company={selectedCompany}
                   employee={selectedEmployee}
-                  questions={sampleQuestions}
-                  answers={sampleAnswers}
+                  questions={[]}
+                  answers={{}}
+                  respostas={respostas}
                 />
               ) : (
                 <div className="flex items-center justify-center py-10 text-muted-foreground">
@@ -217,7 +312,7 @@ const RelatoriosPage: React.FC = () => {
         
         {!reportGenerated && (
           <div className="flex items-center justify-center py-20 text-muted-foreground">
-            Selecione uma empresa e clique em "Gerar Relatório" para visualizar os resultados.
+            Selecione uma empresa e um funcionário, e clique em "Gerar Relatório" para visualizar os resultados.
           </div>
         )}
       </div>

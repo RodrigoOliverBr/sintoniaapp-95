@@ -64,6 +64,7 @@ export interface FormAnswer {
   otherText?: string;
 }
 
+// Updating FormResult to match avaliacao.ts FormResult
 export interface FormResult {
   id: string;
   employeeId: string;
@@ -82,6 +83,7 @@ export interface FormResult {
   totalYes?: number;
   totalNo?: number;
   analyistNotes?: string;
+  isComplete?: boolean;
   yesPerSeverity?: Record<string, number>;
 }
 
