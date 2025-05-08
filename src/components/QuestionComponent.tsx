@@ -45,30 +45,32 @@ const QuestionComponent: React.FC<QuestionComponentProps> = ({
         {getSeverityBadge()}
       </div>
       
-      <RadioGroup
-        value={answer === null ? undefined : answer.toString()}
-        onValueChange={(value) => onAnswerChange(value === "true")}
-        className="flex items-center space-x-6"
-      >
-        <div className="flex items-center space-x-2">
-          <RadioGroupItem value="false" id={`no-${question.id}`} />
-          <Label 
-            htmlFor={`no-${question.id}`} 
-            className="font-normal text-base"
-          >
-            Não
-          </Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <RadioGroupItem value="true" id={`yes-${question.id}`} />
-          <Label 
-            htmlFor={`yes-${question.id}`} 
-            className="font-normal text-base"
-          >
-            Sim
-          </Label>
-        </div>
-      </RadioGroup>
+      <div className="mt-4">
+        <RadioGroup
+          value={answer === null ? undefined : answer.toString()}
+          onValueChange={(value) => onAnswerChange(value === "true")}
+          className="flex items-center space-x-6"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="false" id={`no-${question.id}`} />
+            <Label 
+              htmlFor={`no-${question.id}`} 
+              className="font-normal text-base"
+            >
+              Não
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="true" id={`yes-${question.id}`} />
+            <Label 
+              htmlFor={`yes-${question.id}`} 
+              className="font-normal text-base"
+            >
+              Sim
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
       
       {(answer === true || question.observacao_obrigatoria) && (
         <div className="mt-4">

@@ -1,14 +1,16 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormResult, Question } from "@/types/form";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { formatDistanceToNow, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { FormResult as FormResultType, Question } from "@/types/form"; 
+import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import { updateAnalystNotes } from "@/services/form/formService";
 
 interface FormResultProps {
-  result: FormResult;
+  result: FormResultType;
   questions: Question[];
   onNotesChange?: (notes: string) => void;
   isReadOnly?: boolean;
@@ -20,191 +22,214 @@ const FormResult: React.FC<FormResultProps> = ({
   onNotesChange,
   isReadOnly = false
 }) => {
-  // Group questions by severity
-  const questionsBySeverity = React.useMemo(() => {
-    const grouped: Record<string, { 
-      questions: Question[], 
-      yesCount: number, 
-      color: string,
-      textColor: string
-    }> = {
-      "EXTREMAMENTE PREJUDICIAL": { 
-        questions: [], 
-        yesCount: 0, 
-        color: "bg-red-100", 
-        textColor: "text-red-700" 
-      },
-      "PREJUDICIAL": { 
-        questions: [], 
-        yesCount: 0, 
-        color: "bg-orange-100", 
-        textColor: "text-orange-700"
-      },
-      "LEVEMENTE PREJUDICIAL": { 
-        questions: [], 
-        yesCount: 0, 
-        color: "bg-yellow-100", 
-        textColor: "text-yellow-700"
-      },
-      "Desconhecida": { 
-        questions: [], 
-        yesCount: 0, 
-        color: "bg-gray-100", 
-        textColor: "text-gray-700"
-      }
-    };
-    
-    questions.forEach(question => {
-      const severity = question.risco?.severidade?.nivel || "Desconhecida";
-      
-      if (!grouped[severity]) {
-        grouped[severity] = { 
-          questions: [], 
-          yesCount: 0, 
-          color: "bg-gray-100", 
-          textColor: "text-gray-700"
-        };
-      }
-      
-      grouped[severity].questions.push(question);
-      
-      // Count 'yes' answers for this severity
-      if (result.respostas) {
-        const answer = result.respostas.find(r => r.pergunta_id === question.id);
-        if (answer && answer.resposta === true) {
-          grouped[severity].yesCount += 1;
-        }
-      }
-    });
-    
-    return grouped;
-  }, [questions, result]);
+  const [notes, setNotes] = useState(result.notas_analista || "");
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Calculate completion date
-  const completionDate = result.last_updated ? (
-    formatDistanceToNow(parseISO(result.last_updated), { 
-      addSuffix: true,
-      locale: ptBR 
-    })
-  ) : "Desconhecida";
+  const getQuestionById = (id: string) => {
+    return questions.find(q => q.id === id);
+  };
 
-  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (onNotesChange) {
-      onNotesChange(e.target.value);
+  const handleSaveNotes = async () => {
+    if (!result.id) return;
+
+    try {
+      setIsSaving(true);
+      await updateAnalystNotes(result.id, notes);
+      toast.success("Notas salvas com sucesso!");
+      
+      // Call the parent handler if provided
+      if (onNotesChange) {
+        onNotesChange(notes);
+      }
+    } catch (error) {
+      console.error("Error saving notes:", error);
+      toast.error("Erro ao salvar as notas");
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  // Count severities
+  const countSeverities = () => {
+    const counts = {
+      extremamente: 0,
+      prejudicial: 0,
+      levemente: 0
+    };
+
+    // If there are respostas in the result
+    if (result.respostas) {
+      result.respostas.forEach(resposta => {
+        if (resposta.resposta === true) {
+          const question = getQuestionById(resposta.pergunta_id);
+          if (question?.risco?.severidade?.nivel) {
+            const nivel = question.risco.severidade.nivel;
+            if (nivel.includes('EXTREMAMENTE')) {
+              counts.extremamente++;
+            } else if (nivel.includes('PREJUDICIAL')) {
+              counts.prejudicial++;
+            } else if (nivel.includes('LEVEMENTE')) {
+              counts.levemente++;
+            }
+          }
+        }
+      });
+    }
+
+    return counts;
+  };
+
+  const severityCounts = countSeverities();
+  const hasResponses = result.respostas && result.respostas.length > 0;
+  const totalYes = result.total_sim || 0;
+  const totalNo = result.total_nao || 0;
+  const totalQuestions = totalYes + totalNo;
+  const percentYes = totalQuestions > 0 ? (totalYes / totalQuestions) * 100 : 0;
+
+  // Get responses that have "yes" answers
+  const yesResponses = hasResponses 
+    ? result.respostas!.filter(r => r.resposta === true) 
+    : [];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Resultado da Avaliação</CardTitle>
+          <CardTitle className="text-xl">Resumo da Avaliação</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex flex-col">
-              <span className="text-sm text-muted-foreground">Total SIM</span>
-              <span className="text-lg font-semibold">{result.total_sim}</span>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-gray-100 p-4 rounded-md">
+              <div className="text-sm text-gray-500 mb-1">Total de Respostas</div>
+              <div className="text-2xl font-bold">{totalQuestions}</div>
             </div>
-            
-            <div className="flex flex-col">
-              <span className="text-sm text-muted-foreground">Total NÃO</span>
-              <span className="text-lg font-semibold">{result.total_nao}</span>
+            <div className="bg-green-50 p-4 rounded-md">
+              <div className="text-sm text-gray-500 mb-1">Respostas "Sim"</div>
+              <div className="text-2xl font-bold text-green-600">{totalYes}</div>
             </div>
-            
-            <div className="flex flex-col">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <span className="text-lg font-semibold">
-                {result.is_complete ? "Completa" : "Em andamento"}
-              </span>
-            </div>
-            
-            <div className="flex flex-col">
-              <span className="text-sm text-muted-foreground">Atualizada</span>
-              <span className="text-lg font-semibold">{completionDate}</span>
+            <div className="bg-red-50 p-4 rounded-md">
+              <div className="text-sm text-gray-500 mb-1">Respostas "Não"</div>
+              <div className="text-2xl font-bold text-red-600">{totalNo}</div>
             </div>
           </div>
-          
-          <div className="pt-4">
-            <h3 className="text-lg font-semibold mb-4">Respostas por Severidade</h3>
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-              {Object.entries(questionsBySeverity)
-                .filter(([severity]) => severity !== "Desconhecida")
-                .sort(([sevA], [sevB]) => {
-                  if (sevA === "EXTREMAMENTE PREJUDICIAL") return -1;
-                  if (sevB === "EXTREMAMENTE PREJUDICIAL") return 1;
-                  if (sevA === "PREJUDICIAL") return -1;
-                  if (sevB === "PREJUDICIAL") return 1;
-                  return 0;
-                })
-                .map(([severity, data]) => (
-                <div key={severity} className={`p-4 rounded-lg ${data.color}`}>
-                  <div className={`text-sm font-medium mb-1 ${data.textColor}`}>
-                    {severity}
-                  </div>
-                  <div className="flex justify-between items-end">
-                    <div className="text-2xl font-bold">
-                      {data.yesCount}/{data.questions.length}
-                    </div>
-                    <div className="text-sm font-medium">
-                      {((data.yesCount / data.questions.length) * 100).toFixed(0)}%
-                    </div>
-                  </div>
+
+          <div className="mb-6">
+            <div className="text-sm font-medium mb-2">Distribuição de Respostas</div>
+            <div className="w-full bg-gray-200 rounded-full h-4">
+              <div 
+                className="bg-green-500 h-4 rounded-full" 
+                style={{ width: `${percentYes}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-xs mt-1">
+              <span>{percentYes.toFixed(1)}% Sim</span>
+              <span>{(100 - percentYes).toFixed(1)}% Não</span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="text-sm font-medium">Respostas "Sim" por Nível de Severidade</div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="border border-red-200 bg-red-50 p-3 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">Extremamente Prejudicial</div>
+                  <Badge variant="destructive" className="ml-2">{severityCounts.extremamente}</Badge>
                 </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="pt-4">
-            <h3 className="text-lg font-semibold mb-4">Observações do Analista</h3>
-            <Textarea 
-              value={result.notas_analista || ""} 
-              onChange={handleNotesChange}
-              placeholder="Adicione observações sobre a avaliação aqui..."
-              readOnly={isReadOnly}
-              className="min-h-[150px]"
-            />
-          </div>
-          
-          <div className="pt-4">
-            <h3 className="text-lg font-semibold mb-4">Detalhes das Respostas</h3>
-            {Object.entries(questionsBySeverity)
-              .filter(([severity, data]) => data.questions.length > 0)
-              .map(([severity, data]) => (
-                <div key={severity} className="mb-6">
-                  <h4 className={`font-semibold mb-2 ${data.textColor}`}>
-                    {severity}
-                  </h4>
-                  <div className="space-y-3">
-                    {data.questions.map(question => {
-                      const response = result.respostas?.find(r => r.pergunta_id === question.id);
-                      return (
-                        <div key={question.id} className="border-b pb-3">
-                          <div className="flex justify-between">
-                            <span>{question.texto}</span>
-                            <span className={
-                              response?.resposta === true 
-                                ? "font-medium text-green-600" 
-                                : "font-medium text-gray-600"
-                            }>
-                              {response?.resposta === true ? "SIM" : "NÃO"}
-                            </span>
-                          </div>
-                          {response?.observacao && (
-                            <div className="mt-1 text-sm text-gray-600">
-                              <span className="font-medium">Observação: </span>
-                              {response.observacao}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+              </div>
+              
+              <div className="border border-orange-200 bg-orange-50 p-3 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">Prejudicial</div>
+                  <Badge className="ml-2 bg-orange-500">{severityCounts.prejudicial}</Badge>
                 </div>
-            ))}
+              </div>
+              
+              <div className="border border-yellow-200 bg-yellow-50 p-3 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">Levemente Prejudicial</div>
+                  <Badge className="ml-2 bg-yellow-500">{severityCounts.levemente}</Badge>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Notas do Analista</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Adicione suas observações e análises aqui..."
+            className="min-h-[150px]"
+            disabled={isReadOnly || isSaving}
+          />
+          {!isReadOnly && (
+            <Button 
+              onClick={handleSaveNotes} 
+              className="mt-4"
+              disabled={isSaving}
+            >
+              {isSaving ? "Salvando..." : "Salvar Notas"}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {yesResponses.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Respostas "Sim" Detalhadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {yesResponses.map((resposta) => {
+                const question = getQuestionById(resposta.pergunta_id);
+                if (!question) return null;
+                
+                const severity = question.risco?.severidade?.nivel;
+                let severityIcon = <AlertCircle className="text-yellow-500" />;
+                let severityClass = "bg-yellow-50 border-yellow-200";
+                
+                if (severity?.includes('EXTREMAMENTE')) {
+                  severityIcon = <AlertCircle className="text-red-500" />;
+                  severityClass = "bg-red-50 border-red-200";
+                } else if (severity?.includes('PREJUDICIAL')) {
+                  severityIcon = <AlertCircle className="text-orange-500" />;
+                  severityClass = "bg-orange-50 border-orange-200";
+                }
+                
+                return (
+                  <div key={resposta.id} className={`border p-4 rounded-md ${severityClass}`}>
+                    <div className="flex gap-2 items-start">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium">{question.texto}</div>
+                        
+                        <div className="flex items-center mt-2 text-sm">
+                          {severityIcon}
+                          <span className="ml-1">{severity}</span>
+                        </div>
+                        
+                        {resposta.observacao && (
+                          <div className="mt-2 text-sm bg-white p-2 rounded border">
+                            <span className="font-medium">Observação: </span>
+                            {resposta.observacao}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

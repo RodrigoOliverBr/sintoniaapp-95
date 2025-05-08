@@ -7,8 +7,8 @@ interface FormNavigationProps {
   currentSectionIndex: number;
   sections: any[];
   onNavigate: (index: number) => void;
-  onSave: () => void;
-  isSaving: boolean;
+  onSave?: () => void;
+  isSaving?: boolean;
 }
 
 const FormNavigation: React.FC<FormNavigationProps> = ({
@@ -16,7 +16,7 @@ const FormNavigation: React.FC<FormNavigationProps> = ({
   sections,
   onNavigate,
   onSave,
-  isSaving,
+  isSaving = false,
 }) => {
   const isFirstSection = currentSectionIndex === 0;
   const isLastSection = currentSectionIndex === sections.length - 1;
@@ -37,7 +37,7 @@ const FormNavigation: React.FC<FormNavigationProps> = ({
         Seção {currentSectionIndex + 1} de {sections.length}
       </div>
 
-      {isLastSection ? (
+      {isLastSection && onSave ? (
         <Button
           onClick={onSave}
           disabled={isSaving}

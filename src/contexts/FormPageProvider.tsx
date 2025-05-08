@@ -3,9 +3,17 @@ import React, { useState, useEffect, useCallback } from "react";
 import { FormPageContext } from "./FormPageContext";
 import { useFormSelections } from "@/hooks/form/useFormSelections";
 import { FormResult, Section, Question } from "@/types/form";
-import { getFormSections, getFormQuestions, getEmployeeEvaluations, deleteEvaluation, getEvaluationById } from "@/services/form/formService";
+import { 
+  getFormSections, 
+  getFormQuestions, 
+  getEmployeeEvaluations, 
+  deleteEvaluation, 
+  getEvaluationById, 
+  saveFormResult as saveFormResultService 
+} from "@/services/form/formService";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FormPageProviderProps {
   children: React.ReactNode;
@@ -201,9 +209,17 @@ export const FormPageProvider: React.FC<FormPageProviderProps> = ({ children }) 
       let totalYes = 0;
       let totalNo = 0;
       
-      Object.values(answers).forEach(answer => {
-        if (answer.answer === true) totalYes++;
-        else if (answer.answer === false) totalNo++;
+      // Ensure all answers have the required questionId property
+      const formattedAnswers: Record<string, any> = {};
+      Object.entries(answers).forEach(([key, value]) => {
+        if (value.answer === true) totalYes++;
+        else if (value.answer === false) totalNo++;
+        
+        formattedAnswers[key] = {
+          questionId: key,
+          answer: value.answer,
+          observation: value.observation || ""
+        };
       });
       
       // Prepare evaluation data
@@ -216,11 +232,12 @@ export const FormPageProvider: React.FC<FormPageProviderProps> = ({ children }) 
         total_nao: totalNo,
         is_complete: true,
         notas_analista: currentEvaluation?.notas_analista || selectedEvaluation?.notas_analista || "",
-        answers
+        answers: formattedAnswers
       };
       
       // Save the evaluation using formService
-      const evaluationId = await saveFormResult(evaluationData);
+      console.log("Saving evaluation with data:", evaluationData);
+      const evaluationId = await saveFormResultService(evaluationData);
       console.log("Saved evaluation with ID:", evaluationId);
       
       // Show success message
@@ -239,11 +256,23 @@ export const FormPageProvider: React.FC<FormPageProviderProps> = ({ children }) 
       
       // Refresh the evaluation history
       await loadEmployeeHistory();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving form:", error);
+      let errorMessage = "Não foi possível salvar o formulário";
+      
+      if (error.status === 403) {
+        errorMessage += ": Acesso negado";
+      } else if (error.status === 400) {
+        errorMessage += ": Dados inválidos";
+      } else if (error.status === 500) {
+        errorMessage += ": Erro interno do servidor";
+      } else if (error.message) {
+        errorMessage += ": " + error.message;
+      }
+      
       toast({
         title: "Erro",
-        description: "Não foi possível salvar o formulário",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -277,9 +306,17 @@ export const FormPageProvider: React.FC<FormPageProviderProps> = ({ children }) 
       let totalYes = 0;
       let totalNo = 0;
       
-      Object.values(answers).forEach(answer => {
-        if (answer.answer === true) totalYes++;
-        else if (answer.answer === false) totalNo++;
+      // Ensure all answers have the required questionId property
+      const formattedAnswers: Record<string, any> = {};
+      Object.entries(answers).forEach(([key, value]) => {
+        if (value.answer === true) totalYes++;
+        else if (value.answer === false) totalNo++;
+        
+        formattedAnswers[key] = {
+          questionId: key,
+          answer: value.answer,
+          observation: value.observation || ""
+        };
       });
       
       // Prepare evaluation data - incomplete
@@ -292,11 +329,11 @@ export const FormPageProvider: React.FC<FormPageProviderProps> = ({ children }) 
         total_nao: totalNo,
         is_complete: false, // Save as incomplete
         notas_analista: currentEvaluation?.notas_analista || selectedEvaluation?.notas_analista || "",
-        answers
+        answers: formattedAnswers
       };
       
       // Save the evaluation
-      await saveFormResult(evaluationData);
+      await saveFormResultService(evaluationData);
       
       // Show success message
       sonnerToast.success("Avaliação salva com sucesso");
@@ -310,11 +347,23 @@ export const FormPageProvider: React.FC<FormPageProviderProps> = ({ children }) 
       
       // Refresh evaluation history
       await loadEmployeeHistory();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving form:", error);
+      let errorMessage = "Não foi possível salvar o formulário";
+      
+      if (error.status === 403) {
+        errorMessage += ": Acesso negado";
+      } else if (error.status === 400) {
+        errorMessage += ": Dados inválidos";
+      } else if (error.status === 500) {
+        errorMessage += ": Erro interno do servidor";
+      } else if (error.message) {
+        errorMessage += ": " + error.message;
+      }
+      
       toast({
         title: "Erro",
-        description: "Não foi possível salvar o formulário",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

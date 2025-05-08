@@ -1,10 +1,11 @@
 
 import React from "react";
-import { FormResult, Question, Section } from "@/types/form";
+import { Question, Section } from "@/types/form";
 import { Employee } from "@/types/cadastro";
 import FormAllQuestions from "./FormAllQuestions";
-import FormResult from "./FormResult";
+import FormResultComponent from "./FormResult";
 import EmployeeFormHistory from "./EmployeeFormHistory";
+import { FormResult } from "@/types/form";
 
 interface FormContentSectionProps {
   // Data
@@ -92,7 +93,7 @@ const FormContentSection: React.FC<FormContentSectionProps> = ({
   // View results
   if (showResults) {
     return (
-      <FormResult 
+      <FormResultComponent 
         result={selectedEvaluation || formResult!}
         questions={questions}
         onNotesChange={onNotesChange}

@@ -99,7 +99,7 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
           onClick={markAllAsNo}
           variant="outline"
           className="flex items-center gap-2"
-          disabled={markingAll}
+          disabled={markingAll || isSubmitting}
         >
           <X size={16} /> 
           Marcar Todas como Não

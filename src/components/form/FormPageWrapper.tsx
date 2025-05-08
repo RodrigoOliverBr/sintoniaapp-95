@@ -3,9 +3,6 @@ import React from "react";
 import { useFormPageContext } from "@/contexts/FormPageContext";
 import FormSelectionSection from "@/components/form/FormSelectionSection";
 import FormContentSection from "@/components/form/FormContentSection";
-import FormAllQuestions from "@/components/form/FormAllQuestions";
-import EmployeeFormHistory from "@/components/form/EmployeeFormHistory";
-import FormResult from "@/components/form/FormResult";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -74,8 +71,20 @@ const FormPageWrapper: React.FC = () => {
     }));
   };
 
-  const handleViewResults = (evaluation: any) => {
-    console.log("Viewing evaluation:", evaluation);
+  const handleOptionsChange = (questionId: string, selectedOptions: string[]) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: { 
+        ...prev[questionId], 
+        questionId, 
+        selectedOptions 
+      }
+    }));
+  };
+
+  const handleNotesChange = (notes: string) => {
+    // Handle notes change logic here
+    console.log("Notes changed:", notes);
   };
 
   return (
@@ -95,17 +104,6 @@ const FormPageWrapper: React.FC = () => {
       {/* Show the appropriate content based on state */}
       {selectedEmployeeId && selectedEmployee && (
         <>
-          {/* Show evaluation history when available */}
-          {showingHistoryView && !showResults && (
-            <EmployeeFormHistory 
-              evaluations={evaluationHistory}
-              onShowResults={handleViewResults}
-              onNewEvaluation={handleNewEvaluation}
-              onDeleteEvaluation={handleDeleteEvaluation}
-              isDeletingEvaluation={isDeletingEvaluation}
-            />
-          )}
-          
           {/* Show form results */}
           {showResults && (currentEvaluation || selectedEvaluation) && (
             <div className="space-y-4">
@@ -120,10 +118,32 @@ const FormPageWrapper: React.FC = () => {
                 </Button>
               </div>
               
-              <FormResult
-                result={selectedEvaluation || currentEvaluation!}
+              <FormContentSection
+                selectedEmployee={selectedEmployee}
+                selectedFormId={selectedFormId}
+                selectedFormTitle={selectedFormTitle}
+                sections={sections}
                 questions={questions}
-                isReadOnly={showingHistoryView}
+                answers={answers}
+                evaluationHistory={evaluationHistory}
+                showResults={showResults}
+                showingHistoryView={showingHistoryView}
+                formComplete={formComplete}
+                isSubmitting={isSubmitting}
+                isDeletingEvaluation={isDeletingEvaluation}
+                selectedEvaluation={selectedEvaluation}
+                formResult={currentEvaluation}
+                onAnswerChange={handleAnswerChange}
+                onObservationChange={handleObservationChange}
+                onOptionsChange={handleOptionsChange}
+                onNotesChange={handleNotesChange}
+                onNewEvaluation={handleNewEvaluation}
+                onShowResults={() => {}}
+                onSaveAndComplete={handleSaveAndComplete}
+                onSaveAndExit={handleSaveAndExit}
+                onDeleteEvaluation={handleDeleteEvaluation}
+                onEditEvaluation={() => {}}
+                onExitResults={handleExitResults}
               />
             </div>
           )}
@@ -140,28 +160,72 @@ const FormPageWrapper: React.FC = () => {
                 </p>
               </div>
               
-              {/* Show all questions on a single screen */}
-              <FormAllQuestions
+              <FormContentSection
+                selectedEmployee={selectedEmployee}
+                selectedFormId={selectedFormId}
+                selectedFormTitle={selectedFormTitle}
                 sections={sections}
                 questions={questions}
                 answers={answers}
+                evaluationHistory={evaluationHistory}
+                showResults={showResults}
+                showingHistoryView={showingHistoryView}
+                formComplete={formComplete}
+                isSubmitting={isSubmitting}
+                isDeletingEvaluation={isDeletingEvaluation}
+                selectedEvaluation={selectedEvaluation}
+                formResult={currentEvaluation}
                 onAnswerChange={handleAnswerChange}
                 onObservationChange={handleObservationChange}
+                onOptionsChange={handleOptionsChange}
+                onNotesChange={handleNotesChange}
+                onNewEvaluation={handleNewEvaluation}
+                onShowResults={() => {}}
                 onSaveAndComplete={handleSaveAndComplete}
                 onSaveAndExit={handleSaveAndExit}
-                isSubmitting={isSubmitting}
+                onDeleteEvaluation={handleDeleteEvaluation}
+                onEditEvaluation={() => {}}
+                onExitResults={handleExitResults}
               />
             </div>
           )}
           
+          {/* If there's evaluation history, show it automatically */}
+          {!showForm && !showResults && evaluationHistory.length > 0 && (
+            <FormContentSection
+              selectedEmployee={selectedEmployee}
+              selectedFormId={selectedFormId}
+              selectedFormTitle={selectedFormTitle}
+              sections={sections}
+              questions={questions}
+              answers={answers}
+              evaluationHistory={evaluationHistory}
+              showResults={showResults}
+              showingHistoryView={true}
+              formComplete={formComplete}
+              isSubmitting={isSubmitting}
+              isDeletingEvaluation={isDeletingEvaluation}
+              selectedEvaluation={selectedEvaluation}
+              formResult={currentEvaluation}
+              onAnswerChange={handleAnswerChange}
+              onObservationChange={handleObservationChange}
+              onOptionsChange={handleOptionsChange}
+              onNotesChange={handleNotesChange}
+              onNewEvaluation={handleNewEvaluation}
+              onShowResults={() => {}}
+              onSaveAndComplete={handleSaveAndComplete}
+              onSaveAndExit={handleSaveAndExit}
+              onDeleteEvaluation={handleDeleteEvaluation}
+              onEditEvaluation={() => {}}
+              onExitResults={handleExitResults}
+            />
+          )}
+          
           {/* Default state - Show CTA to start evaluation if no actions happening */}
-          {!showForm && !showResults && !showingHistoryView && (
+          {!showForm && !showResults && !showingHistoryView && evaluationHistory.length === 0 && (
             <div className="bg-white p-8 rounded-lg shadow-sm text-center">
               <h3 className="text-lg font-medium text-gray-700 mb-4">
-                {evaluationHistory && evaluationHistory.length > 0 
-                  ? "Este funcionário já possui avaliações anteriores."
-                  : "Iniciar nova avaliação para este funcionário?"
-                }
+                Iniciar nova avaliação para este funcionário?
               </h3>
               <Button onClick={handleNewEvaluation} className="mt-4">
                 Nova Avaliação
