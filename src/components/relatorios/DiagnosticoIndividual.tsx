@@ -7,8 +7,8 @@ import SeverityBadge from "@/components/SeverityBadge";
 import { AvaliacaoResposta } from '@/types/avaliacao';
 
 interface DiagnosticoIndividualProps {
-  result: FormResult;
-  questions: Question[];
+  result?: FormResult;
+  questions?: Question[];
   companyId?: string;
   respostas?: AvaliacaoResposta[];
 }
@@ -23,6 +23,10 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({
   const hasAnswers = (result?.answers && Object.keys(result.answers).length > 0) || 
                     (result?.respostas && result.respostas.length > 0) ||
                     (respostas && respostas.length > 0);
+  
+  console.log("DiagnosticoIndividual - hasQuestions:", hasQuestions, "hasAnswers:", hasAnswers);
+  console.log("Respostas diretas:", respostas?.length);
+  console.log("Respostas do resultado:", result?.respostas?.length);
   
   // Função para obter todas as respostas disponíveis, priorizando as mais recentes
   const getAllResponses = () => {

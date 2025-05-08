@@ -14,7 +14,7 @@ import { Company, Employee } from "@/types/cadastro";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { AvaliacaoResposta } from "@/types/avaliacao";
+import { AvaliacaoResposta } from '@/types/avaliacao';
 
 const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
@@ -25,6 +25,7 @@ const RelatoriosPage: React.FC = () => {
   const [reportGenerated, setReportGenerated] = useState(false);
   const [respostas, setRespostas] = useState<AvaliacaoResposta[]>([]);
   const [avaliacaoId, setAvaliacaoId] = useState<string | null>(null);
+  const [result, setResult] = useState<any>(null);
 
   // Sample questions and answers for demonstration
   const sampleQuestions: Question[] = [
@@ -108,7 +109,7 @@ const RelatoriosPage: React.FC = () => {
       // First get the evaluation ID
       const { data: avaliacao, error: avaliacaoError } = await supabase
         .from('avaliacoes')
-        .select('id')
+        .select('*')
         .eq('funcionario_id', selectedEmployeeId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -130,6 +131,24 @@ const RelatoriosPage: React.FC = () => {
       
       setAvaliacaoId(avaliacao.id);
       console.log("Found evaluation ID:", avaliacao.id);
+      console.log("Evaluation details:", avaliacao);
+      
+      // Set result with the evaluation data
+      setResult({
+        id: avaliacao.id,
+        employeeId: avaliacao.funcionario_id,
+        empresa_id: avaliacao.empresa_id,
+        formulario_id: avaliacao.formulario_id,
+        total_sim: avaliacao.total_sim,
+        total_nao: avaliacao.total_nao,
+        totalYes: avaliacao.total_sim,
+        totalNo: avaliacao.total_nao,
+        is_complete: avaliacao.is_complete,
+        notas_analista: avaliacao.notas_analista,
+        created_at: avaliacao.created_at,
+        updated_at: avaliacao.updated_at,
+        last_updated: avaliacao.last_updated
+      });
       
       // Then get the responses with the questions and risks
       const { data, error } = await supabase
@@ -167,7 +186,14 @@ const RelatoriosPage: React.FC = () => {
       console.log("Fetched responses:", data);
       
       if (data && data.length > 0) {
-        setRespostas(data);
+        const typedRespostas = data.map(item => ({
+          ...item,
+          opcoes_selecionadas: Array.isArray(item.opcoes_selecionadas) 
+            ? item.opcoes_selecionadas 
+            : []
+        })) as AvaliacaoResposta[];
+        
+        setRespostas(typedRespostas);
         toast.success("Relatório gerado com sucesso!");
       } else {
         console.log("No responses found for evaluation:", avaliacao.id);
@@ -250,7 +276,10 @@ const RelatoriosPage: React.FC = () => {
             </TabsList>
 
             <TabsContent value="diagnostico" className="mt-0">
-              <DiagnosticoIndividual respostas={respostas} />
+              <DiagnosticoIndividual 
+                result={result} 
+                respostas={respostas} 
+              />
             </TabsContent>
 
             <TabsContent value="mapa" className="mt-0">

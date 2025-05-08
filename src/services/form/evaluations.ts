@@ -11,6 +11,8 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
     throw new Error("ID de avaliação inválido");
   }
 
+  console.log(`Deletando avaliação com ID: ${evaluationId}`);
+
   // A função trigger delete_avaliacao_related_data cuidará de deletar todos os dados relacionados
   const { error } = await supabase
     .from("avaliacoes")
@@ -21,6 +23,8 @@ export async function deleteFormEvaluation(evaluationId: string): Promise<void> 
     console.error("Erro ao excluir avaliação:", error);
     throw error;
   }
+  
+  console.log(`Avaliação ${evaluationId} excluída com sucesso`);
 }
 
 /**
@@ -34,6 +38,8 @@ export async function updateAnalystNotes(
     throw new Error("ID de avaliação inválido");
   }
 
+  console.log(`Atualizando notas para avaliação ${evaluationId}`);
+
   const { error } = await supabase
     .from("avaliacoes")
     .update({ notas_analista: notes, last_updated: new Date().toISOString() })
@@ -43,6 +49,8 @@ export async function updateAnalystNotes(
     console.error("Erro ao atualizar notas do analista:", error);
     throw error;
   }
+  
+  console.log(`Notas atualizadas com sucesso para avaliação ${evaluationId}`);
 }
 
 /**
@@ -53,6 +61,8 @@ export async function getFormResultByEmployeeId(
   formId?: string
 ): Promise<FormResult | null> {
   try {
+    console.log(`Buscando avaliação para funcionário ${employeeId}${formId ? ` e formulário ${formId}` : ''}`);
+    
     let query = supabase
       .from("avaliacoes")
       .select(`
@@ -86,8 +96,11 @@ export async function getFormResultByEmployeeId(
     }
 
     if (!avaliacao) {
+      console.log(`Nenhuma avaliação encontrada para funcionário ${employeeId}`);
       return null;
     }
+
+    console.log(`Avaliação encontrada: ${avaliacao.id}, com total_sim: ${avaliacao.total_sim}, total_nao: ${avaliacao.total_nao}`);
 
     // Buscar respostas associadas a esta avaliação
     const { data: respostas, error: respostasError } = await supabase
@@ -107,6 +120,8 @@ export async function getFormResultByEmployeeId(
     if (respostasError) {
       console.error("Erro ao buscar respostas da avaliação:", respostasError);
     }
+
+    console.log(`Encontradas ${respostas?.length || 0} respostas para a avaliação ${avaliacao.id}`);
 
     // Mapear avaliacoes para FormResult
     return {
@@ -146,6 +161,16 @@ export async function saveFormResult(formResult: FormResult): Promise<void> {
       throw new Error("ID do funcionário e ID da empresa são obrigatórios");
     }
 
+    console.log("Iniciando salvamento de avaliação com os dados:", {
+      id: formResult.id || "novo",
+      funcionario_id: formResult.employeeId,
+      empresa_id: formResult.empresa_id,
+      formulario_id: formResult.formulario_id,
+      total_sim: formResult.total_sim || formResult.totalYes || 0,
+      total_nao: formResult.total_nao || formResult.totalNo || 0,
+      is_complete: formResult.is_complete || false
+    });
+
     // Se temos um ID de avaliação, atualizar o registro existente
     const isUpdate = !!formResult.id;
     
@@ -166,6 +191,7 @@ export async function saveFormResult(formResult: FormResult): Promise<void> {
 
     // Inserir ou atualizar avaliação
     if (isUpdate) {
+      console.log(`Atualizando avaliação existente: ${formResult.id}`);
       const { error } = await supabase
         .from("avaliacoes")
         .update(avaliacaoData)
@@ -173,10 +199,13 @@ export async function saveFormResult(formResult: FormResult): Promise<void> {
 
       if (error) {
         console.error("Erro ao atualizar avaliação:", error);
+        console.error("Dados da tentativa de atualização:", avaliacaoData);
         throw error;
       }
+      console.log(`Avaliação ${formResult.id} atualizada com sucesso`);
     } else {
       // Se não for atualização, inserir novo registro
+      console.log("Criando nova avaliação...");
       const { data, error } = await supabase
         .from("avaliacoes")
         .insert(avaliacaoData)
@@ -185,16 +214,21 @@ export async function saveFormResult(formResult: FormResult): Promise<void> {
 
       if (error) {
         console.error("Erro ao inserir avaliação:", error);
+        console.error("Dados da tentativa de inserção:", avaliacaoData);
         throw error;
       }
 
       avaliacaoId = data.id;
+      console.log(`Nova avaliação criada com ID: ${avaliacaoId}`);
     }
 
     // Se temos respostas para salvar
     if (formResult.answers && Object.keys(formResult.answers).length > 0) {
+      console.log(`Salvando ${Object.keys(formResult.answers).length} respostas para avaliação ${avaliacaoId}`);
+      
       // Se estamos atualizando, primeiro deletar respostas existentes
       if (isUpdate) {
+        console.log(`Deletando respostas existentes da avaliação ${avaliacaoId}`);
         const { error } = await supabase
           .from("respostas")
           .delete()
@@ -204,6 +238,7 @@ export async function saveFormResult(formResult: FormResult): Promise<void> {
           console.error("Erro ao deletar respostas existentes:", error);
           throw error;
         }
+        console.log("Respostas existentes deletadas com sucesso");
       }
 
       // Preparar dados de respostas para inserção
@@ -218,15 +253,22 @@ export async function saveFormResult(formResult: FormResult): Promise<void> {
       );
 
       // Inserir novas respostas
+      console.log(`Inserindo ${respostasData.length} respostas`);
       const { error } = await supabase
         .from("respostas")
         .insert(respostasData);
 
       if (error) {
         console.error("Erro ao inserir respostas:", error);
+        console.error("Amostra dos dados de respostas:", respostasData.slice(0, 2));
         throw error;
       }
+      console.log("Todas as respostas foram salvas com sucesso");
+    } else {
+      console.log("Nenhuma resposta para salvar");
     }
+    
+    console.log("Processo de salvamento concluído com sucesso");
   } catch (error) {
     console.error("Erro ao salvar resultado do formulário:", error);
     throw error;
@@ -240,6 +282,8 @@ export async function getEmployeeFormHistory(
   employeeId: string
 ): Promise<FormResult[]> {
   try {
+    console.log(`Buscando histórico de avaliações para funcionário ${employeeId}`);
+    
     const { data: avaliacoes, error } = await supabase
       .from("avaliacoes")
       .select(`
@@ -262,6 +306,8 @@ export async function getEmployeeFormHistory(
       console.error("Erro ao buscar histórico de avaliações:", error);
       throw error;
     }
+
+    console.log(`Encontradas ${avaliacoes.length} avaliações para o funcionário ${employeeId}`);
 
     // Mapear as avaliações para o formato FormResult
     return avaliacoes.map((avaliacao) => ({
@@ -293,6 +339,8 @@ export async function getEmployeeFormHistory(
  */
 export async function fetchEvaluation(evaluationId: string): Promise<FormResult | null> {
   try {
+    console.log(`Buscando avaliação específica com ID: ${evaluationId}`);
+    
     const { data: avaliacao, error } = await supabase
       .from("avaliacoes")
       .select(`
@@ -316,6 +364,8 @@ export async function fetchEvaluation(evaluationId: string): Promise<FormResult 
       throw error;
     }
 
+    console.log(`Avaliação encontrada: ${avaliacao.id}, com total_sim: ${avaliacao.total_sim}, total_nao: ${avaliacao.total_nao}`);
+
     // Buscar respostas associadas a esta avaliação
     const { data: respostas, error: respostasError } = await supabase
       .from("respostas")
@@ -334,6 +384,8 @@ export async function fetchEvaluation(evaluationId: string): Promise<FormResult 
     if (respostasError) {
       console.error("Erro ao buscar respostas da avaliação:", respostasError);
     }
+
+    console.log(`Encontradas ${respostas?.length || 0} respostas para a avaliação ${evaluationId}`);
 
     // Converter as respostas em um formato de objeto answers para uso no formulário
     const answers: Record<string, any> = {};

@@ -15,6 +15,8 @@ export const ResultsStatisticsChart: React.FC<ResultsStatisticsChartProps> = ({
   const yes = typeof totalYes === 'number' ? totalYes : 0;
   const no = typeof totalNo === 'number' ? totalNo : 0;
   
+  console.log(`Exibindo gráfico com Sim: ${yes}, Não: ${no}`);
+  
   const chartData = [
     { name: "Sim", total: yes },
     { name: "Não", total: no },

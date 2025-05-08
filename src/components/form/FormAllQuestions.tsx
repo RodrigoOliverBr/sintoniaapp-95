@@ -28,6 +28,7 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
 }) => {
   // Track if the button has been clicked to prevent double submissions
   const [hasClicked, setHasClicked] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
 
   const handleSaveClick = () => {
     // Set button as clicked to prevent double submissions
@@ -44,6 +45,9 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
 
   // Função para marcar todas as perguntas como "Não"
   const markAllAsNo = () => {
+    console.log("Marcando todas as perguntas como NÃO");
+    setMarkingAll(true);
+    
     // Percorrer todas as perguntas no array questions
     questions.forEach(question => {
       // Verificar se a resposta é diferente de "false" antes de alterar
@@ -52,6 +56,9 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
         onAnswerChange(question.id, false);
       }
     });
+    
+    setMarkingAll(false);
+    console.log("Todas as perguntas foram marcadas como NÃO");
   };
 
   // Get questions for each section
@@ -76,6 +83,7 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
           onClick={markAllAsNo}
           variant="outline"
           className="flex items-center gap-2"
+          disabled={markingAll}
         >
           <X size={16} /> 
           Marcar Todas como Não

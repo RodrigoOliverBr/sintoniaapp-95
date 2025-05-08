@@ -1,4 +1,3 @@
-
 export interface Question {
   id: string;
   texto: string;
@@ -68,20 +67,28 @@ export interface FormResult {
   id: string;
   employeeId: string;
   empresa_id: string;
-  answers: Record<string, FormAnswer>;
-  total_sim: number;
-  total_nao: number;
+  formulario_id: string;
+  
+  // Support for both naming conventions
+  total_sim?: number;
+  total_nao?: number;
+  totalYes?: number; 
+  totalNo?: number;
+  
+  is_complete?: boolean;
+  isComplete?: boolean;
+  
   notas_analista?: string;
-  is_complete: boolean;
-  last_updated: string;
+  analyistNotes?: string;
+  
   created_at: string;
   updated_at: string;
-  formulario_id: string; // Make this required since we need it
+  last_updated: string;
   
-  // These properties are used by the FormResults component
-  totalYes?: number;
-  totalNo?: number;
-  analyistNotes?: string;
+  // Support for both response formats
+  answers?: Record<string, any>;
+  respostas?: AvaliacaoResposta[];
+  
   yesPerSeverity?: Record<string, number>;
 }
 
