@@ -1,9 +1,10 @@
+
 // Define the client status type
 export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
 export type BatchSelection = Record<string, boolean>;
 export type CicloFaturamento = 'mensal' | 'trimestral' | 'anual';
-export type TipoPessoa = 'fisica' | 'juridica'; // Re-export this type to fix build errors
+export type TipoPessoa = 'fisica' | 'juridica' | 'cliente'; // Added 'cliente' to fix type errors
 
 export interface ClienteSistema {
   id: string;

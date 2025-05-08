@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, handleSupabaseError, checkAdminAuth, ensureAuthenticated } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import ClientesTable from "@/components/admin/clientes/ClientesTable";
@@ -26,6 +25,15 @@ const ClientesPage: React.FC = () => {
     try {
       console.log("ClientesPage: Iniciando carregamento de clientes...");
       
+      // Verificar autenticação antes de carregar dados
+      const isAuthenticated = await ensureAuthenticated();
+      if (!isAuthenticated) {
+        console.error("Usuário não autenticado ou sem permissões suficientes");
+        toast.error("Você precisa estar autenticado para acessar esta página");
+        setIsLoading(false);
+        return;
+      }
+      
       // Fetch all clients
       const { data: clientesData, error: clientesError } = await supabase
         .from("clientes_sistema")
@@ -34,7 +42,8 @@ const ClientesPage: React.FC = () => {
       
       if (clientesError) {
         console.error("ClientesPage: Erro ao carregar clientes:", clientesError);
-        toast.error("Erro ao carregar clientes");
+        toast.error("Erro ao carregar clientes: " + handleSupabaseError(clientesError));
+        setIsLoading(false);
         return;
       }
       
@@ -48,7 +57,7 @@ const ClientesPage: React.FC = () => {
         
       if (contratosError) {
         console.error("ClientesPage: Erro ao carregar contratos:", contratosError);
-        toast.error("Erro ao carregar informações de contratos");
+        toast.error("Erro ao carregar informações de contratos: " + handleSupabaseError(contratosError));
       }
       
       console.log(`ClientesPage: ${contratosData?.length || 0} contratos ativos encontrados`);
@@ -75,13 +84,14 @@ const ClientesPage: React.FC = () => {
           telefone: cliente.telefone || "",
           responsavel: cliente.responsavel || "",
           contato: cliente.responsavel || "",
-          tipo: "cliente",
+          tipo: "juridica" as TipoPessoa, // Corrected type casting
           numeroEmpregados: 0,
           dataInclusao: cliente.created_at ? new Date(cliente.created_at).getTime() : Date.now(),
           ativo: true,
           situacao: hasActiveContract ? "ativo" : "sem-contrato",
           planoId: cliente.plano_id || "",
           contratoId: contratoId,
+          clienteId: cliente.id,
           statusContrato: hasActiveContract ? "ativo" : "sem-contrato"
         } as ClienteSistema;
       }) || [];
@@ -218,49 +228,29 @@ const ClientesPage: React.FC = () => {
   const handleCreateNew = async (formData: any) => {
     setIsLoading(true);
     try {
-      // 1. First, create a Supabase authentication user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.senha,
-        email_confirm: true, // Auto-confirm email so the user can login immediately
-      });
-
-      if (authError) {
-        console.error("Erro ao criar usuário de autenticação:", authError);
-        toast.error("Erro ao criar usuário: " + authError.message);
-        return;
-      }
+      console.log("Iniciando criação de novo cliente:", formData);
       
-      if (!authData.user) {
-        toast.error("Erro ao criar usuário: dados de usuário não retornados");
-        return;
-      }
-      
-      console.log("Usuário de autenticação criado:", authData.user.id);
-      
-      // 2. Create the profile in perfis table with tipo 'client'
-      const { data: perfilData, error: perfilError } = await supabase
-        .from("perfis")
-        .insert([{
-          id: authData.user.id,
-          tipo: 'client',
-          nome: formData.razao_social,
-          email: formData.email
-        }])
-        .select();
+      // 1. First, check if the email already exists to avoid errors
+      const { data: existingEmail, error: emailCheckError } = await supabase
+        .from("clientes_sistema")
+        .select("id")
+        .eq("email", formData.email)
+        .maybeSingle();
         
-      if (perfilError) {
-        console.error("Erro ao criar perfil:", perfilError);
-        
-        // Rollback: delete the auth user if profile creation fails
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        toast.error("Erro ao criar perfil: " + perfilError.message);
+      if (emailCheckError) {
+        console.error("Erro ao verificar email existente:", emailCheckError);
+        toast.error("Erro ao verificar disponibilidade de email: " + handleSupabaseError(emailCheckError));
+        setIsLoading(false);
         return;
       }
       
-      console.log("Perfil criado:", perfilData);
+      if (existingEmail) {
+        toast.error("Este email já está sendo usado por outro cliente");
+        setIsLoading(false);
+        return;
+      }
 
-      // 3. Insert new cliente in clientes_sistema table
+      // 2. Insert new cliente in clientes_sistema table first
       const { data: clienteData, error: clienteError } = await supabase
         .from("clientes_sistema")
         .insert([{
@@ -274,14 +264,74 @@ const ClientesPage: React.FC = () => {
         .select();
 
       if (clienteError) {
-        console.error("Erro ao criar cliente:", clienteError);
-        
-        // Rollback: delete the perfil and auth user if cliente creation fails
-        await supabase.from("perfis").delete().eq("id", authData.user.id);
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        
-        toast.error("Erro ao criar cliente: " + clienteError.message);
+        console.error("Erro ao criar cliente no sistema:", clienteError);
+        toast.error("Erro ao criar cliente no sistema: " + handleSupabaseError(clienteError));
         return;
+      }
+      
+      if (!clienteData || clienteData.length === 0) {
+        toast.error("Erro: Não foi possível obter os dados do cliente após criação");
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log("Cliente criado com sucesso no sistema:", clienteData[0]);
+      
+      try {
+        // 3. Create a Supabase authentication user
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.senha,
+          options: {
+            data: {
+              cliente_id: clienteData[0].id,
+              nome: formData.razao_social,
+              tipo: "client"
+            }
+          }
+        });
+
+        if (authError) {
+          console.error("Erro ao criar usuário de autenticação:", authError);
+          
+          // Rollback: delete the client if auth user creation fails
+          await supabase
+            .from("clientes_sistema")
+            .delete()
+            .eq("id", clienteData[0].id);
+            
+          toast.error("Erro ao criar usuário de autenticação: " + authError.message);
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log("Usuário de autenticação criado:", authData);
+        
+        // 4. Create the profile in perfis table with tipo 'client'
+        const { data: perfilData, error: perfilError } = await supabase
+          .from("perfis")
+          .insert([{
+            id: authData.user?.id,
+            tipo: 'client',
+            nome: formData.razao_social,
+            email: formData.email
+          }])
+          .select();
+          
+        if (perfilError) {
+          console.error("Erro ao criar perfil:", perfilError);
+          
+          // Don't rollback auth user creation, as this is handled by Supabase
+          toast.error("Erro ao criar perfil: " + handleSupabaseError(perfilError));
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log("Perfil criado:", perfilData);
+      } catch (authError: any) {
+        console.error("Erro ao criar usuário de autenticação:", authError);
+        toast.error("Erro ao criar usuário de autenticação: " + authError.message);
+        // Não fazemos rollback do cliente já criado, pois pode ser útil manter o registro
       }
       
       toast.success("Cliente criado com sucesso!");

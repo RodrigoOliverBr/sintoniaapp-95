@@ -1,7 +1,7 @@
 
 // Type definition for Client related interfaces
 
-export type TipoPessoa = "fisica" | "juridica";
+export type TipoPessoa = "fisica" | "juridica" | "cliente";
 
 export type StatusContrato = 
   | "ativo" 

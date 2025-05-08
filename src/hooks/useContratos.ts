@@ -1,308 +1,195 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Contrato, ClienteSistema, TipoPessoa } from '@/types/admin';
 
-import { useState, useEffect, useCallback } from "react";
-import { Contrato, ClienteSistema, Plano, StatusContrato } from "@/types/admin";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-
-interface UseContratosResult {
-  contratos: Contrato[];
-  clientes: ClienteSistema[];
-  planos: Plano[];
-  isLoading: boolean;
-  currentContrato: Contrato | null;
-  setCurrentContrato: (contrato: Contrato | null) => void;
-  addContrato: (
-    clienteId: string,
-    planoId: string,
-    numeroContrato: string,
-    dataInicio: Date,
-    dataFim: Date,
-    dataPrimeiroVencimento: Date,
-    valorMensal: number,
-    status: StatusContrato,
-    taxaImplantacao: number,
-    observacoes: string
-  ) => Promise<boolean>;
-  updateContrato: (
-    id: string,
-    clienteId: string,
-    planoId: string,
-    numeroContrato: string,
-    dataInicio: Date,
-    dataFim: Date,
-    dataPrimeiroVencimento: Date,
-    valorMensal: number,
-    status: StatusContrato,
-    taxaImplantacao: number,
-    observacoes: string
-  ) => Promise<boolean>;
-  deleteContrato: (contratoId: string, clienteId: string) => Promise<boolean>;
-  loadData: () => Promise<void>;
-}
-
-export const useContratos = (): UseContratosResult => {
+export function useContratos() {
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
-  const [planos, setPlanos] = useState<Plano[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentContrato, setCurrentContrato] = useState<Contrato | null>(null);
-
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      console.log("useContratos: Iniciando carregamento de dados");
-      
-      console.log("useContratos: Carregando clientes do sistema...");
-      const { data: clientesData, error: clientesError } = await supabase
-        .from('clientes_sistema')
-        .select('*');
-      
-      if (clientesError) {
-        console.error("useContratos: Erro ao carregar clientes:", clientesError);
-        toast.error("Erro ao carregar clientes");
-        return;
-      }
-      
-      if (!clientesData || clientesData.length === 0) {
-        console.log("useContratos: Nenhum cliente encontrado na consulta");
-      } else {
-        console.log(`useContratos: ${clientesData.length} clientes carregados com sucesso:`, 
-          clientesData.map(c => ({ id: c.id, nome: c.razao_social }))
-        );
-      }
-      
-      // Convert database schema to ClienteSistema type - Fix dataInclusao type
-      const clientesFormatted: ClienteSistema[] = clientesData?.map(c => ({
-        id: c.id,
-        nome: c.razao_social || "",
-        razao_social: c.razao_social || "",
-        razaoSocial: c.razao_social || "",
-        cnpj: c.cnpj || "",
-        cpfCnpj: c.cnpj || "", 
-        telefone: c.telefone || "",
-        email: c.email || "",
-        responsavel: c.responsavel || "",
-        contato: c.responsavel || "",
-        situacao: c.situacao || "",
-        tipo: "cliente",
-        numeroEmpregados: 0,
-        dataInclusao: c.created_at ? new Date(c.created_at).getTime() : Date.now(), // Convert to number
-        ativo: true,
-        planoId: c.plano_id || "",
-        contratoId: c.contrato_id || ""
-      })) || [];
-      
-      setClientes(clientesFormatted);
-      
-      console.log("useContratos: Carregando planos ativos...");
-      const { data: planosData, error: planosError } = await supabase
-        .from('planos')
-        .select('*')
-        .eq('ativo', true);
-      
-      if (planosError) {
-        console.error("useContratos: Erro ao carregar planos:", planosError);
-        toast.error("Erro ao carregar planos");
-        return;
-      }
-      
-      console.log(`useContratos: ${planosData?.length || 0} planos ativos carregados`);
-      
-      // Convert database schema to Plano type with all required properties - Fix property name
-      const planosFormatted: Plano[] = planosData?.map(p => ({
-        id: p.id,
-        nome: p.nome || "",
-        valor: p.valor_mensal || 0,
-        valorMensal: p.valor_mensal || 0,
-        valorImplantacao: p.valor_implantacao || 0,
-        descricao: p.descricao || "",
-        ativo: p.ativo || false,
-        numeroUsuarios: p.limite_empregados || 0, // Changed from limite_usuarios to limite_empregados
-        limiteEmpresas: p.limite_empresas || 0,
-        limiteEmpregados: p.limite_empregados || 0,
-        empresasIlimitadas: p.empresas_ilimitadas || false,
-        empregadosIlimitados: p.empregados_ilimitados || false,
-        dataValidade: p.data_validade ? new Date(p.data_validade).getTime() : null,
-        semVencimento: p.sem_vencimento || false
-      })) || [];
-      
-      setPlanos(planosFormatted);
-      
-      console.log("useContratos: Carregando contratos...");
-      const { data: contratosData, error: contratosError } = await supabase
-        .from('contratos')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (contratosError) {
-        console.error("useContratos: Erro ao carregar contratos:", contratosError);
-        toast.error("Erro ao carregar contratos");
-        return;
-      }
-      
-      console.log(`useContratos: ${contratosData?.length || 0} contratos carregados`);
-      
-      // Convert database schema to Contrato type - Fix status type
-      const contratosFormatted: Contrato[] = contratosData?.map(c => ({
-        id: c.id,
-        clienteSistemaId: c.cliente_sistema_id || "",
-        clienteId: c.cliente_id || c.cliente_sistema_id || "",
-        planoId: c.plano_id || "",
-        dataInicio: new Date(c.data_inicio).getTime(),
-        dataFim: new Date(c.data_fim).getTime(),
-        dataPrimeiroVencimento: new Date(c.data_primeiro_vencimento).getTime(),
-        valorMensal: c.valor_mensal || 0,
-        numero: c.numero || "",
-        status: (c.status?.toLowerCase() || "ativo") as StatusContrato, // Cast to StatusContrato type
-        taxaImplantacao: c.taxa_implantacao || 0,
-        observacoes: c.observacoes || ""
-      })) || [];
-      
-      setContratos(contratosFormatted);
-      
-      console.log("useContratos: Carregamento de dados concluído com sucesso");
-    } catch (error) {
-      console.error("useContratos: Erro inesperado ao carregar dados:", error);
-      toast.error("Erro ao carregar dados");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, []);
 
-  const addContrato = async (
-    clienteId: string,
-    planoId: string,
-    numeroContrato: string,
-    dataInicio: Date,
-    dataFim: Date,
-    dataPrimeiroVencimento: Date,
-    valorMensal: number,
-    status: StatusContrato,
-    taxaImplantacao: number,
-    observacoes: string
-  ): Promise<boolean> => {
-    setIsLoading(true);
+  const loadData = async (filters?: any) => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      const { data, error } = await supabase
+      console.log("useContratos: Carregando dados de contratos...");
+      
+      // Fetch contracts first
+      const { data: contractsData, error: contractsError } = await supabase
         .from('contratos')
-        .insert({
-          cliente_sistema_id: clienteId,
-          cliente_id: clienteId, // Ensure cliente_id is set to match the required field
-          plano_id: planoId,
-          numero: numeroContrato,
-          data_inicio: dataInicio.toISOString(),
-          data_fim: dataFim.toISOString(),
-          data_primeiro_vencimento: dataPrimeiroVencimento.toISOString(),
-          valor_mensal: valorMensal,
-          status: status,
-          taxa_implantacao: taxaImplantacao,
-          observacoes: observacoes,
-        });
+        .select(`
+          *,
+          cliente_sistema:cliente_sistema_id (*)
+        `)
+        .order('data_inicio', { ascending: false });
 
-      if (error) {
-        console.error("Erro ao adicionar contrato:", error);
-        toast.error(`Erro ao adicionar contrato: ${error.message}`);
-        return false;
+      if (contractsError) {
+        console.error("Erro ao carregar contratos:", contractsError);
+        setError(`Erro ao carregar contratos: ${contractsError.message}`);
+        return;
       }
 
-      loadData();
-      return true;
-    } catch (error: any) {
-      console.error("Erro ao adicionar contrato:", error);
-      toast.error(`Erro ao adicionar contrato: ${error.message}`);
-      return false;
+      // Fetch clients to get their information
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('clientes_sistema')
+        .select('*');
+
+      if (clientsError) {
+        console.error("Erro ao carregar clientes:", clientsError);
+        setError(`Erro ao carregar clientes: ${clientsError.message}`);
+        return;
+      }
+
+      // Map clients data to ClienteSistema format
+      const clientesProcessed = clientsData.map((cliente: any) => ({
+        id: cliente.id,
+        nome: cliente.razao_social,
+        razao_social: cliente.razao_social,
+        razaoSocial: cliente.razao_social,
+        cnpj: cliente.cnpj,
+        cpfCnpj: cliente.cnpj,
+        email: cliente.email || "",
+        telefone: cliente.telefone || "",
+        responsavel: cliente.responsavel || "",
+        contato: cliente.responsavel || "",
+        tipo: "juridica" as TipoPessoa, // Ensure correct type casting
+        numeroEmpregados: 0,
+        dataInclusao: cliente.created_at ? new Date(cliente.created_at).getTime() : Date.now(),
+        situacao: cliente.situacao || "liberado",
+        planoId: cliente.plano_id || "",
+        contratoId: "",
+        clienteId: cliente.id,
+      }));
+
+      // Process contracts and link them to clients
+      const processedContracts = contractsData.map((contract: any) => {
+        // Find the client associated with this contract
+        const client = clientesProcessed.find(c => c.id === contract.cliente_sistema_id);
+        
+        return {
+          id: contract.id,
+          numero: contract.numero,
+          status: contract.status,
+          clienteId: contract.cliente_id,
+          clienteSistemaId: contract.cliente_sistema_id,
+          planoId: contract.plano_id,
+          dataInicio: new Date(contract.data_inicio).getTime(),
+          dataFim: contract.data_fim ? new Date(contract.data_fim).getTime() : null,
+          dataPrimeiroVencimento: new Date(contract.data_primeiro_vencimento).getTime(),
+          valorMensal: Number(contract.valor_mensal),
+          taxaImplantacao: Number(contract.taxa_implantacao),
+          observacoes: contract.observacoes || "",
+          cicloFaturamento: contract.ciclo_faturamento || "mensal",
+          proximaRenovacao: contract.proxima_renovacao 
+            ? new Date(contract.proxima_renovacao).getTime() 
+            : null,
+          clientName: client?.nome || "Cliente não encontrado",
+          clientInfo: client || null,
+        };
+      });
+
+      console.log(`Contratos carregados: ${processedContracts.length}`);
+      console.log(`Clientes processados: ${clientesProcessed.length}`);
+
+      setContratos(processedContracts);
+      setClientes(clientesProcessed);
+    } catch (e) {
+      console.error("Erro inesperado ao carregar contratos:", e);
+      setError(`Erro inesperado ao carregar contratos: ${e}`);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const updateContrato = async (
-    id: string,
-    clienteId: string,
-    planoId: string,
-    numeroContrato: string,
-    dataInicio: Date,
-    dataFim: Date,
-    dataPrimeiroVencimento: Date,
-    valorMensal: number,
-    status: StatusContrato,
-    taxaImplantacao: number,
-    observacoes: string
-  ): Promise<boolean> => {
-    setIsLoading(true);
+  const createContrato = async (contrato: Omit<Contrato, 'id'>) => {
+    setLoading(true);
+    setError(null);
+
     try {
       const { data, error } = await supabase
         .from('contratos')
-        .update({
-          cliente_sistema_id: clienteId,
-          plano_id: planoId,
-          numero: numeroContrato,
-          data_inicio: dataInicio.toISOString(),
-          data_fim: dataFim.toISOString(),
-          data_primeiro_vencimento: dataPrimeiroVencimento.toISOString(),
-          valor_mensal: valorMensal,
-          status: status,
-          taxa_implantacao: taxaImplantacao,
-          observacoes: observacoes,
-        })
-        .eq('id', id);
+        .insert([contrato])
+        .select();
+
+      if (error) {
+        console.error("Erro ao criar contrato:", error);
+        setError(`Erro ao criar contrato: ${error.message}`);
+      } else {
+        console.log("Contrato criado com sucesso:", data);
+        loadData(); // Refresh data after creating a contract
+      }
+    } catch (e) {
+      console.error("Erro inesperado ao criar contrato:", e);
+      setError(`Erro inesperado ao criar contrato: ${e}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateContrato = async (id: string, updates: Partial<Contrato>) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('contratos')
+        .update(updates)
+        .eq('id', id)
+        .select();
 
       if (error) {
         console.error("Erro ao atualizar contrato:", error);
-        toast.error(`Erro ao atualizar contrato: ${error.message}`);
-        return false;
+        setError(`Erro ao atualizar contrato: ${error.message}`);
+      } else {
+        console.log("Contrato atualizado com sucesso:", data);
+        loadData(); // Refresh data after updating a contract
       }
-
-      loadData();
-      return true;
-    } catch (error: any) {
-      console.error("Erro ao atualizar contrato:", error);
-      toast.error(`Erro ao atualizar contrato: ${error.message}`);
-      return false;
+    } catch (e) {
+      console.error("Erro inesperado ao atualizar contrato:", e);
+      setError(`Erro inesperado ao atualizar contrato: ${e}`);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const deleteContrato = async (contratoId: string, clienteId: string): Promise<boolean> => {
-    setIsLoading(true);
+  const deleteContrato = async (id: string) => {
+    setLoading(true);
+    setError(null);
+
     try {
       const { error } = await supabase
         .from('contratos')
         .delete()
-        .eq('id', contratoId);
+        .eq('id', id);
 
       if (error) {
-        console.error("Erro ao excluir contrato:", error);
-        toast.error(`Erro ao excluir contrato: ${error.message}`);
-        return false;
+        console.error("Erro ao deletar contrato:", error);
+        setError(`Erro ao deletar contrato: ${error.message}`);
+      } else {
+        console.log("Contrato deletado com sucesso");
+        loadData(); // Refresh data after deleting a contract
       }
-
-      loadData();
-      return true;
-    } catch (error: any) {
-      console.error("Erro ao excluir contrato:", error);
-      toast.error(`Erro ao excluir contrato: ${error.message}`);
-      return false;
+    } catch (e) {
+      console.error("Erro inesperado ao deletar contrato:", e);
+      setError(`Erro inesperado ao deletar contrato: ${e}`);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return {
     contratos,
     clientes,
-    planos,
-    isLoading,
-    currentContrato,
-    setCurrentContrato,
-    addContrato,
+    loading,
+    error,
+    loadData,
+    createContrato,
     updateContrato,
     deleteContrato,
-    loadData,
   };
-};
+}
