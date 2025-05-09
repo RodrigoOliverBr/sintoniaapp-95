@@ -9,6 +9,7 @@ export const useContratos = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentContrato, setCurrentContrato] = useState<Contrato | null>(null);
   const { toast } = useToast();
 
   const loadContratos = async () => {
@@ -29,21 +30,21 @@ export const useContratos = () => {
       console.log(`${contratosData?.length || 0} contratos encontrados`);
       
       // Formatar os contratos para o formato esperado pela aplicação
-      const formattedContratos = contratosData?.map(contrato => ({
+      const formattedContratos: Contrato[] = contratosData?.map(contrato => ({
         id: contrato.id,
         numero: contrato.numero,
         clienteId: contrato.cliente_id,
         clienteSistemaId: contrato.cliente_sistema_id,
         planoId: contrato.plano_id,
-        dataInicio: contrato.data_inicio,
-        dataFim: contrato.data_fim,
-        dataPrimeiroVencimento: contrato.data_primeiro_vencimento,
+        dataInicio: contrato.data_inicio ? new Date(contrato.data_inicio).getTime() : new Date().getTime(),
+        dataFim: contrato.data_fim ? new Date(contrato.data_fim).getTime() : addMonths(new Date(), 12).getTime(),
+        dataPrimeiroVencimento: contrato.data_primeiro_vencimento ? new Date(contrato.data_primeiro_vencimento).getTime() : new Date().getTime(),
         status: contrato.status as StatusContrato,
         valorMensal: Number(contrato.valor_mensal),
         taxaImplantacao: Number(contrato.taxa_implantacao || 0),
         observacoes: contrato.observacoes || "",
         cicloFaturamento: contrato.ciclo_faturamento,
-        proximaRenovacao: contrato.proxima_renovacao,
+        proximaRenovacao: contrato.proxima_renovacao ? new Date(contrato.proxima_renovacao).getTime() : undefined,
         ciclosGerados: contrato.ciclos_gerados
       })) || [];
       
@@ -61,7 +62,7 @@ export const useContratos = () => {
       console.log(`${clientesData?.length || 0} clientes encontrados`);
       
       // Formatar os clientes para o formato esperado pela aplicação
-      const formattedClientes = clientesData?.map(cliente => ({
+      const formattedClientes: ClienteSistema[] = clientesData?.map(cliente => ({
         id: cliente.id,
         nome: cliente.razao_social || "",
         razao_social: cliente.razao_social || "",
@@ -128,15 +129,159 @@ export const useContratos = () => {
     }
   };
 
+  const addContrato = async (
+    clienteId: string,
+    planoId: string,
+    numeroContrato: string,
+    dataInicio: Date,
+    dataFim: Date,
+    dataPrimeiroVencimento: Date,
+    valorMensal: number,
+    status: StatusContrato,
+    taxaImplantacao: number,
+    observacoes: string
+  ) => {
+    try {
+      const novoContrato = {
+        cliente_sistema_id: clienteId,
+        cliente_id: clienteId, // Mantemos o mesmo ID para os dois campos por compatibilidade
+        plano_id: planoId,
+        numero: numeroContrato,
+        data_inicio: dataInicio.toISOString(),
+        data_fim: dataFim.toISOString(),
+        data_primeiro_vencimento: dataPrimeiroVencimento.toISOString(),
+        valor_mensal: valorMensal,
+        status: status,
+        taxa_implantacao: taxaImplantacao,
+        observacoes: observacoes,
+        ciclo_faturamento: "mensal"
+      };
+      
+      const { data, error } = await supabase
+        .from("contratos")
+        .insert([novoContrato])
+        .select()
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Atualizar o cliente com o ID do contrato
+      await supabase
+        .from("clientes_sistema")
+        .update({ contrato_id: data.id })
+        .eq("id", clienteId);
+      
+      await loadContratos();
+      return true;
+    } catch (error) {
+      console.error("Erro ao adicionar contrato:", error);
+      return false;
+    }
+  };
+
+  const updateContrato = async (
+    contratoId: string,
+    clienteId: string,
+    planoId: string,
+    numeroContrato: string,
+    dataInicio: Date,
+    dataFim: Date,
+    dataPrimeiroVencimento: Date,
+    valorMensal: number,
+    status: StatusContrato,
+    taxaImplantacao: number,
+    observacoes: string
+  ) => {
+    try {
+      const contratoAtualizado = {
+        cliente_sistema_id: clienteId,
+        cliente_id: clienteId,
+        plano_id: planoId,
+        numero: numeroContrato,
+        data_inicio: dataInicio.toISOString(),
+        data_fim: dataFim.toISOString(),
+        data_primeiro_vencimento: dataPrimeiroVencimento.toISOString(),
+        valor_mensal: valorMensal,
+        status: status,
+        taxa_implantacao: taxaImplantacao,
+        observacoes: observacoes
+      };
+      
+      const { error } = await supabase
+        .from("contratos")
+        .update(contratoAtualizado)
+        .eq("id", contratoId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Atualizar o cliente com o ID do contrato se o status for ativo
+      if (status === "ativo") {
+        await supabase
+          .from("clientes_sistema")
+          .update({ contrato_id: contratoId })
+          .eq("id", clienteId);
+      }
+      
+      await loadContratos();
+      return true;
+    } catch (error) {
+      console.error("Erro ao atualizar contrato:", error);
+      return false;
+    }
+  };
+
+  const deleteContrato = async (contratoId: string, clienteSistemaId: string) => {
+    try {
+      // Remover referência ao contrato no cliente
+      await supabase
+        .from("clientes_sistema")
+        .update({ contrato_id: null })
+        .eq("id", clienteSistemaId)
+        .eq("contrato_id", contratoId);
+      
+      // Deletar o contrato
+      const { error } = await supabase
+        .from("contratos")
+        .delete()
+        .eq("id", contratoId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      await loadContratos();
+      return true;
+    } catch (error) {
+      console.error("Erro ao excluir contrato:", error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     loadContratos();
   }, []);
+
+  // Helper function para adicionar meses a uma data
+  function addMonths(date: Date, months: number): Date {
+    const newDate = new Date(date);
+    newDate.setMonth(newDate.getMonth() + months);
+    return newDate;
+  }
 
   return {
     contratos,
     clientes,
     planos,
     loading,
-    loadContratos
+    currentContrato,
+    setCurrentContrato,
+    loadContratos,
+    addContrato,
+    updateContrato,
+    deleteContrato
   };
 };

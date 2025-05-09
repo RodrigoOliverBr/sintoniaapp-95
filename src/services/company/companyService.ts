@@ -43,9 +43,21 @@ export async function getCompanyById(id: string): Promise<Company | null> {
 export async function addCompany(companyData: Partial<Company>): Promise<Company> {
   try {
     // Verificamos se foi fornecida uma senha
-    const companyToInsert = { ...companyData };
-    const senha = companyToInsert.password;
-    delete companyToInsert.password; // Removemos para não duplicar no objeto
+    const companyToInsert: any = { 
+      nome: companyData.name || companyData.nome,
+      cpf_cnpj: companyData.cpfCnpj,
+      email: companyData.email,
+      telefone: companyData.telefone,
+      endereco: companyData.address,
+      cidade: companyData.city,
+      estado: companyData.state,
+      cep: companyData.zipCode,
+      tipo: companyData.type,
+      situacao: companyData.status,
+      contato: companyData.contact
+    };
+    
+    const senha = companyData.password;
     
     const { data, error } = await supabase
       .from('empresas')

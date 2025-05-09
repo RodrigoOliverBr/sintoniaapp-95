@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addDepartment, getDepartmentsByCompany } from "@/services";
+import { addDepartment } from "@/services";
+import { getDepartmentsByCompany } from "@/services/department/departmentService";
 import { useToast } from "@/hooks/use-toast";
 import { handleSupabaseError } from "@/integrations/supabase/client";
 import { toast } from "sonner";
