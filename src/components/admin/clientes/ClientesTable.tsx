@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   ColumnDef,
@@ -86,7 +85,7 @@ const ClientesTable: React.FC<ClientesTableProps> = ({
           badgeVariant = "destructive";
         }
 
-        return <Badge variant={badgeVariant}>{situacao}</Badge>;
+        return typeof situacao === 'string' ? <Badge variant={badgeVariant}>{situacao}</Badge> : null;
       },
     },
     {

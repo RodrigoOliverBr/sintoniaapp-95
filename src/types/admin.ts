@@ -1,3 +1,4 @@
+
 // Define the client status type
 export type ClienteStatus = 'liberado' | 'bloqueado' | 'pendente' | 'ativo' | 'em-analise' | 'sem-contrato' | 'bloqueado-manualmente';
 export type StatusFatura = 'pendente' | 'pago' | 'atrasado' | 'programada';
@@ -22,7 +23,7 @@ export interface ClienteSistema {
   contratoId: string;
   razaoSocial?: string;
   clienteId?: string;
-  senha?: string; // Add the password field
+  senha?: string;
 }
 
 export interface ClienteComContrato extends ClienteSistema {

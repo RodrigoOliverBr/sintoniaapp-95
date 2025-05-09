@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
@@ -122,8 +123,8 @@ const ClientesPage: React.FC = () => {
     setOpenBlockModal(true);
   };
 
-  const handleUpdateCliente = async (formData: any) => {
-    if (!selectedCliente) return;
+  const handleUpdateCliente = async (formData: any): Promise<void> => {
+    if (!selectedCliente) return Promise.resolve();
     
     setIsLoading(true);
     try {
@@ -136,21 +137,22 @@ const ClientesPage: React.FC = () => {
           email: formData.email,
           telefone: formData.telefone,
           responsavel: formData.responsavel,
-          senha: formData.senha // Include senha field when updating too
+          senha: formData.senha // Include senha field when updating
         })
         .eq("id", selectedCliente.id);
 
       if (error) {
         console.error("Erro ao atualizar cliente:", error);
         toast.error("Erro ao atualizar cliente");
-        return;
+        return Promise.reject(error);
       }
       
       toast.success("Cliente atualizado com sucesso!");
-      loadClientes();
+      await loadClientes();
     } catch (error) {
       console.error("Erro ao atualizar cliente:", error);
       toast.error("Erro ao atualizar cliente");
+      return Promise.reject(error);
     } finally {
       setIsLoading(false);
       setOpenEditModal(false);

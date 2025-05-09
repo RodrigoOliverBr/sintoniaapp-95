@@ -15,7 +15,7 @@ interface ClienteDialogsProps {
   setOpenBlockModal: (open: boolean) => void;
   currentCliente: ClienteSistema | null;
   isLoading: boolean;
-  onUpdateCliente: (data: any) => void;
+  onUpdateCliente: (data: any) => Promise<void>;
   onDeleteCliente: () => void;
   onBlockCliente: () => void;
 }
@@ -43,7 +43,7 @@ export const ClienteDialogs: React.FC<ClienteDialogsProps> = ({
     email: currentCliente.email || "",
     telefone: currentCliente.telefone || "",
     responsavel: currentCliente.responsavel || "",
-    senha: "" // Add empty senha field for edit form
+    senha: "" // Empty senha field for edit form
   };
 
   return (
