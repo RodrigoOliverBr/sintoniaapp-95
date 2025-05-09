@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ClientePerfil } from '@/types/cliente';
 import Layout from '@/components/Layout';
+import { toast } from "sonner";
 
 const UserAccountPage: React.FC = () => {
   const [userProfile, setUserProfile] = useState<ClientePerfil>({
@@ -54,7 +55,25 @@ const UserAccountPage: React.FC = () => {
   
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Implementar a lógica para atualizar o perfil
+    
+    try {
+      const { error } = await supabase
+        .from('perfis')
+        .update({
+          nome: userProfile.nome,
+          telefone: userProfile.telefone
+        })
+        .eq('id', userProfile.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast.success("Perfil atualizado com sucesso!");
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast.error("Erro ao atualizar perfil");
+    }
   };
   
   return (

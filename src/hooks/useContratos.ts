@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { ClienteSistema, Contrato, Plano, StatusContrato, ClienteStatus } from "@/types/admin";
+import { ClienteSistema, Contrato, Plano, StatusContrato, ClienteStatus, CicloFaturamento } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,7 +43,7 @@ export const useContratos = () => {
         valorMensal: Number(contrato.valor_mensal),
         taxaImplantacao: Number(contrato.taxa_implantacao || 0),
         observacoes: contrato.observacoes || "",
-        cicloFaturamento: contrato.ciclo_faturamento,
+        cicloFaturamento: contrato.ciclo_faturamento as CicloFaturamento,
         proximaRenovacao: contrato.proxima_renovacao ? new Date(contrato.proxima_renovacao).getTime() : undefined,
         ciclosGerados: contrato.ciclos_gerados
       })) || [];
@@ -73,7 +73,7 @@ export const useContratos = () => {
         email: cliente.email || "",
         responsavel: cliente.responsavel || "",
         contato: cliente.responsavel || "",
-        situacao: cliente.situacao as ClienteStatus || "liberado",
+        situacao: cliente.situacao as ClienteStatus,
         tipo: "juridica",
         numeroEmpregados: 0,
         dataInclusao: new Date().getTime(),

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addDepartment } from "@/services";
-import { getDepartmentsByCompany } from "@/services/department/departmentService";
+import { getDepartmentsByCompanyService } from "@/services";
 import { useToast } from "@/hooks/use-toast";
 import { handleSupabaseError } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -66,7 +65,7 @@ const NewDepartmentModal: React.FC<NewDepartmentModalProps> = ({
       setTimeout(async () => {
         try {
           console.log("NewDepartmentModal: Atualizando lista de setores após inserção");
-          await getDepartmentsByCompany(companyId);
+          await getDepartmentsByCompanyService(companyId);
           
           // Call the callback again after refresh
           if (onDepartmentAdded) {

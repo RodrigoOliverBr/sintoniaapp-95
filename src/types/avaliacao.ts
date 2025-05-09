@@ -3,7 +3,7 @@
 export interface AvaliacaoRisco {
   id: string;
   texto: string;
-  severidade: number;
+  severidade: number; // This is a number representing severity level
 }
 
 export interface AvaliacaoResposta {
