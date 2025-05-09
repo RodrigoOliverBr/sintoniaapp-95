@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
@@ -136,7 +135,8 @@ const ClientesPage: React.FC = () => {
           cnpj: formData.cnpj,
           email: formData.email,
           telefone: formData.telefone,
-          responsavel: formData.responsavel
+          responsavel: formData.responsavel,
+          senha: formData.senha // Include senha field when updating too
         })
         .eq("id", selectedCliente.id);
 
@@ -226,7 +226,8 @@ const ClientesPage: React.FC = () => {
           cnpj: formData.cnpj,
           email: formData.email,
           telefone: formData.telefone,
-          responsavel: formData.responsavel
+          responsavel: formData.responsavel,
+          senha: formData.senha // Include senha field when saving
         }])
         .select();
 

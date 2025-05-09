@@ -1,10 +1,10 @@
 
-import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import React from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
-import { ClienteForm } from "../ClienteForm";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ClienteSistema } from "@/types/admin";
+import { ClienteForm } from "@/components/admin/ClienteForm";
 
 interface ClienteDialogsProps {
   openEditModal: boolean;
@@ -15,9 +15,9 @@ interface ClienteDialogsProps {
   setOpenBlockModal: (open: boolean) => void;
   currentCliente: ClienteSistema | null;
   isLoading: boolean;
-  onUpdateCliente: (formData: any) => Promise<void>;
-  onDeleteCliente: () => Promise<void>;
-  onBlockCliente: () => Promise<void>;
+  onUpdateCliente: (data: any) => void;
+  onDeleteCliente: () => void;
+  onBlockCliente: () => void;
 }
 
 export const ClienteDialogs: React.FC<ClienteDialogsProps> = ({
@@ -33,91 +33,82 @@ export const ClienteDialogs: React.FC<ClienteDialogsProps> = ({
   onDeleteCliente,
   onBlockCliente,
 }) => {
+  if (!currentCliente) {
+    return null;
+  }
+
+  const defaultValues = {
+    razao_social: currentCliente.razao_social || "",
+    cnpj: currentCliente.cnpj || "",
+    email: currentCliente.email || "",
+    telefone: currentCliente.telefone || "",
+    responsavel: currentCliente.responsavel || "",
+    senha: "" // Add empty senha field for edit form
+  };
+
   return (
     <>
+      {/* Edit Cliente Dialog */}
       <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
             <DialogDescription>
-              Atualize as informações do cliente.
+              Altere os dados do cliente e salve as mudanças.
             </DialogDescription>
           </DialogHeader>
           <ClienteForm 
             onSubmit={onUpdateCliente}
-            defaultValues={{
-              razao_social: currentCliente?.razaoSocial || '',
-              cnpj: currentCliente?.cnpj || '',
-              email: currentCliente?.email || '',
-              telefone: currentCliente?.telefone || '',
-              responsavel: currentCliente?.responsavel || ''
-            }}
+            defaultValues={defaultValues}
             isLoading={isLoading}
             isEditing={true}
           />
         </DialogContent>
       </Dialog>
-      
-      <Dialog open={openDeleteModal} onOpenChange={setOpenDeleteModal}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirmar exclusão</DialogTitle>
-            <DialogDescription>
-              Você está prestes a excluir o cliente "{currentCliente?.razaoSocial}". Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setOpenDeleteModal(false)}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={onDeleteCliente}
+
+      {/* Delete Cliente Dialog */}
+      <AlertDialog open={openDeleteModal} onOpenChange={setOpenDeleteModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Cliente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o cliente "{currentCliente.razao_social}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={onDeleteCliente} 
+              className="bg-red-500 hover:bg-red-600"
               disabled={isLoading}
             >
-              {isLoading ? 'Excluindo...' : 'Excluir'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={openBlockModal} onOpenChange={setOpenBlockModal}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirmar bloqueio</DialogTitle>
-            <DialogDescription>
-              Você está prestes a bloquear manualmente o acesso do cliente "{currentCliente?.razaoSocial}". 
-              O cliente não poderá acessar o sistema após esta ação.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 mt-4">
-            <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-              <AlertCircle size={20} className="text-yellow-600" />
-              <p className="text-sm text-yellow-700">
-                Este bloqueio é manual e não será alterado automaticamente pela situação do contrato.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setOpenBlockModal(false)}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={onBlockCliente}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Bloqueando...' : 'Bloquear Cliente'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+              {isLoading ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Block Cliente Dialog */}
+      <AlertDialog open={openBlockModal} onOpenChange={setOpenBlockModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bloquear Cliente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja bloquear o cliente "{currentCliente.razao_social}"? Isso impedirá o acesso deles ao sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={onBlockCliente} 
+              className="bg-yellow-500 hover:bg-yellow-600"
+              disabled={isLoading}
+            >
+              {isLoading ? "Bloqueando..." : "Bloquear"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

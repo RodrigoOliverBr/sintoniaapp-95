@@ -12,7 +12,8 @@ const clienteFormSchema = z.object({
   cnpj: z.string().min(14, { message: 'CNPJ inválido' }),
   email: z.string().email({ message: 'Email inválido' }).optional().or(z.literal('')),
   telefone: z.string().optional().or(z.literal('')),
-  responsavel: z.string().optional().or(z.literal(''))
+  responsavel: z.string().optional().or(z.literal('')),
+  senha: z.string().optional().or(z.literal(''))
 });
 
 type ClienteFormValues = z.infer<typeof clienteFormSchema>;
@@ -31,7 +32,8 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
     cnpj: '',
     email: '',
     telefone: '',
-    responsavel: ''
+    responsavel: '',
+    senha: ''
   },
   isLoading = false,
   isEditing = false
@@ -112,6 +114,20 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
               <FormLabel>Responsável</FormLabel>
               <FormControl>
                 <Input {...field} disabled={isLoading} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="senha"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Senha</FormLabel>
+              <FormControl>
+                <Input type="password" {...field} placeholder="Digite a senha" disabled={isLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
