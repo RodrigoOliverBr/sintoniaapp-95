@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Company } from '@/types/cadastro';
 import { getClienteIdAtivo } from '@/utils/clientContext';
@@ -48,7 +49,7 @@ export const getCompanies = async (): Promise<Company[]> => {
     
     return (data || []).map(company => ({
       id: company.id,
-      name: company.nome,
+      nome: company.nome,
       cpfCnpj: company.cpf_cnpj,
       telefone: company.telefone,
       email: company.email,
@@ -157,7 +158,7 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
     console.log("Adicionando empresa para o perfil:", session.user.id);
     
     const dbData = {
-      nome: companyData.name,
+      nome: companyData.nome || companyData.name,
       cpf_cnpj: companyData.cpfCnpj,
       telefone: companyData.telefone,
       email: companyData.email,
@@ -168,7 +169,8 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
       cep: companyData.zipCode,
       estado: companyData.state,
       cidade: companyData.city,
-      perfil_id: session.user.id // Use the session user ID directly
+      perfil_id: session.user.id, // Use the session user ID directly
+      senha: companyData.password // Adicionar campo de senha
     };
 
     console.log("Dados para inserção:", dbData);
@@ -187,7 +189,7 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
     console.log("Empresa cadastrada com sucesso:", data);
     return {
       id: data.id,
-      name: data.nome,
+      nome: data.nome,
       cpfCnpj: data.cpf_cnpj,
       telefone: data.telefone,
       email: data.email,
@@ -199,7 +201,8 @@ export const addCompany = async (companyData: Partial<Company>): Promise<Company
       state: data.estado,
       city: data.cidade,
       createdAt: data.created_at,
-      updatedAt: data.updated_at
+      updatedAt: data.updated_at,
+      password: data.senha // Incluir o campo de senha no retorno
     };
   } catch (error) {
     console.error("Erro ao adicionar empresa:", error);

@@ -1,7 +1,7 @@
-
 export interface Company {
   id: string;
-  name: string;
+  nome?: string;   // Nome compatível com DB
+  name?: string;   // Nome para compatibilidade
   cpfCnpj?: string;
   telefone?: string;
   email?: string;
@@ -15,6 +15,7 @@ export interface Company {
   createdAt?: string;
   updatedAt?: string;
   departments?: Department[];
+  password?: string; // Campo de senha adicionado
 }
 
 export interface Department {

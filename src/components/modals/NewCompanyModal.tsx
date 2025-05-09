@@ -27,6 +27,7 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
   onCompanyAdded,
 }) => {
   const [name, setName] = React.useState("");
+  const [password, setPassword] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
 
@@ -34,6 +35,7 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
   React.useEffect(() => {
     if (open) {
       setName("");
+      setPassword("");
       setErrorMessage("");
     }
   }, [open]);
@@ -59,12 +61,16 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       console.log("Usuário autenticado:", session.user.id);
       console.log("Iniciando processo de cadastro da empresa:", name.trim());
       
-      // Enviar dados para cadastro
-      await addCompany({ name: name.trim() });
+      // Enviar dados para cadastro (incluindo a senha)
+      await addCompany({ 
+        name: name.trim(),
+        password: password.trim() 
+      });
       
       toast.success("Empresa cadastrada com sucesso!");
       
       setName("");
+      setPassword("");
       
       // Automatically close the modal after success
       onOpenChange(false);
@@ -110,6 +116,20 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 className="col-span-3 text-sm"
                 autoFocus
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="password" className="text-right text-sm">
+                Senha
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="col-span-3 text-sm"
+                placeholder="Digite a senha"
                 disabled={isSubmitting}
               />
             </div>
