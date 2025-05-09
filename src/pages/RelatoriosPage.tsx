@@ -11,6 +11,7 @@ import { getCompanies } from "@/services/company/companyService";
 import { getEmployeesByCompany } from "@/services/employee/employeeService";
 import { Question, FormResult } from "@/types/form";
 import { Company, Employee } from "@/types/cadastro";
+import { AvaliacaoResposta, AvaliacaoRisco } from "@/types/avaliacao";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,7 @@ const RelatoriosPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("diagnostico");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>([]);
 
   // Sample questions and answers for demonstration
   const sampleQuestions: Question[] = [
@@ -54,10 +56,49 @@ const RelatoriosPage: React.FC = () => {
     q3: true
   };
 
-  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery({
-    queryKey: ["companies"],
-    queryFn: getCompanies
-  });
+  // Sample risk for demonstration
+  const sampleRisco: AvaliacaoRisco = {
+    id: "r1",
+    texto: "Risco de Estresse",
+    severidade: 3
+  };
+  
+  // Sample respostas for demonstration
+  const sampleRespostas: AvaliacaoResposta[] = [
+    {
+      id: "resp1",
+      perguntaId: "q1",
+      resposta: true,
+      observacao: "O funcionário relatou excesso de tarefas"
+    },
+    {
+      id: "resp2",
+      perguntaId: "q2",
+      resposta: false,
+      observacao: "Decisões sempre precisam de aprovação superior"
+    },
+    {
+      id: "resp3",
+      perguntaId: "q3",
+      resposta: true,
+      observacao: ""
+    }
+  ];
+
+  // Load companies
+  useEffect(() => {
+    const loadCompaniesData = async () => {
+      try {
+        const companiesData = await getCompanies();
+        setCompanies(companiesData || []);
+      } catch (error) {
+        console.error("Erro ao carregar empresas:", error);
+        toast.error("Erro ao carregar empresas");
+      }
+    };
+    
+    loadCompaniesData();
+  }, []);
 
   const { data: employees = [], isLoading: isLoadingEmployees } = useQuery({
     queryKey: ["employees", selectedCompanyId],
@@ -124,34 +165,6 @@ const RelatoriosPage: React.FC = () => {
   const selectedCompany = companies.find(c => c.id === selectedCompanyId) || null;
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) || null;
 
-  // Sample form result for diagnostic
-  const sampleFormResult: FormResult = {
-    id: "sample-result",
-    employeeId: selectedEmployeeId || "1",
-    empresa_id: selectedCompanyId || "1",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    answers: {
-      q1: { 
-        questionId: "q1",
-        answer: true 
-      },
-      q2: { 
-        questionId: "q2", 
-        answer: false 
-      },
-      q3: { 
-        questionId: "q3", 
-        answer: true 
-      }
-    },
-    total_sim: 2,
-    total_nao: 1,
-    is_complete: true,
-    last_updated: new Date().toISOString(),
-    formulario_id: "f1"
-  };
-
   return (
     <Layout title="Relatórios">
       <div className="space-y-4 px-4 py-6">
@@ -184,8 +197,8 @@ const RelatoriosPage: React.FC = () => {
 
             <TabsContent value="diagnostico" className="mt-0">
               <DiagnosticoIndividual
-                result={sampleFormResult}
-                questions={sampleQuestions}
+                risco={sampleRisco}
+                respostas={sampleRespostas}
                 companyId={selectedCompanyId}
               />
             </TabsContent>

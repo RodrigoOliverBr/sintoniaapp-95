@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addCompany } from "@/services"; 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -61,11 +60,31 @@ const NewCompanyModal: React.FC<NewCompanyModalProps> = ({
       console.log("Usuário autenticado:", session.user.id);
       console.log("Iniciando processo de cadastro da empresa:", name.trim());
       
-      // Enviar dados para cadastro (incluindo a senha)
-      await addCompany({ 
-        name: name.trim(),
-        password: password.trim() 
-      });
+      // Adicionar a empresa diretamente via Supabase
+      const { data, error } = await supabase
+        .from('empresas')
+        .insert([{ 
+          nome: name.trim(),
+          tipo: 'juridica'
+        }])
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Se uma senha foi fornecida, também criar um registro na tabela clientes_sistema
+      if (password.trim() && data) {
+        await supabase
+          .from('clientes_sistema')
+          .insert([{ 
+            id: data.id,
+            razao_social: name.trim(),
+            cnpj: data.cpf_cnpj || '',
+            senha: password.trim() 
+          }]);
+      }
       
       toast.success("Empresa cadastrada com sucesso!");
       

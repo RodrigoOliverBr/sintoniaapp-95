@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from "react";
 import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import ContractForm from "./ContractForm";
-import { ClienteSistema, Plano, StatusContrato } from "@/types/admin";
+import { ClienteSistema, Plano, StatusContrato, ClienteStatus } from "@/types/admin";
 import { toast } from "sonner";
 import { supabase, ensureAuthenticated, logAuthStatus } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -105,11 +104,10 @@ const NewContractModal: React.FC<NewContractModalProps> = ({
             email: c.email || "",
             responsavel: c.responsavel || "",
             contato: c.responsavel || "",
-            situacao: c.situacao || "",
-            tipo: "cliente",
+            situacao: (c.situacao || "liberado") as ClienteStatus, // Cast para ClienteStatus
+            tipo: "juridica",
             numeroEmpregados: 0,
             dataInclusao: c.created_at ? new Date(c.created_at).getTime() : Date.now(),
-            ativo: true,
             planoId: c.plano_id || "",
             contratoId: c.contrato_id || ""
           }));

@@ -1,20 +1,21 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AvaliacaoResposta } from "@/types/avaliacao";
+import { AvaliacaoResposta, AvaliacaoRisco } from "@/types/avaliacao";
 // Fix the import to use the default export from SeverityBadge
 import SeverityBadge from "@/components/SeverityBadge";
 
 interface DiagnosticoIndividualProps {
+  risco: AvaliacaoRisco;
   respostas: AvaliacaoResposta[];
+  companyId: string;
 }
 
-const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas }) => {
+const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas, risco }) => {
   // Agrupar respostas por risco
   const respostasPorRisco = respostas.reduce((acc, resposta) => {
-    const risco = resposta.pergunta.risco;
-    if (!risco) return acc;
-
+    // Usamos o ID do risco fornecido como prop
     const riscoId = risco.id;
     if (!acc[riscoId]) {
       acc[riscoId] = {
@@ -24,7 +25,7 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas
     }
     acc[riscoId].respostas.push(resposta);
     return acc;
-  }, {} as { [key: string]: { risco: any, respostas: AvaliacaoResposta[] } });
+  }, {} as { [key: string]: { risco: AvaliacaoRisco, respostas: AvaliacaoResposta[] } });
 
   return (
     <Card className="w-full">
@@ -43,9 +44,9 @@ const DiagnosticoIndividual: React.FC<DiagnosticoIndividualProps> = ({ respostas
                 <ul className="list-disc pl-5 space-y-2">
                   {respostas.map((resposta) => (
                     <li key={resposta.id}>
-                      <p className="font-medium">{resposta.pergunta.texto}</p>
+                      <p className="font-medium">Pergunta ID: {resposta.perguntaId}</p>
                       <p className="text-sm text-gray-500">
-                        Resposta: {resposta.resposta_texto || "Não respondido"}
+                        Resposta: {resposta.resposta ? "Sim" : "Não"}
                       </p>
                       {resposta.observacao && (
                         <p className="text-sm italic mt-1">

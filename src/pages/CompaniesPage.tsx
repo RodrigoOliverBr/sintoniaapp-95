@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -12,12 +13,6 @@ import {
 } from "@/components/ui/table";
 import { Plus, Trash, FolderPlus, RefreshCw } from "lucide-react";
 import { Company, Department } from "@/types/cadastro";
-import { 
-  deleteCompany, 
-  getCompanies, 
-  deleteDepartment,
-  getDepartmentsByCompany 
-} from "@/services";
 import NewCompanyModal from "@/components/modals/NewCompanyModal";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -29,6 +24,7 @@ import {
 } from "@/components/ui/accordion";
 import NewDepartmentModal from "@/components/modals/NewDepartmentModal";
 import { getClienteIdAtivo } from "@/utils/clientContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const CompaniesPage = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -41,10 +37,68 @@ const CompaniesPage = () => {
   const loadCompanies = async () => {
     setIsLoading(true);
     try {
-      // Load companies with their departments
-      const loadedCompanies = await getCompanies();
-      console.log("Loaded companies:", loadedCompanies);
-      setCompanies(loadedCompanies || []);
+      // Load companies from Supabase
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('*');
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log("Loaded companies:", data);
+      
+      // Map the data to match the Company type
+      const formattedCompanies: Company[] = data.map(company => ({
+        id: company.id,
+        name: company.nome,
+        nome: company.nome,
+        cpfCnpj: company.cpf_cnpj,
+        telefone: company.telefone,
+        email: company.email,
+        address: company.endereco,
+        city: company.cidade,
+        state: company.estado,
+        zipCode: company.cep,
+        type: company.tipo,
+        status: company.situacao,
+        contact: company.contato,
+        createdAt: company.created_at,
+        updatedAt: company.updated_at,
+        departments: [] // Will load departments separately
+      }));
+      
+      // Load departments for each company
+      const companiesWithDepartments = await Promise.all(
+        formattedCompanies.map(async (company) => {
+          try {
+            const { data: departments, error: deptError } = await supabase
+              .from('setores')
+              .select('*')
+              .eq('empresa_id', company.id);
+            
+            if (deptError) {
+              throw deptError;
+            }
+            
+            // Map the departments to match the Department type
+            company.departments = departments.map(dept => ({
+              id: dept.id,
+              name: dept.nome,
+              companyId: dept.empresa_id,
+              createdAt: dept.created_at,
+              updatedAt: dept.updated_at
+            }));
+            
+            return company;
+          } catch (error) {
+            console.error(`Error loading departments for company ${company.id}:`, error);
+            return company;
+          }
+        })
+      );
+      
+      setCompanies(companiesWithDepartments || []);
     } catch (error) {
       console.error("Erro ao carregar empresas:", error);
       toast({
@@ -62,7 +116,24 @@ const CompaniesPage = () => {
   const refreshCompanyDepartments = async (companyId: string) => {
     try {
       console.log("Refreshing departments for company:", companyId);
-      const departments = await getDepartmentsByCompany(companyId);
+      
+      const { data, error } = await supabase
+        .from('setores')
+        .select('*')
+        .eq('empresa_id', companyId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Map the departments to match the Department type
+      const departments: Department[] = data.map(dept => ({
+        id: dept.id,
+        name: dept.nome,
+        companyId: dept.empresa_id,
+        createdAt: dept.created_at,
+        updatedAt: dept.updated_at
+      }));
       
       // Update the companies state with the new departments
       setCompanies(prevCompanies => 
@@ -84,7 +155,16 @@ const CompaniesPage = () => {
   const handleDeleteCompany = async (id: string) => {
     if (window.confirm("Tem certeza que deseja excluir essa empresa? Todos os funcionários associados também serão excluídos.")) {
       try {
-        await deleteCompany(id);
+        // Delete the company from Supabase
+        const { error } = await supabase
+          .from('empresas')
+          .delete()
+          .eq('id', id);
+        
+        if (error) {
+          throw error;
+        }
+        
         await loadCompanies();
         toast({
           title: "Sucesso",
@@ -104,8 +184,17 @@ const CompaniesPage = () => {
   const handleDeleteDepartment = async (companyId: string, departmentId: string) => {
     if (window.confirm("Tem certeza que deseja excluir este setor?")) {
       try {
-        // Pass both department ID and company ID
-        await deleteDepartment(departmentId, companyId);
+        // Delete the department from Supabase
+        const { error } = await supabase
+          .from('setores')
+          .delete()
+          .eq('id', departmentId)
+          .eq('empresa_id', companyId);
+        
+        if (error) {
+          throw error;
+        }
+        
         // Force refresh the departments for this specific company
         await refreshCompanyDepartments(companyId);
         toast({

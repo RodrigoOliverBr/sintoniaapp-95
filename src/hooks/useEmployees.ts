@@ -2,12 +2,12 @@
 import { useState, useCallback } from "react";
 import { Company, Employee } from "@/types/cadastro";
 import {
-  getCompanies,
   getEmployeesByCompany,
   deleteEmployee,
-  getJobRoleById,
+  getJobRoleById
 } from "@/services";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface JobRoleMap {
   [key: string]: string;
@@ -25,8 +25,14 @@ export const useEmployees = () => {
     setIsLoading(true);
     try {
       console.log("useEmployees: Carregando empresas...");
-      const companiesData = await getCompanies();
-      console.log("useEmployees: Empresas carregadas:", companiesData.length, companiesData);
+      
+      const { data: companiesData, error } = await supabase
+        .from('empresas')
+        .select('*');
+        
+      if (error) throw error;
+      
+      console.log("useEmployees: Empresas carregadas:", companiesData?.length, companiesData);
       
       setCompanies(Array.isArray(companiesData) ? companiesData : []);
       
