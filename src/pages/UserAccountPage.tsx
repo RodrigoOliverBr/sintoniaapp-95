@@ -34,7 +34,7 @@ const UserAccountPage: React.FC = () => {
           if (error) {
             console.error('Erro ao buscar perfil:', error);
           } else if (data) {
-            // Atualizar o estado com os dados do perfil
+            // Atualizar o estado com os dados do perfil, garantindo que telefone exista
             setUserProfile({
               id: data.id || "",
               nome: data.nome || "",
@@ -61,7 +61,7 @@ const UserAccountPage: React.FC = () => {
         .from('perfis')
         .update({
           nome: userProfile.nome,
-          telefone: userProfile.telefone
+          telefone: userProfile.telefone || null // Use null if telefone is empty
         })
         .eq('id', userProfile.id);
         

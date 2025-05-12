@@ -1,6 +1,9 @@
 
 import React from 'react';
 import { Company, Employee, Department } from '@/types/cadastro';
+import CompanySelect from './CompanySelect';
+import EmployeeList from './EmployeeList';
+import EmployeeStatus from './EmployeeStatus';
 
 interface EmployeeContentProps {
   companies: Company[];
@@ -16,7 +19,6 @@ interface EmployeeContentProps {
   onRefreshDepartments?: () => void;
 }
 
-// Fix the CompanySelect component by adding a noop function for onNewEmployee
 const EmployeeContent: React.FC<EmployeeContentProps> = ({
   companies,
   employees = [],
@@ -30,43 +32,49 @@ const EmployeeContent: React.FC<EmployeeContentProps> = ({
   onDeleteEmployee,
   onRefreshDepartments
 }) => {
-  // Placeholder implementation
   const handleCompanyChange = (id: string) => {
     onCompanyChange(id);
   };
 
-  return (
-    <div>
-      {/* Pass the missing onNewEmployee prop */}
-      <CompanySelect 
-        companies={companies} 
-        selectedCompanyId={selectedCompanyId}
-        onCompanyChange={handleCompanyChange}
-        onNewEmployee={onNewEmployee}
-      />
-    </div>
-  );
-};
+  const getEmployeeStatus = (employeeId: string) => {
+    return <EmployeeStatus employeeId={employeeId} />;
+  };
 
-// Define the CompanySelectProps interface
-interface CompanySelectProps {
-  companies: Company[];
-  selectedCompanyId: string;
-  onCompanyChange: (companyId: string) => void;
-  onNewEmployee: () => void;
-}
+  const handleDeleteEmployee = (employee: Employee) => {
+    if (onDeleteEmployee) {
+      onDeleteEmployee(employee);
+    }
+  };
 
-// Basic CompanySelect component that expects the onNewEmployee prop
-const CompanySelect: React.FC<CompanySelectProps> = ({
-  companies,
-  selectedCompanyId,
-  onCompanyChange,
-  onNewEmployee
-}) => {
   return (
-    <div>
-      {/* Placeholder component */}
-      <button onClick={onNewEmployee}>New Employee</button>
+    <div className="space-y-6">
+      <div className="bg-white p-4 rounded-lg shadow-sm">
+        <CompanySelect 
+          companies={companies} 
+          selectedCompanyId={selectedCompanyId}
+          onCompanyChange={handleCompanyChange}
+          onNewEmployee={onNewEmployee}
+        />
+      </div>
+      
+      {selectedCompanyId && (
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <EmployeeList 
+            employees={employees}
+            isLoading={isLoading}
+            roleNames={roleNames}
+            onEdit={(employee) => onEditEmployee && onEditEmployee(employee)}
+            onDelete={(employeeId) => {
+              // Find the employee by ID and pass the complete employee object
+              const employee = employees.find(emp => emp.id === employeeId);
+              if (employee && onDeleteEmployee) {
+                onDeleteEmployee(employee);
+              }
+            }}
+            getStatusComponent={getEmployeeStatus}
+          />
+        </div>
+      )}
     </div>
   );
 };

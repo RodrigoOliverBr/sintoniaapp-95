@@ -72,6 +72,14 @@ const EmployeesPage: React.FC = () => {
     }
   };
 
+  // Modified to accept Employee object and extract the ID
+  const handleEmployeeDelete = (employee: Employee) => {
+    console.log("EmployeesPage: Delete requested for employee:", employee.id);
+    if (employee && employee.id) {
+      handleDeleteEmployee(employee.id);
+    }
+  };
+
   return (
     <Layout title="Funcionários">
       <EmployeeContent
@@ -87,7 +95,7 @@ const EmployeesPage: React.FC = () => {
           setSelectedEmployee(employee);
           setOpenEditModal(true);
         }}
-        onDeleteEmployee={handleDeleteEmployee}
+        onDeleteEmployee={handleEmployeeDelete}
         onRefreshDepartments={handleRefreshDepartments}
       />
 
