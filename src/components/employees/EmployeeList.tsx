@@ -65,7 +65,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
               
             return (
               <TableRow key={employee.id}>
-                <TableCell>{employee.name}</TableCell>
+                <TableCell>{employee.name || 'Sem nome'}</TableCell>
                 <TableCell>{employee.email || '-'}</TableCell>
                 <TableCell>{roleName}</TableCell>
                 <TableCell>{getStatusComponent(employee.id)}</TableCell>

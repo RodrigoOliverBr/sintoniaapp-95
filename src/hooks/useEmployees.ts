@@ -6,6 +6,7 @@ import { getEmployeesByCompany } from "@/services/employee/employeeService";
 import { getCompanies } from "@/services/company/companyService";
 import { Company } from "@/types/cadastro";
 import { getJobRolesByCompany } from "@/services/jobRole/jobRoleService";
+import { toast } from "sonner";
 
 export function useEmployees(initialCompanyId?: string) {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -13,6 +14,7 @@ export function useEmployees(initialCompanyId?: string) {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(initialCompanyId || null);
   const [loading, setLoading] = useState(true);
   const [roleNames, setRoleNames] = useState<Record<string, string>>({});
+  const [error, setError] = useState<Error | null>(null);
   
   useEffect(() => {
     loadCompanies();
@@ -31,6 +33,7 @@ export function useEmployees(initialCompanyId?: string) {
   const loadCompanies = async () => {
     try {
       setLoading(true);
+      setError(null);
       const companiesData = await getCompanies();
       setCompanies(companiesData);
       
@@ -40,26 +43,36 @@ export function useEmployees(initialCompanyId?: string) {
       }
     } catch (error) {
       console.error("Erro ao carregar empresas:", error);
+      setError(error instanceof Error ? error : new Error('Erro ao carregar empresas'));
       setCompanies([]);
+      toast.error("Erro ao carregar empresas");
     } finally {
       setLoading(false);
     }
   };
 
   const loadEmployees = async (companyId: string) => {
+    if (!companyId) return;
+    
     try {
       setLoading(true);
+      setError(null);
       const employeesData = await getEmployeesByCompany(companyId);
       setEmployees(employeesData);
     } catch (error) {
       console.error("Erro ao carregar funcionários:", error);
-      setEmployees([]);
+      // Importante: não limpar a lista de funcionários em caso de erro
+      // para que dados previamente carregados não desapareçam
+      setError(error instanceof Error ? error : new Error('Erro ao carregar funcionários'));
+      toast.error("Erro ao carregar funcionários");
     } finally {
       setLoading(false);
     }
   };
   
   const loadRoleNames = async (companyId: string) => {
+    if (!companyId) return;
+    
     try {
       const roles = await getJobRolesByCompany(companyId);
       const rolesMap: Record<string, string> = {};
@@ -71,6 +84,7 @@ export function useEmployees(initialCompanyId?: string) {
       setRoleNames(rolesMap);
     } catch (error) {
       console.error("Erro ao carregar cargos:", error);
+      // Não mostrar toast para este erro secundário para evitar excesso de notificações
     }
   };
 
@@ -83,20 +97,24 @@ export function useEmployees(initialCompanyId?: string) {
         
       if (error) throw error;
       
-      // Refresh employees list after deletion
-      if (selectedCompanyId) {
-        loadEmployees(selectedCompanyId);
-      }
+      // Update employees list locally after deletion instead of refetching
+      setEmployees(prevEmployees => 
+        prevEmployees.filter(employee => employee.id !== employeeId)
+      );
       
+      toast.success("Funcionário excluído com sucesso");
       return true;
     } catch (error) {
       console.error("Erro ao excluir funcionário:", error);
+      toast.error("Erro ao excluir funcionário");
       return false;
     }
   };
 
   const refreshEmployees = (companyId: string) => {
-    loadEmployees(companyId);
+    if (companyId) {
+      loadEmployees(companyId);
+    }
   };
 
   return {
@@ -106,6 +124,7 @@ export function useEmployees(initialCompanyId?: string) {
     selectedCompanyId,
     isLoading: loading,
     roleNames,
+    error,
     setSelectedCompanyId,
     loadCompanies,
     loadEmployees,

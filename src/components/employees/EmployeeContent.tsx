@@ -44,18 +44,27 @@ const EmployeeContent: React.FC<EmployeeContentProps> = ({
   console.log("EmployeeContent: Selected company ID:", selectedCompanyId);
   console.log("EmployeeContent: Available departments:", departments?.length || 0);
   console.log("EmployeeContent: Role names mapping:", roleNames);
+  console.log("EmployeeContent: Current employees:", employees);
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between">
+      <div className="flex justify-between items-center">
         <div className="flex-1 max-w-xs">
           <CompanySelect
             companies={companies}
             selectedCompanyId={selectedCompanyId}
             onCompanyChange={onCompanyChange}
-            onNewEmployee={onNewEmployee}
           />
         </div>
+        
+        <Button 
+          onClick={onNewEmployee}
+          disabled={!selectedCompanyId}
+          className="ml-4"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Funcionário
+        </Button>
       </div>
 
       <Card>

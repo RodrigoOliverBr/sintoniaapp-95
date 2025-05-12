@@ -21,17 +21,17 @@ const EmployeesPage: React.FC = () => {
     isLoading,
     roleNames,
     setSelectedCompanyId,
-    loadCompanies,
     loadEmployees,
     handleDeleteEmployee,
   } = useEmployees();
 
   useEffect(() => {
     console.log("EmployeesPage: Carregando empresas no mount...");
-    loadCompanies();
   }, []);
 
   const loadDepartments = useCallback(async (companyId: string) => {
+    if (!companyId) return;
+    
     console.log("EmployeesPage: Loading departments for company:", companyId);
     try {
       const departmentsData = await getDepartmentsByCompanyService(companyId);
@@ -40,20 +40,18 @@ const EmployeesPage: React.FC = () => {
     } catch (error) {
       console.error("EmployeesPage: Error loading departments:", error);
       toast.error("Erro ao carregar setores");
-      setDepartments([]);
+      // Não limpar departamentos existentes em caso de erro
     }
   }, []);
 
   useEffect(() => {
     if (selectedCompanyId) {
       console.log("EmployeesPage: Company changed, loading employees and departments");
-      loadEmployees(selectedCompanyId);
       loadDepartments(selectedCompanyId);
     } else {
       console.log("EmployeesPage: No company selected");
-      setDepartments([]);
     }
-  }, [selectedCompanyId, loadEmployees, loadDepartments]);
+  }, [selectedCompanyId, loadDepartments]);
 
   const handleCompanyChange = (companyId: string) => {
     console.log("EmployeesPage: Company selection changed to:", companyId);
