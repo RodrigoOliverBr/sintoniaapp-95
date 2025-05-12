@@ -1,59 +1,125 @@
 
-// Type definition for Client related interfaces
+// src/types/cliente.d.ts
+// Este arquivo contém as definições de tipos relacionados aos clientes do sistema
 
-export type TipoPessoa = "fisica" | "juridica";
-
-export type StatusContrato = 
-  | "ativo" 
-  | "pendente" 
-  | "vencido" 
-  | "cancelado" 
-  | "renovado";
-
-export type ClienteStatus = 
-  | "liberado" 
-  | "bloqueado" 
-  | "ativo" 
-  | "em-analise" 
-  | "sem-contrato" 
-  | "bloqueado-manualmente";
-
-export interface ClientePerfil {
+export interface ClienteDashboard {
   id: string;
-  nome: string;
-  email: string;
+  razao_social: string;
+  nome_responsavel?: string;
+  email_responsavel?: string;
   telefone?: string;
-  tipo?: TipoPessoa;
-  cpfCnpj?: string;
-  contato?: string;
-  situacao?: ClienteStatus;
-  created_at?: string;
-  updated_at?: string;
+  situacao: string;
+  plano?: string;
+  data_contrato?: string;
+  proximity?: number;  // apenas para o cálculo de relevância na busca
 }
 
-export interface ClienteSistema {
-  id: string;
-  razao_social?: string;
-  razaoSocial?: string;
-  nome: string;
-  tipo: TipoPessoa;
-  numeroEmpregados: number;
-  dataInclusao: number; // timestamp
-  situacao: ClienteStatus;
-  cnpj?: string;
-  cpfCnpj: string;
-  email: string;
-  telefone: string;
+export interface ClienteInput {
+  razao_social: string;
+  cnpj: string;
+  email?: string;
   responsavel?: string;
-  contato?: string;
-  planoId?: string;
-  contratoId?: string;
-  clienteId: string;
+  telefone?: string;
+  situacao?: string;
+  plano_id?: string;
 }
 
-// Add this interface to support the planos_mitigacao table structure
-export interface PlanoMitigacao {
+export interface ClienteSystem {
   id: string;
+  razao_social: string;
+  cnpj: string;
+  email: string | null;
+  responsavel: string | null;
+  telefone: string | null;
+  situacao: string;
+  plano_id: string | null;
+  contrato_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Contrato {
+  id: string;
+  numero: string;
+  cliente_id: string;
+  cliente_sistema_id: string | null;
+  plano_id: string;
+  data_inicio: string;
+  data_fim: string | null;
+  valor_mensal: number;
+  taxa_implantacao: number;
+  data_primeiro_vencimento: string;
+  ciclo_faturamento: string;
+  status: string;
+  observacoes: string | null;
+  ciclos_gerados: number | null;
+  proxima_renovacao: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContratoInput {
+  numero: string;
+  cliente_id: string;
+  plano_id: string;
+  data_inicio: string;
+  data_fim?: string;
+  valor_mensal: number;
+  taxa_implantacao?: number;
+  data_primeiro_vencimento: string;
+  ciclo_faturamento: string;
+  status?: string;
+  observacoes?: string;
+}
+
+export interface Fatura {
+  id: string;
+  numero: string;
+  cliente_id: string;
+  cliente_sistema_id: string | null;
+  contrato_id: string | null;
+  valor: number;
+  data_emissao: string;
+  data_vencimento: string;
+  status: string;
+  referencia: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Plano {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  valor_mensal: number;
+  valor_implantacao: number;
+  limite_empresas: number | null;
+  limite_empregados: number | null;
+  empresas_ilimitadas: boolean | null;
+  empregados_ilimitados: boolean | null;
+  sem_vencimento: boolean | null;
+  data_validade: string | null;
+  ativo: boolean | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlanoInput {
+  nome: string;
+  descricao?: string;
+  valor_mensal: number;
+  valor_implantacao?: number;
+  limite_empresas?: number;
+  limite_empregados?: number;
+  empresas_ilimitadas?: boolean;
+  empregados_ilimitados?: boolean;
+  sem_vencimento?: boolean;
+  data_validade?: string;
+  ativo?: boolean;
+}
+
+export interface PlanoMitigacao {
+  id?: string;
   empresa_id: string;
   risco_id: string;
   medidas_controle: string;

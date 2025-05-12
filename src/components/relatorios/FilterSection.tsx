@@ -21,6 +21,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
   return (
     <div>
+      <h2 className="text-base font-medium mb-2">Empresa</h2>
       {isLoadingCompanies ? (
         <Skeleton className="h-10 w-full" />
       ) : (
