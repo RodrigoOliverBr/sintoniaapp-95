@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 export interface RelatorioPGRProps {
   company: Company;
@@ -99,39 +101,102 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
   
   const handleSaveChanges = (riskId: string) => {
     // Here you would normally save to the database
+    // Ideally this would save to a planos_mitigacao table in the database
+    // with fields for: risco_id, empresa_id, prazo, responsavel, medidas_controle, status
     toast.success("Alterações salvas com sucesso!");
     console.log("Saving changes for risk:", riskId, editedRisks[riskId]);
-    
-    // In a real implementation, this would be:
-    // const saveChanges = async () => {
-    //   try {
-    //     const { error } = await supabase
-    //       .from('planos_mitigacao')
-    //       .upsert({
-    //         risco_id: riskId,
-    //         empresa_id: companyId,
-    //         prazo: editedRisks[riskId].prazo,
-    //         responsavel: editedRisks[riskId].responsavel,
-    //         medidas_controle: editedRisks[riskId].medidasControle,
-    //         status: editedRisks[riskId].status || 'Pendente'
-    //       });
-    //       
-    //     if (error) throw error;
-    //     toast.success("Alterações salvas com sucesso!");
-    //   } catch (error) {
-    //     console.error("Erro ao salvar alterações:", error);
-    //     toast.error("Erro ao salvar alterações");
-    //   }
-    // };
-    // saveChanges();
   };
   
   const handleExportPDF = () => {
-    toast.success("Exportando relatório para PDF...");
-    // Aqui implementaríamos a lógica real de exportação para PDF usando jsPDF
-    setTimeout(() => {
+    try {
+      toast.info("Gerando PDF...");
+      
+      // Initialize jsPDF
+      const doc = new jsPDF();
+      
+      // Add company information at the top
+      doc.setFontSize(18);
+      doc.text("Relatório de Gerenciamento de Riscos Psicossociais (PGR)", 14, 20);
+      
+      doc.setFontSize(12);
+      doc.text(`Empresa: ${companyName}`, 14, 30);
+      doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, 36);
+      doc.text(`Metodologia: ISTAS21-BR (NR-01)`, 14, 42);
+      
+      // Add risks information
+      let yPosition = 55;
+      doc.setFontSize(14);
+      doc.text("Riscos Identificados e Planos de Mitigação", 14, yPosition);
+      yPosition += 10;
+      
+      riscos.forEach((risco, index) => {
+        if (yPosition > 250) { // Check if we need a new page
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        const editedRisk = editedRisks[risco.id] || {};
+        const medidasControle = editedRisk.medidasControle !== undefined ? 
+            editedRisk.medidasControle : risco.medidasControle;
+        const prazo = editedRisk.prazo !== undefined ? 
+            editedRisk.prazo : risco.prazo;
+        const responsavel = editedRisk.responsavel !== undefined ? 
+            editedRisk.responsavel : risco.responsavel;
+        const status = editedRisk.status !== undefined ? 
+            editedRisk.status : risco.status;
+            
+        // Add risk title and description
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${index + 1}. ${risco.titulo}`, 14, yPosition);
+        yPosition += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        
+        // Split description into multiple lines if needed
+        const descriptionLines = doc.splitTextToSize(risco.descricao, 180);
+        doc.text(descriptionLines, 14, yPosition);
+        yPosition += (descriptionLines.length * 5) + 5;
+        
+        // Add risk details in a table
+        // @ts-ignore - jsPDF-AutoTable typing issue
+        doc.autoTable({
+          startY: yPosition,
+          head: [['Informação', 'Valor']],
+          body: [
+            ['Probabilidade', risco.totalYes !== undefined && risco.totalQuestions !== undefined ? 
+                `${risco.totalYes}/${risco.totalQuestions}` : risco.probabilidade],
+            ['Severidade', risco.severidade],
+            ['Status', status],
+            ['Medidas de Controle', medidasControle || 'Não definidas'],
+            ['Prazo', prazo || 'Não definido'],
+            ['Responsável', responsavel || 'Não definido']
+          ],
+          theme: 'striped',
+          margin: { left: 14, right: 14 },
+          tableWidth: 'auto',
+          styles: { overflow: 'linebreak', cellPadding: 3 },
+          columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } }
+        });
+        
+        // @ts-ignore - Get the final y position after the table
+        yPosition = (doc as any).lastAutoTable.finalY + 10;
+      });
+      
+      // Add footer
+      doc.setFontSize(8);
+      doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, 14, 280);
+      doc.text('Página 1 de 1', 170, 280);
+      
+      // Save the PDF
+      doc.save(`PGR-${companyName}-${new Date().toISOString().split('T')[0]}.pdf`);
+      
       toast.success("PDF gerado com sucesso!");
-    }, 1500);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast.error("Erro ao gerar o PDF");
+    }
   };
 
   if (isLoading) {
@@ -157,19 +222,11 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
                   <span className="text-sm font-medium text-muted-foreground w-32">Empresa:</span>
                   <span>{companyName}</span>
                 </div>
-                <div className="flex gap-2">
-                  <span className="text-sm font-medium text-muted-foreground w-32">CNPJ/CPF:</span>
-                  <span>{company.cpfCnpj || '00.000.000/0000-00'}</span>
-                </div>
                 {employee && (
                   <>
                     <div className="flex gap-2">
                       <span className="text-sm font-medium text-muted-foreground w-32">Funcionário:</span>
                       <span>{employee.name}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-sm font-medium text-muted-foreground w-32">CPF:</span>
-                      <span>{employee.cpf || 'N/A'}</span>
                     </div>
                   </>
                 )}
@@ -187,10 +244,6 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
                 <div className="flex gap-2">
                   <span className="text-sm font-medium text-muted-foreground w-32">Metodologia:</span>
                   <span>ISTAS21-BR (NR-01)</span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-sm font-medium text-muted-foreground w-32">Validade:</span>
-                  <span>12 meses</span>
                 </div>
               </div>
             </div>
@@ -233,11 +286,6 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
             }
           };
           
-          // Formatar a exibição da probabilidade como respostas sim / total
-          const probabilidadeDisplay = risco.totalYes !== undefined && risco.totalQuestions !== undefined 
-            ? `${risco.totalYes}/${risco.totalQuestions}` 
-            : risco.probabilidade;
-          
           return (
             <Card key={risco.id} className={`overflow-hidden ${getBorderColor()}`}>
               <CardContent className="pt-6">
@@ -253,9 +301,13 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
                   <div>
                     <p className="font-medium text-sm text-gray-600 mb-2">Funções Expostas</p>
                     <div className="flex flex-wrap gap-2">
-                      {risco.funcoes.map((funcao, idx) => (
-                        <Badge key={idx} variant="outline">{funcao}</Badge>
-                      ))}
+                      {risco.funcoes && risco.funcoes.length > 0 ? (
+                        risco.funcoes.map((funcao, idx) => (
+                          <Badge key={idx} variant="outline">{funcao}</Badge>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Não especificado</p>
+                      )}
                     </div>
                   </div>
                   
@@ -265,7 +317,9 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
                       <div>
                         <p className="text-xs text-gray-500">Probabilidade</p>
                         <p className="font-medium">
-                          {probabilidadeDisplay}
+                          {risco.totalYes !== undefined && risco.totalQuestions !== undefined 
+                            ? `${risco.totalYes}/${risco.totalQuestions}` 
+                            : risco.probabilidade}
                         </p>
                       </div>
                       <div>
@@ -289,8 +343,6 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Removed Documents section as requested previously */}
                 </div>
                 
                 <div className="space-y-4 mb-4">

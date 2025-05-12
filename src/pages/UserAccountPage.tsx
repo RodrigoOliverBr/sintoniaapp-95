@@ -1,30 +1,36 @@
-
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { ClientePerfil } from '@/types/cliente';
-import Layout from '@/components/Layout';
+import React, { useState, useEffect } from "react";
+import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const UserAccountPage: React.FC = () => {
-  const [userProfile, setUserProfile] = useState<ClientePerfil>({
-    id: '',
-    nome: '',
-    email: '',
-    telefone: ''
+interface UserProfile {
+  id: string;
+  nome: string;
+  email: string;
+  telefone?: string; // Make telefone optional
+}
+
+const UserAccountPage = () => {
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    id: "",
+    nome: "",
+    email: "",
+    telefone: ""
   });
-  
-  const [loading, setLoading] = useState(true);
-  
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
+    // Buscar os dados do usuário autenticado
     const fetchUserProfile = async () => {
+      setIsLoading(true);
       try {
-        setLoading(true);
-        
-        // Obter o usuário atual
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
-          // Buscar perfil do usuário
+          // Buscar dados adicionais do perfil
           const { data, error } = await supabase
             .from('perfis')
             .select('*')
@@ -39,21 +45,21 @@ const UserAccountPage: React.FC = () => {
               id: data.id || "",
               nome: data.nome || "",
               email: data.email || "",
-              telefone: data.telefone || ""
+              telefone: data.telefone || "" // Handle possibly missing telefone property
             });
           }
         }
       } catch (error) {
-        console.error('Erro ao buscar dados do usuário:', error);
+        console.error('Erro ao carregar dados do usuário:', error);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
-    
+
     fetchUserProfile();
   }, []);
-  
-  const handleProfileUpdate = async (e: React.FormEvent) => {
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
@@ -66,28 +72,29 @@ const UserAccountPage: React.FC = () => {
         .eq('id', userProfile.id);
         
       if (error) {
-        throw error;
+        console.error('Erro ao atualizar perfil:', error);
+        toast.error('Erro ao atualizar perfil');
+      } else {
+        toast.success('Perfil atualizado com sucesso!');
       }
-      
-      toast.success("Perfil atualizado com sucesso!");
     } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      toast.error("Erro ao atualizar perfil");
+      console.error('Erro ao processar atualização:', error);
+      toast.error('Erro ao processar atualização');
     }
   };
-  
+
   return (
     <Layout title="Minha Conta">
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">Meu Perfil</h1>
         
-        {loading ? (
+        {isLoading ? (
           <p>Carregando dados...</p>
         ) : (
-          <form onSubmit={handleProfileUpdate} className="space-y-6 max-w-lg">
+          <form onSubmit={handleUpdateProfile} className="space-y-6 max-w-lg">
             <div>
-              <label htmlFor="nome" className="block text-sm font-medium mb-1">Nome</label>
-              <input
+              <Label htmlFor="nome" className="block text-sm font-medium mb-1">Nome</Label>
+              <Input
                 id="nome"
                 type="text"
                 value={userProfile.nome}
@@ -97,8 +104,8 @@ const UserAccountPage: React.FC = () => {
             </div>
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1">Email</label>
-              <input
+              <Label htmlFor="email" className="block text-sm font-medium mb-1">Email</Label>
+              <Input
                 id="email"
                 type="email"
                 value={userProfile.email}
@@ -110,8 +117,8 @@ const UserAccountPage: React.FC = () => {
             </div>
             
             <div>
-              <label htmlFor="telefone" className="block text-sm font-medium mb-1">Telefone</label>
-              <input
+              <Label htmlFor="telefone" className="block text-sm font-medium mb-1">Telefone</Label>
+              <Input
                 id="telefone"
                 type="text"
                 value={userProfile.telefone || ""}
@@ -120,12 +127,12 @@ const UserAccountPage: React.FC = () => {
               />
             </div>
             
-            <button
+            <Button
               type="submit"
               className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
             >
               Salvar Alterações
-            </button>
+            </Button>
           </form>
         )}
       </div>
