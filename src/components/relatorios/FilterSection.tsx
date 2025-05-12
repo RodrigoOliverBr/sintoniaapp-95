@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Company, Employee } from "@/types/cadastro";
+import { Company } from "@/types/cadastro";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,10 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface FilterSectionProps {
   companies: Company[];
   selectedCompanyId: string;
-  selectedEmployeeId: string;
-  employees?: Employee[];
   onCompanyChange: (companyId: string) => void;
-  onEmployeeChange: (employeeId: string) => void;
   onPeriodChange: (period: string) => void;
   isGenerating: boolean;
 }
@@ -19,15 +16,11 @@ interface FilterSectionProps {
 const FilterSection: React.FC<FilterSectionProps> = ({
   companies = [],
   selectedCompanyId,
-  selectedEmployeeId,
-  employees = [],
   onCompanyChange,
-  onEmployeeChange,
   onPeriodChange,
   isGenerating
 }) => {
   const isLoadingCompanies = companies.length === 0;
-  const isLoadingEmployees = selectedCompanyId && employees.length === 0;
 
   return (
     <div className="space-y-4">
@@ -48,31 +41,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               {companies.map((company) => (
                 <SelectItem key={company.id} value={company.id}>
                   {company.name || company.nome || "Empresa sem nome"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-
-      <div>
-        <Label htmlFor="employee">Funcionário (opcional)</Label>
-        {isLoadingEmployees ? (
-          <Skeleton className="h-10 w-full mt-2" />
-        ) : (
-          <Select
-            value={selectedEmployeeId}
-            onValueChange={onEmployeeChange}
-            disabled={!selectedCompanyId || isGenerating}
-          >
-            <SelectTrigger id="employee" className="w-full">
-              <SelectValue placeholder="Todos os funcionários" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os funcionários</SelectItem>
-              {employees.map((employee) => (
-                <SelectItem key={employee.id} value={employee.id}>
-                  {employee.name}
                 </SelectItem>
               ))}
             </SelectContent>
