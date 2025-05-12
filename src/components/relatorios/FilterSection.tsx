@@ -69,7 +69,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               <SelectValue placeholder="Todos os funcionários" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os funcionários</SelectItem>
+              <SelectItem value="all">Todos os funcionários</SelectItem>
               {employees.map((employee) => (
                 <SelectItem key={employee.id} value={employee.id}>
                   {employee.name}
