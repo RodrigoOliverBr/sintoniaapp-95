@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Company, Department } from "@/types/cadastro"; 
 
@@ -13,7 +12,13 @@ export async function getCompanies(): Promise<Company[]> {
       throw new Error(error.message);
     }
     
-    return data || [];
+    // Map the data to ensure both nome and name properties exist
+    const companies = data?.map(company => ({
+      ...company,
+      name: company.nome, // Add name property based on nome from database
+    })) || [];
+    
+    return companies;
   } catch (error) {
     console.error("Erro ao buscar empresas:", error);
     throw error;
