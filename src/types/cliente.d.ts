@@ -27,6 +27,8 @@ export interface ClientePerfil {
   cpfCnpj?: string;
   contato?: string;
   situacao?: ClienteStatus;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ClienteSistema {

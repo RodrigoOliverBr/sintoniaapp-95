@@ -216,12 +216,29 @@ const ClientesPage: React.FC = () => {
     }
   };
   
+  // Helper function to handle Supabase errors with user-friendly messages
+  const handleSupabaseError = (error: any): string => {
+    console.error("Erro Supabase detalhado:", error);
+    
+    if (error?.code === '42501' || error?.message?.includes('permission denied')) {
+      return 'Erro de permissão: você não tem autorização para realizar esta ação.';
+    } else if (error?.code === 'auth/email-already-in-use' || error?.message?.includes('already registered')) {
+      return 'Este e-mail já está registrado. Por favor, use outro e-mail.';
+    } else if (error?.message?.includes('duplicate key')) {
+      return 'Um registro com estas informações já existe.';
+    } else if (error?.message?.includes('password')) {
+      return 'Erro relacionado à senha. Verifique se ela atende aos requisitos de segurança.';
+    } else {
+      return `Erro ao processar solicitação: ${error?.message || 'Desconhecido'}`;
+    }
+  };
+  
   const handleCreateNew = async (formData: any) => {
     setIsLoading(true);
     try {
       console.log("Iniciando criação de cliente:", formData);
       
-      // 1. Primeiro cria o cliente no sistema (código existente)
+      // 1. Primeiro cria o cliente no sistema
       const { data, error } = await supabase
         .from("clientes_sistema")
         .insert([{
@@ -250,43 +267,45 @@ const ClientesPage: React.FC = () => {
       const novoCliente = data[0];
       console.log("Cliente criado com sucesso:", novoCliente);
       
-      // 2. Agora criar o usuário de autenticação se tiver email e senha
+      // 2. Criar o usuário de autenticação se tiver email e senha
       if (formData.email && formData.senha) {
         console.log("Criando usuário de autenticação para:", formData.email);
         
-        const { data: userData, error: authError } = await supabase.auth.admin.createUser({
-          email: formData.email,
-          password: formData.senha,
-          email_confirm: true
-        });
-        
-        if (authError) {
-          console.error("Erro ao criar usuário de autenticação:", authError);
-          toast.error("Cliente criado, mas não foi possível criar o usuário de acesso: " + handleSupabaseError(authError));
+        try {
+          // Usando o método auth.admin.createUser para criar o usuário
+          const { data: userData, error: authError } = await supabase.auth.admin.createUser({
+            email: formData.email,
+            password: formData.senha,
+            email_confirm: true
+          });
           
-          // Continua o fluxo, pois o cliente já foi criado
-        } else if (userData && userData.user) {
-          console.log("Usuário de autenticação criado com sucesso:", userData.user.id);
-          
-          // 3. Criar entrada na tabela perfis
-          const { error: perfilError } = await supabase
-            .from('perfis')
-            .insert({
-              id: userData.user.id,
-              email: formData.email,
-              nome: formData.razao_social,
-              tipo: 'client'
-            });
+          if (authError) {
+            console.error("Erro ao criar usuário de autenticação:", authError);
+            toast.error("Cliente criado, mas não foi possível criar o usuário de acesso: " + handleSupabaseError(authError));
+          } else if (userData && userData.user) {
+            console.log("Usuário de autenticação criado com sucesso:", userData.user.id);
             
-          if (perfilError) {
-            console.error("Erro ao criar perfil para o usuário:", perfilError);
-            toast.error("Cliente e usuário criados, mas não foi possível criar o perfil: " + handleSupabaseError(perfilError));
-          } else {
-            console.log("Perfil criado com sucesso para o usuário");
-            
-            // 4. Atualizar o cliente com qualquer referência adicional se necessário
-            // Não precisamos atualizar o cliente neste caso, pois a relação é pelo email
+            // 3. Criar entrada na tabela perfis
+            const { error: perfilError } = await supabase
+              .from('perfis')
+              .insert({
+                id: userData.user.id,
+                email: formData.email,
+                nome: formData.razao_social,
+                tipo: 'client'
+              });
+              
+            if (perfilError) {
+              console.error("Erro ao criar perfil para o usuário:", perfilError);
+              toast.error("Cliente e usuário criados, mas não foi possível criar o perfil: " + handleSupabaseError(perfilError));
+            } else {
+              console.log("Perfil criado com sucesso para o usuário");
+              toast.success("Cliente criado com sucesso e acesso configurado!");
+            }
           }
+        } catch (authCreateError) {
+          console.error("Erro ao criar usuário de autenticação:", authCreateError);
+          toast.error("Cliente criado, mas erro ao configurar o acesso: " + (authCreateError as Error).message);
         }
       } else {
         console.log("Email ou senha não fornecidos, pulando criação de usuário");
