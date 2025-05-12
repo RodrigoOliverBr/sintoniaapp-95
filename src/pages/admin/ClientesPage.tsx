@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
@@ -220,7 +219,9 @@ const ClientesPage: React.FC = () => {
   const handleCreateNew = async (formData: any) => {
     setIsLoading(true);
     try {
-      // Insert new cliente in Supabase
+      console.log("Iniciando criação de cliente:", formData);
+      
+      // 1. Primeiro cria o cliente no sistema (código existente)
       const { data, error } = await supabase
         .from("clientes_sistema")
         .insert([{
@@ -229,21 +230,74 @@ const ClientesPage: React.FC = () => {
           email: formData.email,
           telefone: formData.telefone,
           responsavel: formData.responsavel,
-          senha: formData.senha // Include senha field when saving
+          senha: formData.senha,
+          situacao: "liberado" // Definindo situação inicial como liberado
         }])
         .select();
 
       if (error) {
         console.error("Erro ao criar cliente:", error);
-        toast.error("Erro ao criar cliente");
+        toast.error("Erro ao criar cliente: " + handleSupabaseError(error));
         return;
+      }
+      
+      if (!data || data.length === 0) {
+        console.error("Dados de cliente não retornados após inserção");
+        toast.error("Erro ao criar cliente: dados não retornados");
+        return;
+      }
+      
+      const novoCliente = data[0];
+      console.log("Cliente criado com sucesso:", novoCliente);
+      
+      // 2. Agora criar o usuário de autenticação se tiver email e senha
+      if (formData.email && formData.senha) {
+        console.log("Criando usuário de autenticação para:", formData.email);
+        
+        const { data: userData, error: authError } = await supabase.auth.admin.createUser({
+          email: formData.email,
+          password: formData.senha,
+          email_confirm: true
+        });
+        
+        if (authError) {
+          console.error("Erro ao criar usuário de autenticação:", authError);
+          toast.error("Cliente criado, mas não foi possível criar o usuário de acesso: " + handleSupabaseError(authError));
+          
+          // Continua o fluxo, pois o cliente já foi criado
+        } else if (userData && userData.user) {
+          console.log("Usuário de autenticação criado com sucesso:", userData.user.id);
+          
+          // 3. Criar entrada na tabela perfis
+          const { error: perfilError } = await supabase
+            .from('perfis')
+            .insert({
+              id: userData.user.id,
+              email: formData.email,
+              nome: formData.razao_social,
+              tipo: 'client'
+            });
+            
+          if (perfilError) {
+            console.error("Erro ao criar perfil para o usuário:", perfilError);
+            toast.error("Cliente e usuário criados, mas não foi possível criar o perfil: " + handleSupabaseError(perfilError));
+          } else {
+            console.log("Perfil criado com sucesso para o usuário");
+            
+            // 4. Atualizar o cliente com qualquer referência adicional se necessário
+            // Não precisamos atualizar o cliente neste caso, pois a relação é pelo email
+          }
+        }
+      } else {
+        console.log("Email ou senha não fornecidos, pulando criação de usuário");
+        toast.warning("Cliente criado sem acesso ao sistema (email ou senha não fornecidos)");
       }
       
       toast.success("Cliente criado com sucesso!");
       loadClientes();
     } catch (error) {
-      console.error("Erro ao criar cliente:", error);
-      toast.error("Erro ao criar cliente");
+      console.error("Erro inesperado ao criar cliente:", error);
+      toast.error("Erro inesperado ao criar cliente");
     } finally {
       setIsLoading(false);
       setOpenNewModal(false);
