@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ClienteSistema, Contrato, Plano, StatusContrato, ClienteStatus, CicloFaturamento } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
@@ -276,7 +275,7 @@ export const useContratos = () => {
     contratos,
     clientes,
     planos,
-    loading,
+    isLoading: loading, // Changed from 'loading' to 'isLoading' for component compatibility
     currentContrato,
     setCurrentContrato,
     loadContratos,
