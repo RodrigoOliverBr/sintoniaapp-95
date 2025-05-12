@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { PlanoMitigacao } from "@/types/cliente";
 
 export interface AreaCriticaData {
   area: string;
@@ -153,7 +154,9 @@ export const getRiscosPorEmpresa = async (companyId: string) => {
         titulo: "Sobrecarga de trabalho",
         descricao: "Excesso de demandas, prazos exíguos e pressão por resultados",
         funcoes: ["Desenvolvedores", "Analistas", "Gerentes de Projetos"],
-        probabilidade: "Alta",
+        probabilidade: "4/8", // Agora mostrando o formato respostas sim / total
+        totalYes: 4,
+        totalQuestions: 8,
         severidade: "Média", 
         status: "Pendente",
         medidasControle: "Revisão de processos e carga de trabalho. Distribuição equilibrada de tarefas.\nContratação de pessoal adicional.\nTreinamento em gestão do tempo.",
@@ -165,7 +168,9 @@ export const getRiscosPorEmpresa = async (companyId: string) => {
         titulo: "Falta de Clareza nas Atribuições",
         descricao: "Empregados sem orientações claras sobre suas responsabilidades e atribuições",
         funcoes: ["Administrativo", "Suporte", "Novos Funcionários"],
-        probabilidade: "Média",
+        probabilidade: "3/6",
+        totalYes: 3,
+        totalQuestions: 6,
         severidade: "Baixa",
         status: "Pendente",
         medidasControle: "Definir claramente as responsabilidades e atribuições através de documentação.\nOferecer treinamento regular sobre funções e expectativas relacionadas a cada cargo.\nCriar canais diretos para esclarecer dúvidas ou solicitar orientações adicionais.",
@@ -177,7 +182,9 @@ export const getRiscosPorEmpresa = async (companyId: string) => {
         titulo: "Desrespeito e Desvalorização Profissional",
         descricao: "Expressões ou atitudes que fazem os empregados se sentirem desrespeitados ou desvalorizados",
         funcoes: ["Atendimento", "Operacional", "Suporte"],
-        probabilidade: "Média",
+        probabilidade: "2/5",
+        totalYes: 2,
+        totalQuestions: 5,
         severidade: "Média",
         status: "Pendente",
         medidasControle: "Implementar programa de reconhecimento e valorização.\nTreinar gestores em feedback construtivo.\nEstabelecer canais seguros para reportar situações de desrespeito.",
@@ -189,7 +196,9 @@ export const getRiscosPorEmpresa = async (companyId: string) => {
         titulo: "Problemas de Comunicação",
         descricao: "Falhas nos processos de comunicação entre setores e níveis hierárquicos",
         funcoes: ["Todos os Setores"],
-        probabilidade: "Alta",
+        probabilidade: "5/10",
+        totalYes: 5,
+        totalQuestions: 10,
         severidade: "Média",
         status: "Pendente",
         medidasControle: "Implementar canais de comunicação mais eficientes.\nRealizar reuniões periódicas entre departamentos.\nEstabelecer protocolos claros para comunicação interna.",
@@ -201,7 +210,9 @@ export const getRiscosPorEmpresa = async (companyId: string) => {
         titulo: "Conflitos Interpessoais",
         descricao: "Desentendimentos recorrentes entre membros da equipe que prejudicam o ambiente de trabalho",
         funcoes: ["Comercial", "Atendimento", "TI"],
-        probabilidade: "Média",
+        probabilidade: "4/7",
+        totalYes: 4,
+        totalQuestions: 7,
         severidade: "Média",
         status: "Pendente",
         medidasControle: "Oferecer treinamento em resolução de conflitos.\nImplementar mediação quando necessário.\nPromover atividades de integração entre equipes.",
@@ -213,7 +224,9 @@ export const getRiscosPorEmpresa = async (companyId: string) => {
         titulo: "Falta de Participação nas Decisões",
         descricao: "Empregados sem voz ativa nos processos decisórios que afetam seu trabalho",
         funcoes: ["Operacional", "Administrativo"],
-        probabilidade: "Média",
+        probabilidade: "3/8",
+        totalYes: 3,
+        totalQuestions: 8,
         severidade: "Baixa",
         status: "Pendente",
         medidasControle: "Implementar reuniões de feedback e sugestões.\nCriar comitês com participação de diversos níveis hierárquicos.\nEstabelecer canais para coleta de ideias e melhorias.",

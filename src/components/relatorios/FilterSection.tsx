@@ -9,7 +9,6 @@ interface FilterSectionProps {
   companies: Company[];
   selectedCompanyId: string;
   onCompanyChange: (companyId: string) => void;
-  onPeriodChange: (period: string) => void;
   isGenerating: boolean;
 }
 
@@ -17,7 +16,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   companies = [],
   selectedCompanyId,
   onCompanyChange,
-  onPeriodChange,
   isGenerating
 }) => {
   const isLoadingCompanies = companies.length === 0;
@@ -46,26 +44,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             </SelectContent>
           </Select>
         )}
-      </div>
-
-      <div>
-        <Label htmlFor="period">Período</Label>
-        <Select
-          defaultValue="all"
-          onValueChange={onPeriodChange}
-          disabled={isGenerating}
-        >
-          <SelectTrigger id="period" className="w-full">
-            <SelectValue placeholder="Selecionar período" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todo o período</SelectItem>
-            <SelectItem value="1m">Último mês</SelectItem>
-            <SelectItem value="3m">Últimos 3 meses</SelectItem>
-            <SelectItem value="6m">Últimos 6 meses</SelectItem>
-            <SelectItem value="1y">Último ano</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
     </div>
   );

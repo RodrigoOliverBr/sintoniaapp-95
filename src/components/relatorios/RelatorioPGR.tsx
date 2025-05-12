@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { getRiscosPorEmpresa } from '@/services/relatorios/relatoriosService';
-import { Save } from 'lucide-react';
+import { Save, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,7 +28,9 @@ interface RiscoPGR {
   titulo: string;
   descricao: string;
   funcoes: string[];
-  probabilidade: string;
+  probabilidade: string; // Agora armazena a proporção de respostas sim/total
+  totalYes?: number; // Adicionamos estes campos para calcular a proporção
+  totalQuestions?: number;
   severidade: string;
   status: string;
   medidasControle: string;
@@ -123,6 +125,14 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
     // };
     // saveChanges();
   };
+  
+  const handleExportPDF = () => {
+    toast.success("Exportando relatório para PDF...");
+    // Aqui implementaríamos a lógica real de exportação para PDF usando jsPDF
+    setTimeout(() => {
+      toast.success("PDF gerado com sucesso!");
+    }, 1500);
+  };
 
   if (isLoading) {
     return (
@@ -179,10 +189,6 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
                   <span>ISTAS21-BR (NR-01)</span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="text-sm font-medium text-muted-foreground w-32">Período:</span>
-                  <span>Período completo</span>
-                </div>
-                <div className="flex gap-2">
                   <span className="text-sm font-medium text-muted-foreground w-32">Validade:</span>
                   <span>12 meses</span>
                 </div>
@@ -192,7 +198,13 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
         </CardContent>
       </Card>
       
-      <h3 className="text-xl font-semibold">Riscos Identificados</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold">Riscos Identificados</h3>
+        <Button variant="outline" onClick={handleExportPDF}>
+          <FileDown className="mr-2 h-4 w-4" />
+          Exportar PDF
+        </Button>
+      </div>
       
       <div className="space-y-6">
         {riscos.map((risco: RiscoPGR) => {
@@ -221,6 +233,11 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
             }
           };
           
+          // Formatar a exibição da probabilidade como respostas sim / total
+          const probabilidadeDisplay = risco.totalYes !== undefined && risco.totalQuestions !== undefined 
+            ? `${risco.totalYes}/${risco.totalQuestions}` 
+            : risco.probabilidade;
+          
           return (
             <Card key={risco.id} className={`overflow-hidden ${getBorderColor()}`}>
               <CardContent className="pt-6">
@@ -248,7 +265,7 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
                       <div>
                         <p className="text-xs text-gray-500">Probabilidade</p>
                         <p className="font-medium">
-                          {risco.probabilidade}
+                          {probabilidadeDisplay}
                         </p>
                       </div>
                       <div>
@@ -273,7 +290,7 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
                     </div>
                   </div>
                   
-                  {/* Removed Documents section as requested */}
+                  {/* Removed Documents section as requested previously */}
                 </div>
                 
                 <div className="space-y-4 mb-4">

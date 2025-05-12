@@ -11,14 +11,13 @@ import { Question } from "@/types/form";
 import { Company } from "@/types/cadastro";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { FileText, Download } from "lucide-react";
+import { FileText } from "lucide-react";
 
 const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState("mapa");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
+  const [activeTab, setActiveTab] = useState("mapa");
   const [companies, setCompanies] = useState<Company[]>([]);
 
   // Sample questions and answers for demonstration
@@ -74,10 +73,6 @@ const RelatoriosPage: React.FC = () => {
     setSelectedCompanyId(companyId);
   };
 
-  const handlePeriodChange = (period: string) => {
-    setSelectedPeriod(period);
-  };
-
   const handleGenerateReport = () => {
     if (!selectedCompanyId) {
       toast.warning("Por favor, selecione uma empresa primeiro");
@@ -114,7 +109,7 @@ const RelatoriosPage: React.FC = () => {
             </p>
           </div>
           
-          {/* Filter controls - now in a horizontal layout at the top */}
+          {/* Filter controls - horizontal layout at the top */}
           <div className="w-full bg-card p-6 rounded-lg shadow-sm">
             <div className="flex flex-col md:flex-row gap-6 items-end">
               <div className="w-full md:w-1/3">
@@ -123,7 +118,6 @@ const RelatoriosPage: React.FC = () => {
                   companies={companies}
                   selectedCompanyId={selectedCompanyId}
                   onCompanyChange={handleCompanyChange}
-                  onPeriodChange={handlePeriodChange}
                   isGenerating={isGenerating}
                 />
               </div>
@@ -146,7 +140,7 @@ const RelatoriosPage: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-semibold">Resultados da Análise</h2>
                   <Button variant="outline" onClick={handleExportPDF}>
-                    <Download className="mr-2 h-4 w-4" />
+                    <FileText className="mr-2 h-4 w-4" />
                     Exportar PDF
                   </Button>
                 </div>
@@ -168,16 +162,6 @@ const RelatoriosPage: React.FC = () => {
                   </TabsContent>
 
                   <TabsContent value="pgr" className="mt-0">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-medium">
-                        Programa de Gerenciamento de Riscos Psicossociais
-                      </h3>
-                      <Button variant="outline" size="sm">
-                        <FileText className="mr-2 h-4 w-4" />
-                        Exportar PDF
-                      </Button>
-                    </div>
-
                     {selectedCompany ? (
                       <RelatorioPGR
                         company={selectedCompany}
