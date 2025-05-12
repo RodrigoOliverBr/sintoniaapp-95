@@ -1,25 +1,48 @@
+
 import React from 'react';
-import { Company } from '@/types/cadastro';
+import { Company, Employee, Department } from '@/types/cadastro';
+
+interface EmployeeContentProps {
+  companies: Company[];
+  employees?: Employee[];
+  selectedCompanyId: string;
+  isLoading?: boolean;
+  roleNames?: Record<string, string>;
+  departments?: Department[];
+  onCompanyChange: (companyId: string) => void;
+  onNewEmployee: () => void;
+  onEditEmployee?: (employee: Employee) => void;
+  onDeleteEmployee?: (employee: Employee) => void;
+  onRefreshDepartments?: () => void;
+}
 
 // Fix the CompanySelect component by adding a noop function for onNewEmployee
-const EmployeeContent = () => {
+const EmployeeContent: React.FC<EmployeeContentProps> = ({
+  companies,
+  employees = [],
+  selectedCompanyId,
+  isLoading = false,
+  roleNames = {},
+  departments = [],
+  onCompanyChange,
+  onNewEmployee,
+  onEditEmployee,
+  onDeleteEmployee,
+  onRefreshDepartments
+}) => {
   // Placeholder implementation
   const handleCompanyChange = (id: string) => {
-    console.log("Company changed:", id);
-  };
-
-  const handleNewEmployee = () => {
-    console.log("New employee requested");
+    onCompanyChange(id);
   };
 
   return (
     <div>
       {/* Pass the missing onNewEmployee prop */}
       <CompanySelect 
-        companies={[]} 
-        selectedCompanyId=""
+        companies={companies} 
+        selectedCompanyId={selectedCompanyId}
         onCompanyChange={handleCompanyChange}
-        onNewEmployee={handleNewEmployee}
+        onNewEmployee={onNewEmployee}
       />
     </div>
   );

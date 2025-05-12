@@ -10,10 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { getRiscosPorEmpresa } from '@/services/relatorios/relatoriosService';
-import { AlertTriangle, FileText, Info, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AlertTriangle } from 'lucide-react';
 
 export interface RelatorioPGRProps {
   company: Company;
@@ -98,6 +99,29 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
     // Here you would normally save to the database
     toast.success("Alterações salvas com sucesso!");
     console.log("Saving changes for risk:", riskId, editedRisks[riskId]);
+    
+    // In a real implementation, this would be:
+    // const saveChanges = async () => {
+    //   try {
+    //     const { error } = await supabase
+    //       .from('planos_mitigacao')
+    //       .upsert({
+    //         risco_id: riskId,
+    //         empresa_id: companyId,
+    //         prazo: editedRisks[riskId].prazo,
+    //         responsavel: editedRisks[riskId].responsavel,
+    //         medidas_controle: editedRisks[riskId].medidasControle,
+    //         status: editedRisks[riskId].status || 'Pendente'
+    //       });
+    //       
+    //     if (error) throw error;
+    //     toast.success("Alterações salvas com sucesso!");
+    //   } catch (error) {
+    //     console.error("Erro ao salvar alterações:", error);
+    //     toast.error("Erro ao salvar alterações");
+    //   }
+    // };
+    // saveChanges();
   };
 
   if (isLoading) {
@@ -176,7 +200,8 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
           const medidasControle = editedRisk.medidasControle !== undefined ? editedRisk.medidasControle : risco.medidasControle;
           const prazo = editedRisk.prazo !== undefined ? editedRisk.prazo : risco.prazo;
           const responsavel = editedRisk.responsavel !== undefined ? editedRisk.responsavel : risco.responsavel;
-          const status = editedRisk.status !== undefined ? editedRisk.status : risco.status;
+          // Padronizar o status inicial como "Pendente" (Aguardando início)
+          const status = editedRisk.status !== undefined ? editedRisk.status : "Pendente";
           
           const getBorderColor = () => {
             if (risco.severidade === 'Alta') return 'border-l-4 border-l-red-500';
@@ -248,19 +273,7 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
                     </div>
                   </div>
                   
-                  <div>
-                    <p className="font-medium text-sm text-gray-600 mb-2">Documentos</p>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="text-xs">
-                        <FileText className="h-3.5 w-3.5 mr-1" />
-                        Plano de Ação
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-xs">
-                        <Info className="h-3.5 w-3.5 mr-1" />
-                        Orientações
-                      </Button>
-                    </div>
-                  </div>
+                  {/* Removed Documents section as requested */}
                 </div>
                 
                 <div className="space-y-4 mb-4">

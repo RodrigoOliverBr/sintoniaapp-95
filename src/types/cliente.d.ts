@@ -50,3 +50,16 @@ export interface ClienteSistema {
   contratoId?: string;
   clienteId: string;
 }
+
+// Add this interface to support the planos_mitigacao table structure
+export interface PlanoMitigacao {
+  id: string;
+  empresa_id: string;
+  risco_id: string;
+  medidas_controle: string;
+  prazo: string;
+  responsavel: string;
+  status: "Pendente" | "Implementando" | "Monitorando";
+  created_at?: string;
+  updated_at?: string;
+}
