@@ -1,14 +1,15 @@
 
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Company, Employee } from "@/types/cadastro";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export interface FilterSectionProps {
+interface FilterSectionProps {
   companies: Company[];
   selectedCompanyId: string;
   selectedEmployeeId: string;
+  employees?: Employee[];
   onCompanyChange: (companyId: string) => void;
   onEmployeeChange: (employeeId: string) => void;
   onPeriodChange: (period: string) => void;
@@ -16,60 +17,89 @@ export interface FilterSectionProps {
 }
 
 const FilterSection: React.FC<FilterSectionProps> = ({
-  companies,
+  companies = [],
   selectedCompanyId,
   selectedEmployeeId,
+  employees = [],
   onCompanyChange,
   onEmployeeChange,
   onPeriodChange,
   isGenerating
 }) => {
+  const isLoadingCompanies = companies.length === 0;
+  const isLoadingEmployees = selectedCompanyId && employees.length === 0;
+
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="company">Empresa</Label>
-            <Select 
-              value={selectedCompanyId} 
-              onValueChange={onCompanyChange}
-              disabled={isGenerating}
-            >
-              <SelectTrigger id="company">
-                <SelectValue placeholder="Selecione uma empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="period">Período</Label>
-            <Select 
-              defaultValue="all" 
-              onValueChange={onPeriodChange}
-              disabled={isGenerating}
-            >
-              <SelectTrigger id="period">
-                <SelectValue placeholder="Selecione um período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os períodos</SelectItem>
-                <SelectItem value="last-month">Último mês</SelectItem>
-                <SelectItem value="last-quarter">Último trimestre</SelectItem>
-                <SelectItem value="last-year">Último ano</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="company">Empresa</Label>
+        {isLoadingCompanies ? (
+          <Skeleton className="h-10 w-full mt-2" />
+        ) : (
+          <Select
+            value={selectedCompanyId}
+            onValueChange={onCompanyChange}
+            disabled={isGenerating}
+          >
+            <SelectTrigger id="company" className="w-full">
+              <SelectValue placeholder="Selecionar empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              {companies.map((company) => (
+                <SelectItem key={company.id} value={company.id}>
+                  {company.name || company.nome || "Empresa sem nome"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="employee">Funcionário (opcional)</Label>
+        {isLoadingEmployees ? (
+          <Skeleton className="h-10 w-full mt-2" />
+        ) : (
+          <Select
+            value={selectedEmployeeId}
+            onValueChange={onEmployeeChange}
+            disabled={!selectedCompanyId || isGenerating}
+          >
+            <SelectTrigger id="employee" className="w-full">
+              <SelectValue placeholder="Todos os funcionários" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos os funcionários</SelectItem>
+              {employees.map((employee) => (
+                <SelectItem key={employee.id} value={employee.id}>
+                  {employee.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="period">Período</Label>
+        <Select
+          defaultValue="all"
+          onValueChange={onPeriodChange}
+          disabled={isGenerating}
+        >
+          <SelectTrigger id="period" className="w-full">
+            <SelectValue placeholder="Selecionar período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todo o período</SelectItem>
+            <SelectItem value="1m">Último mês</SelectItem>
+            <SelectItem value="3m">Últimos 3 meses</SelectItem>
+            <SelectItem value="6m">Últimos 6 meses</SelectItem>
+            <SelectItem value="1y">Último ano</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
   );
 };
 

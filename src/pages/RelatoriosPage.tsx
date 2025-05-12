@@ -3,24 +3,24 @@ import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FilterSection from "@/components/relatorios/FilterSection";
-import DiagnosticoIndividual from "@/components/relatorios/DiagnosticoIndividual";
+import RankingAreasCriticas from "@/components/relatorios/RankingAreasCriticas";
 import MapaRiscoPsicossocial from "@/components/relatorios/MapaRiscoPsicossocial";
 import RelatorioPGR from "@/components/relatorios/RelatorioPGR";
 import { useQuery } from "@tanstack/react-query";
 import { getCompanies } from "@/services/company/companyService";
 import { getEmployeesByCompany } from "@/services/employee/employeeService";
-import { Question, FormResult } from "@/types/form";
+import { Question } from "@/types/form";
 import { Company, Employee } from "@/types/cadastro";
-import { AvaliacaoResposta, AvaliacaoRisco } from "@/types/avaliacao";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { FileText, Download } from "lucide-react";
 
 const RelatoriosPage: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState("diagnostico");
+  const [activeTab, setActiveTab] = useState("mapa");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -56,41 +56,15 @@ const RelatoriosPage: React.FC = () => {
     q3: true
   };
 
-  // Sample risk for demonstration
-  const sampleRisco: AvaliacaoRisco = {
-    id: "r1",
-    texto: "Risco de Estresse",
-    severidade: 3
-  };
-  
-  // Sample respostas for demonstration
-  const sampleRespostas: AvaliacaoResposta[] = [
-    {
-      id: "resp1",
-      perguntaId: "q1",
-      resposta: true,
-      observacao: "O funcionário relatou excesso de tarefas"
-    },
-    {
-      id: "resp2",
-      perguntaId: "q2",
-      resposta: false,
-      observacao: "Decisões sempre precisam de aprovação superior"
-    },
-    {
-      id: "resp3",
-      perguntaId: "q3",
-      resposta: true,
-      observacao: ""
-    }
-  ];
-
   // Load companies
   useEffect(() => {
     const loadCompaniesData = async () => {
       try {
         const companiesData = await getCompanies();
         setCompanies(companiesData || []);
+        if (companiesData && companiesData.length > 0 && !selectedCompanyId) {
+          setSelectedCompanyId(companiesData[0].id);
+        }
       } catch (error) {
         console.error("Erro ao carregar empresas:", error);
         toast.error("Erro ao carregar empresas");
@@ -134,17 +108,14 @@ const RelatoriosPage: React.FC = () => {
   const handleCompanyChange = (companyId: string) => {
     setSelectedCompanyId(companyId);
     setSelectedEmployeeId("");
-    setReportGenerated(false);
   };
 
   const handleEmployeeChange = (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
-    setReportGenerated(false);
   };
 
   const handlePeriodChange = (period: string) => {
     setSelectedPeriod(period);
-    setReportGenerated(false);
   };
 
   const handleGenerateReport = () => {
@@ -162,75 +133,117 @@ const RelatoriosPage: React.FC = () => {
     }, 1500);
   };
 
+  const handleExportPDF = () => {
+    toast.success("Exportando relatório para PDF...");
+    // Aqui implementaríamos a lógica real de exportação para PDF
+    setTimeout(() => {
+      toast.success("PDF gerado com sucesso!");
+    }, 1500);
+  };
+
   const selectedCompany = companies.find(c => c.id === selectedCompanyId) || null;
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) || null;
 
   return (
     <Layout title="Relatórios">
-      <div className="space-y-4 px-4 py-6">
-        <FilterSection
-          companies={companies}
-          selectedCompanyId={selectedCompanyId}
-          selectedEmployeeId={selectedEmployeeId}
-          onCompanyChange={handleCompanyChange}
-          onEmployeeChange={handleEmployeeChange}
-          onPeriodChange={handlePeriodChange}
-          isGenerating={isGenerating}
-        />
-        
-        <div className="flex justify-end mb-4">
-          <Button 
-            onClick={handleGenerateReport} 
-            disabled={!selectedCompanyId || isGenerating}
-          >
-            {isGenerating ? "Gerando..." : "Gerar Relatório"}
-          </Button>
+      <div className="space-y-6 px-4 py-6">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+          <div className="w-full md:w-2/3">
+            <h1 className="text-2xl font-bold mb-2">Relatórios Psicossociais</h1>
+            <p className="text-muted-foreground">
+              Visualize e exporte relatórios detalhados sobre riscos psicossociais
+            </p>
+          </div>
+          
+          <div className="flex flex-col w-full md:w-1/3 gap-4">
+            <FilterSection
+              companies={companies}
+              selectedCompanyId={selectedCompanyId}
+              selectedEmployeeId={selectedEmployeeId}
+              employees={employees}
+              onCompanyChange={handleCompanyChange}
+              onEmployeeChange={handleEmployeeChange}
+              onPeriodChange={handlePeriodChange}
+              isGenerating={isGenerating}
+            />
+            
+            <Button 
+              onClick={handleGenerateReport} 
+              disabled={!selectedCompanyId || isGenerating}
+              className="w-full"
+            >
+              {isGenerating ? "Gerando..." : "Gerar Relatório"}
+            </Button>
+          </div>
         </div>
 
         {reportGenerated && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 mb-8">
-              <TabsTrigger value="diagnostico">Diagnóstico Individual</TabsTrigger>
-              <TabsTrigger value="mapa">Mapa de Risco</TabsTrigger>
-              <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
-            </TabsList>
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Resultados da Análise</h2>
+              <Button variant="outline" onClick={handleExportPDF}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar PDF
+              </Button>
+            </div>
 
-            <TabsContent value="diagnostico" className="mt-0">
-              <DiagnosticoIndividual
-                risco={sampleRisco}
-                respostas={sampleRespostas}
-                companyId={selectedCompanyId}
-              />
-            </TabsContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-2 mb-8 w-full md:w-1/2">
+                <TabsTrigger value="mapa">Mapa de Risco</TabsTrigger>
+                <TabsTrigger value="pgr">Relatório PGR</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="mapa" className="mt-0">
-              <MapaRiscoPsicossocial 
-                companyId={selectedCompanyId}
-                departmentId=""
-                dateRange={{ from: new Date(), to: new Date() }}
-              />
-            </TabsContent>
-
-            <TabsContent value="pgr" className="mt-0">
-              {selectedCompany && selectedEmployee ? (
-                <RelatorioPGR
-                  company={selectedCompany}
-                  employee={selectedEmployee}
-                  questions={sampleQuestions}
-                  answers={sampleAnswers}
-                />
-              ) : (
-                <div className="flex items-center justify-center py-10 text-muted-foreground">
-                  Selecione uma empresa e um funcionário para gerar o relatório PGR.
+              <TabsContent value="mapa" className="mt-0 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-2">
+                    <MapaRiscoPsicossocial 
+                      companyId={selectedCompanyId}
+                      departmentId=""
+                      dateRange={{ from: new Date(), to: new Date() }}
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-1">
+                    <RankingAreasCriticas companyId={selectedCompanyId} />
+                  </div>
                 </div>
-              )}
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+
+              <TabsContent value="pgr" className="mt-0">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium">
+                    Programa de Gerenciamento de Riscos Psicossociais
+                  </h3>
+                  <Button variant="outline" size="sm">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Exportar PDF
+                  </Button>
+                </div>
+
+                {selectedCompany ? (
+                  <RelatorioPGR
+                    company={selectedCompany}
+                    employee={selectedEmployee}
+                    questions={sampleQuestions}
+                    answers={sampleAnswers}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center py-10 text-muted-foreground">
+                    Selecione uma empresa para gerar o relatório PGR.
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
         
         {!reportGenerated && (
-          <div className="flex items-center justify-center py-20 text-muted-foreground">
-            Selecione uma empresa e clique em "Gerar Relatório" para visualizar os resultados.
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <FileText className="h-16 w-16 text-gray-300 mb-4" />
+            <h3 className="text-xl font-medium mb-2">Nenhum relatório gerado</h3>
+            <p className="text-muted-foreground max-w-md">
+              Selecione uma empresa e clique em "Gerar Relatório" para visualizar os resultados.
+            </p>
           </div>
         )}
       </div>

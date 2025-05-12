@@ -1,65 +1,64 @@
 
-import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getRankingAreasCriticas, AreaCriticaData } from "@/services/relatorios/relatoriosService";
-import { Company } from '@/types/cadastro';
+import { AreaCriticaData, getRankingAreasCriticas } from "@/services/relatorios/relatoriosService";
+import { useQuery } from "@tanstack/react-query";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface RankingAreasCriticasProps {
-  selectedCompanyId?: string;
-  companies: Company[];
+  companyId: string;
 }
 
-const RankingAreasCriticas: React.FC<RankingAreasCriticasProps> = ({ selectedCompanyId, companies }) => {
-  const [data, setData] = useState<AreaCriticaData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const RankingAreasCriticas: React.FC<RankingAreasCriticasProps> = ({ companyId }) => {
+  const { data: areasRanking = [], isLoading, error } = useQuery({
+    queryKey: ["areasRanking", companyId],
+    queryFn: () => getRankingAreasCriticas(companyId),
+    enabled: !!companyId
+  });
 
-  useEffect(() => {
-    const fetchAreas = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        if (selectedCompanyId) {
-          const areas = await getRankingAreasCriticas(selectedCompanyId);
-          setData(areas);
-        } else {
-          setData([]);
-        }
-      } catch (err) {
-        setError('Erro ao carregar o ranking das áreas críticas.');
-        console.error('Erro ao carregar o ranking das áreas críticas:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAreas();
-  }, [selectedCompanyId]);
+  // Sort areas by total in descending order
+  const sortedAreas = [...areasRanking].sort((a, b) => b.total - a.total);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Ranking de Áreas Críticas</CardTitle>
         <CardDescription>
-          Exibe o ranking das áreas mais críticas da empresa.
+          Visualização das áreas com maior número de respostas positivas
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading && <p>Carregando...</p>}
-        {error && <p className="text-red-500">{error}</p>}
-        {!isLoading && !error && data.length === 0 && <p>Nenhum dado disponível para a empresa selecionada.</p>}
-        {!isLoading && !error && data.length > 0 && (
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="area" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="total" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-12 bg-gray-100 animate-pulse rounded-md" />
+            ))}
+          </div>
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Erro ao carregar o ranking de áreas críticas
+            </AlertDescription>
+          </Alert>
+        ) : sortedAreas.length > 0 ? (
+          <div className="space-y-6">
+            {sortedAreas.map((area) => (
+              <div key={area.area} className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{area.area}</span>
+                  <span className="text-sm font-medium">{area.total} respostas positivas</span>
+                </div>
+                <Progress value={area.total} max={20} className="h-2" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-muted-foreground">
+            Nenhuma área crítica identificada
+          </div>
         )}
       </CardContent>
     </Card>
