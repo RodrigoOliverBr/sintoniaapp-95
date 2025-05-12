@@ -106,7 +106,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
     }
     
     try {
-      const loadedDepartments = await getDepartmentsByCompany(companyId);
+      const loadedDepartments = await getDepartmentsByCompanyService(companyId);
       setDepartments(loadedDepartments);
     } catch (error) {
       console.error("Error loading departments:", error);

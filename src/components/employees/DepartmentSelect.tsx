@@ -1,11 +1,10 @@
-
 import React, { useEffect, useState } from "react";
 import { Department } from "@/types/cadastro";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FolderMinus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getDepartmentsByCompany } from "@/services";
+import { getDepartmentsByCompanyService } from "@/services";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Employee, Department, JobRole } from "@/types/cadastro";
 import NewEmployeeModal from "@/components/modals/NewEmployeeModal";
 import EditEmployeeModal from "@/components/modals/EditEmployeeModal";
-import { getDepartmentsByCompany } from "@/services";
+import { getDepartmentsByCompanyService } from "@/services";
 import { toast } from "sonner";
 
 interface EmployeeModalsProps {
@@ -42,7 +42,7 @@ const EmployeeModals: React.FC<EmployeeModalsProps> = ({
       if ((openNewModal || openEditModal) && selectedCompanyId) {
         console.log("EmployeeModals: Refreshing departments for company:", selectedCompanyId);
         try {
-          const depts = await getDepartmentsByCompany(selectedCompanyId);
+          const depts = await getDepartmentsByCompanyService(selectedCompanyId);
           console.log("EmployeeModals: Refreshed departments:", depts);
           
           if (depts && depts.length === 0) {

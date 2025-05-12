@@ -5,7 +5,7 @@ import { Employee, Department } from "@/types/cadastro";
 import { useEmployees } from "@/hooks/useEmployees";
 import EmployeeContent from "@/components/employees/EmployeeContent";
 import EmployeeModals from "@/components/employees/EmployeeModals";
-import { getDepartmentsByCompany } from "@/services";
+import { getDepartmentsByCompanyService } from "@/services";
 import { toast } from "sonner";
 
 const EmployeesPage: React.FC = () => {
@@ -34,7 +34,7 @@ const EmployeesPage: React.FC = () => {
   const loadDepartments = useCallback(async (companyId: string) => {
     console.log("EmployeesPage: Loading departments for company:", companyId);
     try {
-      const departmentsData = await getDepartmentsByCompany(companyId);
+      const departmentsData = await getDepartmentsByCompanyService(companyId);
       console.log("EmployeesPage: Departments loaded:", departmentsData);
       setDepartments(departmentsData || []);
     } catch (error) {
