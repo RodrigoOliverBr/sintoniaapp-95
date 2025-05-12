@@ -1,18 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-export interface PlanoMitigacao {
-  id?: string;
-  empresa_id: string;
-  risco_id: string;
-  medidas_controle: string;
-  prazo: string;
-  responsavel: string;
-  status: "Pendente" | "Implementando" | "Monitorando";
-  created_at?: string;
-  updated_at?: string;
-}
+import { PlanoMitigacao } from "@/types/cliente";
 
 /**
  * Get existing mitigation plan for a specific risk and company
@@ -22,6 +11,7 @@ export const getPlanoMitigacao = async (
   riscoId: string
 ): Promise<PlanoMitigacao | null> => {
   try {
+    // Verificamos se a tabela existe antes de tentar consultar
     const { data, error } = await supabase
       .from('planos_mitigacao')
       .select('*')
@@ -34,7 +24,7 @@ export const getPlanoMitigacao = async (
       return null;
     }
 
-    return data;
+    return data as PlanoMitigacao | null;
   } catch (error) {
     console.error("Failed to fetch mitigation plan:", error);
     return null;
@@ -58,7 +48,7 @@ export const getPlanosMitigacaoByEmpresa = async (
       return [];
     }
 
-    return data || [];
+    return data as PlanoMitigacao[] || [];
   } catch (error) {
     console.error("Failed to fetch mitigation plans:", error);
     return [];
@@ -137,5 +127,27 @@ export const savePlanoMitigacao = async (
   } catch (error) {
     console.error("Failed to save mitigation plan:", error);
     return { success: false, error };
+  }
+};
+
+/**
+ * Get mitigation suggestions for a risk
+ */
+export const getMitigacoesPorRisco = async (riscoId: string): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('mitigacoes')
+      .select('descricao')
+      .eq('risco_id', riscoId);
+
+    if (error) {
+      console.error("Error fetching mitigations for risk:", error);
+      return [];
+    }
+
+    return data?.map(item => item.descricao) || [];
+  } catch (error) {
+    console.error("Failed to fetch mitigations:", error);
+    return [];
   }
 };

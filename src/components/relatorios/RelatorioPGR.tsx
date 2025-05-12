@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Company, Employee } from '@/types/cadastro';
 import { Question } from '@/types/form';
@@ -14,7 +14,7 @@ import { AlertTriangle } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import RiscoCard from './RiscoCard';
-import { savePlanoMitigacao } from '@/services/relatorios/planosMitigacaoService';
+import { getPlanoMitigacao, savePlanoMitigacao } from '@/services/relatorios/planosMitigacaoService';
 
 export interface RelatorioPGRProps {
   company: Company;
@@ -57,6 +57,35 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
     queryFn: () => companyId ? getRiscosPorEmpresa(companyId) : Promise.resolve([]),
     enabled: !!companyId
   });
+  
+  // Função para definir valores padrão para os riscos quando carregados
+  useEffect(() => {
+    if (riscos.length > 0) {
+      // Para cada risco, definimos valores padrão se estiverem vazios
+      const defaults: Record<string, Partial<RiscoPGR>> = {};
+      
+      riscos.forEach((risco: RiscoPGR) => {
+        if (!risco.prazo) {
+          defaults[risco.id] = {
+            ...defaults[risco.id],
+            prazo: "30 dias"
+          };
+        }
+        
+        if (!risco.responsavel) {
+          defaults[risco.id] = {
+            ...defaults[risco.id],
+            responsavel: "Recursos Humanos"
+          };
+        }
+      });
+      
+      // Só atualizamos o estado se houver valores padrão para definir
+      if (Object.keys(defaults).length > 0) {
+        setEditedRisks(defaults);
+      }
+    }
+  }, [riscos]);
   
   // Mutation for saving risk mitigation plans
   const saveMutation = useMutation({
@@ -145,8 +174,8 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
     }
     
     const medidasControle = editedRisk.medidasControle !== undefined ? editedRisk.medidasControle : risco.medidasControle;
-    const prazo = editedRisk.prazo !== undefined ? editedRisk.prazo : risco.prazo;
-    const responsavel = editedRisk.responsavel !== undefined ? editedRisk.responsavel : risco.responsavel;
+    const prazo = editedRisk.prazo !== undefined ? editedRisk.prazo : risco.prazo || "30 dias";
+    const responsavel = editedRisk.responsavel !== undefined ? editedRisk.responsavel : risco.responsavel || "Recursos Humanos";
     const status = editedRisk.status !== undefined ? editedRisk.status : risco.status;
     
     saveMutation.mutate({ 
@@ -325,8 +354,8 @@ const RelatorioPGR: React.FC<RelatorioPGRProps> = ({
               key={risco.id}
               risco={risco}
               editedMedidasControle={editedRisk.medidasControle}
-              editedPrazo={editedRisk.prazo}
-              editedResponsavel={editedRisk.responsavel}
+              editedPrazo={editedRisk.prazo || (!risco.prazo ? "30 dias" : undefined)}
+              editedResponsavel={editedRisk.responsavel || (!risco.responsavel ? "Recursos Humanos" : undefined)}
               editedStatus={editedRisk.status}
               onMedidasChange={(value) => handleMedidasChange(risco.id, value)}
               onPrazoChange={(value) => handlePrazoChange(risco.id, value)}

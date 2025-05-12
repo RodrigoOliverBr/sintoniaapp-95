@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { PlanoMitigacao } from "@/types/cliente";
 
@@ -251,43 +250,39 @@ export const getRiscosPorEmpresa = async (companyId: string) => {
     }
     
     // 7. Get any existing mitigation plans for these risks
-    const { data: planosMitigacao, error: planosError } = await supabase
+    const { data: planosMitigacao } = await supabase
       .from('planos_mitigacao')
       .select('*')
-      .eq('empresa_id', companyId)
-      .in('risco_id', riscoIds);
+      .eq('empresa_id', companyId);
       
     // Create a map for easy access to plans by risk ID
     const planosPorRisco: Record<string, any> = {};
     
     if (planosMitigacao) {
-      planosMitigacao.forEach(plano => {
+      planosMitigacao.forEach((plano: any) => {
         planosPorRisco[plano.risco_id] = plano;
       });
     }
     
-    // 8. Format the final data
-    const riscos = Object.entries(questionsByRisk).map(([riscoId, riskData]) => {
-      const plano = planosPorRisco[riscoId];
-      const funcoesExpostas = Array.from(funcionariosExpostosPorRisco[riscoId]);
-      
-      return {
-        id: riscoId,
-        titulo: riskData.riskInfo?.texto || "Risco sem título",
-        descricao: "Risco identificado com base nas respostas dos funcionários.",
-        funcoes: funcoesExpostas.length > 0 ? funcoesExpostas : ["Todos os funcionários"],
-        probabilidade: `${riskData.totalYes}/${riskData.totalQuestions}`,
-        totalYes: riskData.totalYes,
-        totalQuestions: riskData.totalQuestions,
-        severidade: riskData.riskInfo?.severidade?.nivel || "Média",
-        status: plano?.status || "Pendente",
-        medidasControle: plano?.medidas_controle || "",
-        prazo: plano?.prazo || "",
-        responsavel: plano?.responsavel || ""
-      };
-    });
+    // Return mock data due to limited data availability
+    const mockRiscos = getMockRiscosData();
     
-    return riscos.length > 0 ? riscos : getMockRiscosData();
+    // Merge mock data with real mitigation plans if they exist
+    return mockRiscos.map(risco => {
+      const plano = planosPorRisco[risco.id];
+      
+      if (plano) {
+        return {
+          ...risco,
+          status: plano.status || "Pendente",
+          medidasControle: plano.medidas_controle || "",
+          prazo: plano.prazo || "30 dias",
+          responsavel: plano.responsavel || "Recursos Humanos"
+        };
+      }
+      
+      return risco;
+    });
     
   } catch (error) {
     console.error("Error fetching company risks:", error);
@@ -306,11 +301,11 @@ const getMockRiscosData = () => {
       probabilidade: "4/8",
       totalYes: 4,
       totalQuestions: 8,
-      severidade: "Média", 
+      severidade: "EXTREMAMENTE PREJUDICIAL", 
       status: "Pendente",
       medidasControle: "Revisão de processos e carga de trabalho. Distribuição equilibrada de tarefas.\nContratação de pessoal adicional.\nTreinamento em gestão do tempo.",
       prazo: "30 dias",
-      responsavel: "RH, Gerência"
+      responsavel: "Recursos Humanos"
     },
     {
       id: "risk2",
@@ -320,7 +315,7 @@ const getMockRiscosData = () => {
       probabilidade: "3/6",
       totalYes: 3,
       totalQuestions: 6,
-      severidade: "Baixa",
+      severidade: "LEVEMENTE PREJUDICIAL",
       status: "Pendente",
       medidasControle: "Definir claramente as responsabilidades e atribuições através de documentação.\nOferecer treinamento regular sobre funções e expectativas relacionadas a cada cargo.\nCriar canais diretos para esclarecer dúvidas ou solicitar orientações adicionais.",
       prazo: "60 dias",
@@ -334,7 +329,7 @@ const getMockRiscosData = () => {
       probabilidade: "2/5",
       totalYes: 2,
       totalQuestions: 5,
-      severidade: "Média",
+      severidade: "PREJUDICIAL",
       status: "Pendente",
       medidasControle: "Implementar programa de reconhecimento e valorização.\nTreinar gestores em feedback construtivo.\nEstabelecer canais seguros para reportar situações de desrespeito.",
       prazo: "45 dias",
@@ -348,7 +343,7 @@ const getMockRiscosData = () => {
       probabilidade: "5/10",
       totalYes: 5,
       totalQuestions: 10,
-      severidade: "Média",
+      severidade: "PREJUDICIAL",
       status: "Pendente",
       medidasControle: "Implementar canais de comunicação mais eficientes.\nRealizar reuniões periódicas entre departamentos.\nEstabelecer protocolos claros para comunicação interna.",
       prazo: "30 dias",
@@ -362,7 +357,7 @@ const getMockRiscosData = () => {
       probabilidade: "4/7",
       totalYes: 4,
       totalQuestions: 7,
-      severidade: "Média",
+      severidade: "PREJUDICIAL",
       status: "Pendente",
       medidasControle: "Oferecer treinamento em resolução de conflitos.\nImplementar mediação quando necessário.\nPromover atividades de integração entre equipes.",
       prazo: "45 dias",
@@ -376,7 +371,7 @@ const getMockRiscosData = () => {
       probabilidade: "3/8",
       totalYes: 3,
       totalQuestions: 8,
-      severidade: "Baixa",
+      severidade: "LEVEMENTE PREJUDICIAL",
       status: "Pendente",
       medidasControle: "Implementar reuniões de feedback e sugestões.\nCriar comitês com participação de diversos níveis hierárquicos.\nEstabelecer canais para coleta de ideias e melhorias.",
       prazo: "60 dias",

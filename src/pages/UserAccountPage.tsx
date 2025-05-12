@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,8 @@ const UserAccountPage = () => {
               id: data.id || "",
               nome: data.nome || "",
               email: data.email || "",
-              telefone: data.telefone || "" // Handle possibly missing telefone property
+              // Verificamos se telefone existe antes de atribuir
+              telefone: data.telefone !== undefined ? data.telefone : ""
             });
           }
         }

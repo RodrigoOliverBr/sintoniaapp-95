@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
+import { getMitigacoesPorRisco } from '@/services/relatorios/planosMitigacaoService';
 
 interface RiscoCardProps {
   risco: any;
@@ -41,9 +42,22 @@ const RiscoCard: React.FC<RiscoCardProps> = ({
   const responsavel = editedResponsavel !== undefined ? editedResponsavel : risco.responsavel;
   const status = editedStatus !== undefined ? editedStatus : risco.status;
   
+  const [mitigacoesSugeridas, setMitigacoesSugeridas] = useState<string[]>([]);
+
+  useEffect(() => {
+    const carregarMitigacoes = async () => {
+      if (risco?.id) {
+        const sugestoes = await getMitigacoesPorRisco(risco.id);
+        setMitigacoesSugeridas(sugestoes);
+      }
+    };
+    
+    carregarMitigacoes();
+  }, [risco?.id]);
+  
   const getBorderColor = () => {
-    if (risco.severidade === 'Alta') return 'border-l-4 border-l-red-500';
-    if (risco.severidade === 'Média') return 'border-l-4 border-l-yellow-500';
+    if (risco.severidade === 'EXTREMAMENTE PREJUDICIAL') return 'border-l-4 border-l-red-500';
+    if (risco.severidade === 'PREJUDICIAL') return 'border-l-4 border-l-orange-500';
     return 'border-l-4 border-l-green-500';
   };
   
@@ -129,7 +143,18 @@ const RiscoCard: React.FC<RiscoCardProps> = ({
               onChange={(e) => onMedidasChange(e.target.value)}
               className="mt-1 resize-none"
               rows={4}
+              placeholder={mitigacoesSugeridas.length > 0 ? mitigacoesSugeridas.join('\n') : "Descreva as medidas de controle para este risco..."}
             />
+            {mitigacoesSugeridas.length > 0 && !medidasControle && (
+              <div className="mt-2">
+                <p className="text-xs text-blue-600 font-medium">Sugestões de mitigação:</p>
+                <ul className="text-xs text-muted-foreground ml-4 mt-1 list-disc">
+                  {mitigacoesSugeridas.map((mitigacao, idx) => (
+                    <li key={idx}>{mitigacao}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
         
@@ -143,6 +168,7 @@ const RiscoCard: React.FC<RiscoCardProps> = ({
               value={prazo}
               onChange={(e) => onPrazoChange(e.target.value)}
               className="mt-1"
+              placeholder="30 dias"
             />
           </div>
           <div className="md:col-span-2">
@@ -154,6 +180,7 @@ const RiscoCard: React.FC<RiscoCardProps> = ({
               value={responsavel}
               onChange={(e) => onResponsavelChange(e.target.value)}
               className="mt-1"
+              placeholder="Recursos Humanos"
             />
           </div>
         </div>
