@@ -72,6 +72,8 @@ export const handleSupabaseError = (error: any): string => {
     return 'Um registro com estas informações já existe.';
   } else if (error?.message?.includes('password')) {
     return 'Erro relacionado à senha. Verifique se ela atende aos critérios de segurança.';
+  } else if (error?.code === '23505') {
+    return 'Este registro já existe. Verifique se o e-mail ou documento já está cadastrado.';
   } else {
     return `Erro ao processar solicitação: ${error?.message || 'Desconhecido'}`;
   }

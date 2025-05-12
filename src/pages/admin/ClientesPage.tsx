@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import ClientesTable from "@/components/admin/clientes/ClientesTable";
@@ -220,30 +219,76 @@ const ClientesPage: React.FC = () => {
   const handleCreateNew = async (formData: any) => {
     setIsLoading(true);
     try {
-      // Insert new cliente in Supabase
-      const { data, error } = await supabase
+      console.log("Criando novo cliente com dados:", formData);
+
+      // 1. Primeiro, criamos o usuário no sistema de auth do Supabase
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        password: formData.senha,
+        email_confirm: true // Auto-confirmar o email para facilitar o primeiro login
+      });
+
+      if (authError) {
+        console.error("Erro ao criar usuário na autenticação:", authError);
+        toast.error(`Erro ao criar usuário: ${handleSupabaseError(authError)}`);
+        return;
+      }
+
+      console.log("Usuário criado na autenticação:", authData);
+      const userId = authData.user.id;
+
+      // 2. Inserimos o registro na tabela perfis
+      const { error: perfilError } = await supabase
+        .from("perfis")
+        .insert([{
+          id: userId, // Usamos o ID gerado pelo auth
+          email: formData.email,
+          nome: formData.razao_social,
+          tipo: "client" // Tipo fixo para clientes do sistema
+        }]);
+
+      if (perfilError) {
+        console.error("Erro ao criar perfil:", perfilError);
+        
+        // Se falhar, tentamos reverter a criação do usuário de auth
+        await supabase.auth.admin.deleteUser(userId);
+        
+        toast.error(`Erro ao criar perfil: ${handleSupabaseError(perfilError)}`);
+        return;
+      }
+
+      // 3. Por fim, criamos o registro do cliente usando o mesmo ID
+      const { data: clienteData, error: clienteError } = await supabase
         .from("clientes_sistema")
         .insert([{
+          id: userId, // Usamos o mesmo ID
           razao_social: formData.razao_social,
           cnpj: formData.cnpj,
           email: formData.email,
           telefone: formData.telefone,
           responsavel: formData.responsavel,
-          senha: formData.senha // Include senha field when saving
+          senha: formData.senha,
+          situacao: "liberado" // Status inicial padrão
         }])
         .select();
 
-      if (error) {
-        console.error("Erro ao criar cliente:", error);
-        toast.error("Erro ao criar cliente");
+      if (clienteError) {
+        console.error("Erro ao criar cliente:", clienteError);
+        
+        // Se falhar, tentamos reverter as operações anteriores
+        await supabase.auth.admin.deleteUser(userId);
+        await supabase.from("perfis").delete().eq("id", userId);
+        
+        toast.error(`Erro ao criar cliente: ${handleSupabaseError(clienteError)}`);
         return;
       }
       
       toast.success("Cliente criado com sucesso!");
+      console.log("Cliente criado com sucesso:", clienteData);
       loadClientes();
     } catch (error) {
-      console.error("Erro ao criar cliente:", error);
-      toast.error("Erro ao criar cliente");
+      console.error("Erro inesperado ao criar cliente:", error);
+      toast.error(`Erro inesperado ao criar cliente: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsLoading(false);
       setOpenNewModal(false);
