@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Question } from "@/types/form";
 import QuestionComponent from "@/components/QuestionComponent";
+import { XCircle } from "lucide-react";
 
 interface FormAllQuestionsProps {
   sections: any[];
@@ -55,8 +56,26 @@ const FormAllQuestions: React.FC<FormAllQuestionsProps> = ({
     return a.ordem - b.ordem;
   });
 
+  // Function to mark all questions as "No"
+  const handleMarkAllAsNo = () => {
+    questions.forEach(question => {
+      onAnswerChange(question.id, false);
+    });
+  };
+
   return (
     <div className="space-y-10">
+      <div className="flex justify-end mb-4">
+        <Button 
+          variant="outline" 
+          onClick={handleMarkAllAsNo}
+          className="flex items-center gap-2"
+        >
+          <XCircle className="h-4 w-4" />
+          Marcar todas como Não
+        </Button>
+      </div>
+
       {sortedSections.map(section => {
         const sectionQuestions = getQuestionsForSection(section.id);
         
