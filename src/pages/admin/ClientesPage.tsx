@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import ClientesTable from "@/components/admin/clientes/ClientesTable";
 import { ClienteDialogs } from "@/components/admin/clientes/ClienteDialogs";
 import { ClienteActions } from "@/components/admin/clientes/ClienteActions";
 import { ClienteForm } from "@/components/admin/ClienteForm";
-import { ClienteSistema } from "@/types/admin";
+import { ClienteSistema, ClienteStatus, TipoPessoa } from "@/types/admin";
 
 const ClientesPage: React.FC = () => {
   const [clientes, setClientes] = useState<ClienteSistema[]>([]);
@@ -54,14 +54,10 @@ const ClientesPage: React.FC = () => {
       
       // Map clients to include contract status
       const clientesProcessed = clientesData?.map(cliente => {
-        // Check if client has active contracts
+        // Check if client has active contract
         const hasActiveContract = contratosData?.some(
           contrato => contrato.cliente_sistema_id === cliente.id && contrato.status === "ativo"
         );
-        
-        const contratoId = "";
-        
-        console.log(`Cliente ${cliente.razao_social}: ${hasActiveContract ? 'Com contrato ativo' : 'Sem contrato ativo'}`);
         
         return {
           id: cliente.id,
@@ -74,14 +70,13 @@ const ClientesPage: React.FC = () => {
           telefone: cliente.telefone || "",
           responsavel: cliente.responsavel || "",
           contato: cliente.responsavel || "",
-          tipo: "cliente",
+          tipo: "juridica" as TipoPessoa,
           numeroEmpregados: 0,
           dataInclusao: cliente.created_at ? new Date(cliente.created_at).getTime() : Date.now(),
-          ativo: true,
-          situacao: hasActiveContract ? "ativo" : "sem-contrato",
+          situacao: hasActiveContract ? "ativo" as ClienteStatus : "sem-contrato" as ClienteStatus,
           planoId: cliente.plano_id || "",
-          contratoId: contratoId,
-          statusContrato: hasActiveContract ? "ativo" : "sem-contrato"
+          contratoId: cliente.contrato_id || "",
+          clienteId: cliente.id
         } as ClienteSistema;
       }) || [];
       
@@ -241,14 +236,19 @@ const ClientesPage: React.FC = () => {
       const { data: clienteData, error: clienteError } = await supabase
         .from("clientes_sistema")
         .insert([{
-          id: authData.user.id, // Usar o mesmo ID do usuário criado
+          id: authData.user.id,
           razao_social: formData.razao_social,
           cnpj: formData.cnpj,
           email: formData.email,
           telefone: formData.telefone,
           responsavel: formData.responsavel,
-          senha: formData.senha,
-          situacao: "liberado" // Definir status inicial como liberado
+          tipo: "juridica",
+          situacao: "liberado" as ClienteStatus,
+          cpfCnpj: formData.cnpj,
+          nome: formData.razao_social,
+          numeroEmpregados: 0,
+          dataInclusao: Date.now(),
+          clienteId: authData.user.id
         }])
         .select()
         .single();
