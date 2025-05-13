@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
+import { Save, AlertTriangle, Flame, AlertCircle } from 'lucide-react';
 import { getMitigacoesPorRisco } from '@/services/relatorios/planosMitigacaoService';
 
 interface RiscoCardProps {
@@ -73,6 +73,33 @@ const RiscoCard: React.FC<RiscoCardProps> = ({
     }
   };
   
+  const getSeverityBadge = () => {
+    switch(risco.severidade) {
+      case 'EXTREMAMENTE PREJUDICIAL':
+        return (
+          <div className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-md text-xs font-medium">
+            <Flame size={14} />
+            <span>Extremamente Prejudicial</span>
+          </div>
+        );
+      case 'PREJUDICIAL':
+        return (
+          <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 rounded-md text-xs font-medium">
+            <AlertTriangle size={14} />
+            <span>Prejudicial</span>
+          </div>
+        );
+      case 'LEVEMENTE PREJUDICIAL':
+      default:
+        return (
+          <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs font-medium">
+            <AlertCircle size={14} />
+            <span>Levemente Prejudicial</span>
+          </div>
+        );
+    }
+  };
+  
   return (
     <Card className={`overflow-hidden ${getBorderColor()}`}>
       <CardContent className="pt-6">
@@ -111,9 +138,7 @@ const RiscoCard: React.FC<RiscoCardProps> = ({
               </div>
               <div>
                 <p className="text-xs text-gray-500">Severidade</p>
-                <p className="font-medium">
-                  {risco.severidade}
-                </p>
+                {getSeverityBadge()}
               </div>
               <div>
                 <p className="text-xs text-gray-500">Status</p>
