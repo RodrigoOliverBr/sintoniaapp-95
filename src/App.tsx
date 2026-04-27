@@ -5,6 +5,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import FormularioPage from "./pages/FormularioPage";
 import ComoPreencher from "./pages/ComoPreencher";
 import ComoAvaliar from "./pages/ComoAvaliar";
+import ComoPreencherPublico from "./pages/publico/ComoPreencherPublico";
+import ComoAvaliarPublico from "./pages/publico/ComoAvaliarPublico";
 import CompaniesPage from "./pages/CompaniesPage";
 import EmployeesPage from "./pages/EmployeesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
@@ -79,6 +81,10 @@ const App = () => {
           <Routes>
             {/* Login route is accessible to everyone */}
             <Route path="/login" element={<LoginPage />} />
+
+            {/* Rotas públicas (acessíveis sem login) */}
+            <Route path="/publico/como-preencher" element={<ComoPreencherPublico />} />
+            <Route path="/publico/como-avaliar" element={<ComoAvaliarPublico />} />
             
             {/* Rotas do cliente */}
             <Route 
