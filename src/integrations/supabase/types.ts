@@ -7,23 +7,966 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
-      [_ in never]: never
+      avaliacoes: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          formulario_id: string | null
+          funcionario_id: string
+          id: string
+          is_complete: boolean | null
+          last_updated: string
+          notas_analista: string | null
+          total_nao: number | null
+          total_sim: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          formulario_id?: string | null
+          funcionario_id: string
+          id?: string
+          is_complete?: boolean | null
+          last_updated?: string
+          notas_analista?: string | null
+          total_nao?: number | null
+          total_sim?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          formulario_id?: string | null
+          funcionario_id?: string
+          id?: string
+          is_complete?: boolean | null
+          last_updated?: string
+          notas_analista?: string | null
+          total_nao?: number | null
+          total_sim?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "formularios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cargos: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clientes_sistema: {
+        Row: {
+          cnpj: string
+          contrato_id: string | null
+          created_at: string
+          email: string | null
+          id: string
+          plano_id: string | null
+          razao_social: string
+          responsavel: string | null
+          senha: string | null
+          situacao: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj: string
+          contrato_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          plano_id?: string | null
+          razao_social: string
+          responsavel?: string | null
+          senha?: string | null
+          situacao?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string
+          contrato_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          plano_id?: string | null
+          razao_social?: string
+          responsavel?: string | null
+          senha?: string | null
+          situacao?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_sistema_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_sistema_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contratos: {
+        Row: {
+          ciclo_faturamento: string
+          ciclos_gerados: number | null
+          cliente_id: string
+          cliente_sistema_id: string | null
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          data_primeiro_vencimento: string
+          id: string
+          numero: string
+          observacoes: string | null
+          plano_id: string
+          proxima_renovacao: string | null
+          status: string
+          taxa_implantacao: number
+          updated_at: string
+          valor_mensal: number
+        }
+        Insert: {
+          ciclo_faturamento?: string
+          ciclos_gerados?: number | null
+          cliente_id: string
+          cliente_sistema_id?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          data_primeiro_vencimento: string
+          id?: string
+          numero: string
+          observacoes?: string | null
+          plano_id: string
+          proxima_renovacao?: string | null
+          status?: string
+          taxa_implantacao?: number
+          updated_at?: string
+          valor_mensal: number
+        }
+        Update: {
+          ciclo_faturamento?: string
+          ciclos_gerados?: number | null
+          cliente_id?: string
+          cliente_sistema_id?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          data_primeiro_vencimento?: string
+          id?: string
+          numero?: string
+          observacoes?: string | null
+          plano_id?: string
+          proxima_renovacao?: string | null
+          status?: string
+          taxa_implantacao?: number
+          updated_at?: string
+          valor_mensal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_cliente_sistema_id_fkey"
+            columns: ["cliente_sistema_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_sistema"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_departments: {
+        Row: {
+          created_at: string
+          department_id: string
+          employee_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          employee_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          employee_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_departments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_departments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresas: {
+        Row: {
+          cep: string | null
+          cidade: string | null
+          contato: string | null
+          cpf_cnpj: string | null
+          created_at: string
+          data_inclusao: string
+          email: string | null
+          endereco: string | null
+          estado: string | null
+          id: string
+          nome: string
+          numero_empregados: number | null
+          perfil_id: string | null
+          situacao: string
+          telefone: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          cep?: string | null
+          cidade?: string | null
+          contato?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string
+          data_inclusao?: string
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          nome: string
+          numero_empregados?: number | null
+          perfil_id?: string | null
+          situacao?: string
+          telefone?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          cep?: string | null
+          cidade?: string | null
+          contato?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string
+          data_inclusao?: string
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          nome?: string
+          numero_empregados?: number | null
+          perfil_id?: string | null
+          situacao?: string
+          telefone?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresas_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "perfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faturas: {
+        Row: {
+          cliente_id: string
+          cliente_sistema_id: string | null
+          contrato_id: string | null
+          created_at: string
+          data_emissao: string
+          data_vencimento: string
+          id: string
+          numero: string
+          referencia: string | null
+          status: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          cliente_id: string
+          cliente_sistema_id?: string | null
+          contrato_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_vencimento: string
+          id?: string
+          numero: string
+          referencia?: string | null
+          status?: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          cliente_id?: string
+          cliente_sistema_id?: string | null
+          contrato_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_vencimento?: string
+          id?: string
+          numero?: string
+          referencia?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturas_cliente_sistema_id_fkey"
+            columns: ["cliente_sistema_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_sistema"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      formularios: {
+        Row: {
+          ativo: boolean | null
+          created_at: string
+          descricao: string | null
+          id: string
+          titulo: string
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          titulo: string
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          titulo?: string
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: []
+      }
+      funcionarios: {
+        Row: {
+          cargo_id: string | null
+          cpf: string | null
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          cargo_id?: string | null
+          cpf?: string | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          cargo_id?: string | null
+          cpf?: string | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funcionarios_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funcionarios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mitigacoes: {
+        Row: {
+          created_at: string
+          id: string
+          risco_id: string
+          texto: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          risco_id: string
+          texto: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          risco_id?: string
+          texto?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mitigacoes_risco_id_fkey"
+            columns: ["risco_id"]
+            isOneToOne: false
+            referencedRelation: "riscos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      perfis: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          nome: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          nome?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pergunta_opcoes: {
+        Row: {
+          created_at: string
+          id: string
+          ordem: number | null
+          pergunta_id: string | null
+          texto: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ordem?: number | null
+          pergunta_id?: string | null
+          texto: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ordem?: number | null
+          pergunta_id?: string | null
+          texto?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pergunta_opcoes_pergunta_id_fkey"
+            columns: ["pergunta_id"]
+            isOneToOne: false
+            referencedRelation: "perguntas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      perguntas: {
+        Row: {
+          created_at: string
+          formulario_id: string
+          id: string
+          observacao_obrigatoria: boolean | null
+          opcoes: Json | null
+          ordem_pergunta: number | null
+          risco_id: string
+          secao_id: string
+          texto: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          formulario_id: string
+          id?: string
+          observacao_obrigatoria?: boolean | null
+          opcoes?: Json | null
+          ordem_pergunta?: number | null
+          risco_id: string
+          secao_id: string
+          texto: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          formulario_id?: string
+          id?: string
+          observacao_obrigatoria?: boolean | null
+          opcoes?: Json | null
+          ordem_pergunta?: number | null
+          risco_id?: string
+          secao_id?: string
+          texto?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "perguntas_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "formularios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "perguntas_risco_id_fkey"
+            columns: ["risco_id"]
+            isOneToOne: false
+            referencedRelation: "riscos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "perguntas_secao_id_fkey"
+            columns: ["secao_id"]
+            isOneToOne: false
+            referencedRelation: "secoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string
+          data_validade: string | null
+          descricao: string | null
+          empregados_ilimitados: boolean | null
+          empresas_ilimitadas: boolean | null
+          id: string
+          limite_empregados: number | null
+          limite_empresas: number | null
+          nome: string
+          sem_vencimento: boolean | null
+          updated_at: string
+          valor_implantacao: number
+          valor_mensal: number
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string
+          data_validade?: string | null
+          descricao?: string | null
+          empregados_ilimitados?: boolean | null
+          empresas_ilimitadas?: boolean | null
+          id?: string
+          limite_empregados?: number | null
+          limite_empresas?: number | null
+          nome: string
+          sem_vencimento?: boolean | null
+          updated_at?: string
+          valor_implantacao?: number
+          valor_mensal: number
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string
+          data_validade?: string | null
+          descricao?: string | null
+          empregados_ilimitados?: boolean | null
+          empresas_ilimitadas?: boolean | null
+          id?: string
+          limite_empregados?: number | null
+          limite_empresas?: number | null
+          nome?: string
+          sem_vencimento?: boolean | null
+          updated_at?: string
+          valor_implantacao?: number
+          valor_mensal?: number
+        }
+        Relationships: []
+      }
+      relatorios: {
+        Row: {
+          avaliacao_id: string | null
+          caminho_arquivo: string | null
+          created_at: string
+          data_geracao: string
+          empresa_id: string
+          id: string
+          observacoes: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          avaliacao_id?: string | null
+          caminho_arquivo?: string | null
+          created_at?: string
+          data_geracao?: string
+          empresa_id: string
+          id?: string
+          observacoes?: string | null
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          avaliacao_id?: string | null
+          caminho_arquivo?: string | null
+          created_at?: string
+          data_geracao?: string
+          empresa_id?: string
+          id?: string
+          observacoes?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relatorios_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resposta_opcoes: {
+        Row: {
+          created_at: string
+          id: string
+          opcao_id: string | null
+          resposta_id: string | null
+          texto_outro: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          opcao_id?: string | null
+          resposta_id?: string | null
+          texto_outro?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          opcao_id?: string | null
+          resposta_id?: string | null
+          texto_outro?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resposta_opcoes_opcao_id_fkey"
+            columns: ["opcao_id"]
+            isOneToOne: false
+            referencedRelation: "pergunta_opcoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resposta_opcoes_resposta_id_fkey"
+            columns: ["resposta_id"]
+            isOneToOne: false
+            referencedRelation: "respostas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      respostas: {
+        Row: {
+          avaliacao_id: string
+          created_at: string
+          id: string
+          observacao: string | null
+          opcoes_selecionadas: Json | null
+          pergunta_id: string
+          resposta: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          avaliacao_id: string
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          opcoes_selecionadas?: Json | null
+          pergunta_id: string
+          resposta?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          avaliacao_id?: string
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          opcoes_selecionadas?: Json | null
+          pergunta_id?: string
+          resposta?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "respostas_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "respostas_pergunta_id_fkey"
+            columns: ["pergunta_id"]
+            isOneToOne: false
+            referencedRelation: "perguntas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      riscos: {
+        Row: {
+          created_at: string
+          id: string
+          severidade_id: string
+          texto: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          severidade_id: string
+          texto: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          severidade_id?: string
+          texto?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "riscos_severidade_id_fkey"
+            columns: ["severidade_id"]
+            isOneToOne: false
+            referencedRelation: "severidade"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secoes: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          formulario_id: string
+          id: string
+          ordem: number | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          formulario_id: string
+          id?: string
+          ordem?: number | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          formulario_id?: string
+          id?: string
+          ordem?: number | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secoes_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "formularios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      setores: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      severidade: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          nivel: string
+          ordem: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nivel: string
+          ordem?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nivel?: string
+          ordem?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      company_type: "fisica" | "juridica"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -31,25 +974,21 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -67,16 +1006,14 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -92,16 +1029,14 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -117,16 +1052,14 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -134,22 +1067,22 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      company_type: ["fisica", "juridica"],
+    },
   },
 } as const
