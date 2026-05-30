@@ -20,6 +20,7 @@ import FaturamentoPage from "./pages/admin/FaturamentoPage";
 import UserAccountPage from "./pages/UserAccountPage";
 import UsersAdminPage from "./pages/admin/UsersAdminPage";
 import FormulariosPage from "./pages/admin/FormulariosPage";
+import DomainLookupPage from "./pages/admin/DomainLookupPage";
 import { useEffect, useState } from "react";
 import { ThemeProvider } from "next-themes";
 
@@ -222,6 +223,15 @@ const App = () => {
               />
             </Route>
             
+            <Route
+              path="/admin/dominios"
+              element={
+                <ProtectedRoute userType="admin">
+                  <DomainLookupPage />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Fallback route para usuários autenticados */}
             <Route 
               path="/" 
