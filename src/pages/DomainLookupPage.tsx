@@ -1,11 +1,11 @@
 import React from "react";
-import AdminLayout from "@/components/AdminLayout";
+import Layout from "@/components/Layout";
 import DomainLookupContent from "@/components/domain/DomainLookupContent";
 
 const DomainLookupPage: React.FC = () => (
-  <AdminLayout title="Consulta de Domínios">
+  <Layout title="Consulta de Domínios">
     <DomainLookupContent />
-  </AdminLayout>
+  </Layout>
 );
 
 export default DomainLookupPage;

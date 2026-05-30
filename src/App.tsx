@@ -21,6 +21,7 @@ import UserAccountPage from "./pages/UserAccountPage";
 import UsersAdminPage from "./pages/admin/UsersAdminPage";
 import FormulariosPage from "./pages/admin/FormulariosPage";
 import DomainLookupPage from "./pages/admin/DomainLookupPage";
+import UserDomainLookupPage from "./pages/DomainLookupPage";
 import { useEffect, useState } from "react";
 import { ThemeProvider } from "next-themes";
 
@@ -136,13 +137,21 @@ const App = () => {
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/relatorios" 
+            <Route
+              path="/dominios"
+              element={
+                <ProtectedRoute userType="client">
+                  <UserDomainLookupPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/relatorios"
               element={
                 <ProtectedRoute userType="client">
                   <RelatoriosPage />
                 </ProtectedRoute>
-              } 
+              }
             />
             
             {/* Rotas do admin */}
